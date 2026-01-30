@@ -1,11 +1,10 @@
 import { stat } from "node:fs/promises"
 
-import { spawnAsync } from "soda-nodejs"
+import { execAsync } from "soda-nodejs"
 
 import { ProjectCommand } from "@/schemas/projectCommand"
 import { RunProjectParams } from "@/schemas/runProject"
 
-import { collectStreamText } from "@/server/collectStreamText"
 import { ensureProjectRoot } from "@/server/ensureProjectRoot"
 import { getProjectComposePath, getProjectDir } from "@/server/getProjectPaths"
 import { isAdmin } from "@/server/isAdmin"
@@ -16,12 +15,29 @@ export interface RunProjectResult {
     output: string
 }
 
-function getDockerComposeArgs(command: ProjectCommand, composePath: string) {
-    if (command === ProjectCommand.启动) return ["compose", "-f", composePath, "up", "-d"]
-    if (command === ProjectCommand.停止) return ["compose", "-f", composePath, "down"]
-    if (command === ProjectCommand.重启) return ["compose", "-f", composePath, "restart"]
-    if (command === ProjectCommand.拉取) return ["compose", "-f", composePath, "pull"]
-    return ["compose", "-f", composePath, "logs", "--tail", "200"]
+export interface ExecAsyncError {
+    stdout?: string | Buffer
+    stderr?: string | Buffer
+    message?: string
+}
+
+function wrapShellValue(value: string) {
+    return `"${value.replace(/"/g, '\\"')}"`
+}
+
+function normalizeExecOutput(value?: string | Buffer) {
+    if (typeof value === "string") return value
+    return value?.toString() ?? ""
+}
+
+function getDockerComposeCommand(command: ProjectCommand, composePath: string) {
+    const composeArg = wrapShellValue(composePath)
+
+    if (command === ProjectCommand.启动) return `docker compose -f ${composeArg} up -d`
+    if (command === ProjectCommand.停止) return `docker compose -f ${composeArg} down`
+    if (command === ProjectCommand.重启) return `docker compose -f ${composeArg} restart`
+    if (command === ProjectCommand.拉取) return `docker compose -f ${composeArg} pull`
+    return `docker compose -f ${composeArg} logs --tail 200`
 }
 
 export async function runProject({ name, command }: RunProjectParams) {
@@ -35,18 +51,23 @@ export async function runProject({ name, command }: RunProjectParams) {
         throw new ClientError("项目不存在")
     }
 
-    const args = getDockerComposeArgs(command, composePath)
-    const promise = spawnAsync("docker", args, { cwd: projectDir })
+    const commandText = getDockerComposeCommand(command, composePath)
 
-    const [stdoutText, stderrText] = await Promise.all([collectStreamText(promise.child.stdout), collectStreamText(promise.child.stderr)])
+    try {
+        const output = await execAsync(commandText, { cwd: projectDir })
 
-    await promise
+        return {
+            output: output.trim(),
+        } as RunProjectResult
+    } catch (error) {
+        const execError = error as ExecAsyncError
+        const stdoutText = normalizeExecOutput(execError.stdout)
+        const stderrText = normalizeExecOutput(execError.stderr)
+        const messageText = execError.message ?? ""
+        const output = `${stdoutText}${stderrText}${messageText}`.trim()
 
-    const output = `${stdoutText}${stderrText}`.trim()
-
-    return {
-        output,
-    } as RunProjectResult
+        throw new ClientError(output || "项目执行失败")
+    }
 }
 
 runProject.filter = isAdmin
