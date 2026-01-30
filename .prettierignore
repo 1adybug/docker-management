@@ -1,0 +1,12 @@
+node_modules
+public
+dist
+build
+generated
+.next
+.vscode
+.generated
+
+.agent
+.cursor
+AGENTS.md

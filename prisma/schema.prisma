@@ -1,0 +1,72 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+    provider               = "prisma-client"
+    output                 = "generated"
+    runtime                = "nodejs"
+    moduleFormat           = "esm"
+    generatedFileExtension = "ts"
+    importFileExtension    = ""
+}
+
+datasource db {
+    provider = "sqlite"
+}
+
+model OperationLog {
+    id          String   @id @default(uuid()) // 主键ID
+    createdAt   DateTime @default(now()) // 创建时间
+    action      String? // 请求动作
+    params      String? // 请求参数
+    ip          String? // IP地址
+    userAgent   String? // User Agent
+    username    String? // 用户名
+    phone       String? // 手机号
+    role        Role? // 角色
+    userId      String? // 用户ID
+    user        User?    @relation(fields: [userId], references: [id])
+}
+
+model ErrorLog {
+    id          String   @id @default(uuid()) // 主键ID
+    createdAt   DateTime @default(now()) // 创建时间
+    type        String // 错误类型
+    message     String // 错误消息
+    stack       String? // 堆栈信息
+    action      String? // 请求动作
+    params      String? // 请求参数
+    ip          String? // IP地址
+    userAgent   String? // User Agent
+    username    String? // 用户名
+    phone       String? // 手机号
+    role        Role? // 角色
+    userId      String? // 用户ID
+    user        User?    @relation(fields: [userId], references: [id])
+}
+
+enum Role {
+    USER
+    ADMIN
+}
+
+model User {
+    id            String         @id @default(uuid())
+    createdAt     DateTime       @default(now())
+    updatedAt     DateTime       @updatedAt
+    username      String         @unique
+    phone         String         @unique
+    role          Role           @default(USER)
+    operationLogs OperationLog[]
+    errorLogs     ErrorLog[]
+    captcha       Captcha?
+}
+
+model Captcha {
+    id        String   @id @default(uuid())
+    createdAt DateTime @default(now())
+    code      String
+    expiredAt DateTime
+    userId    String   @unique
+    user      User     @relation(fields: [userId], references: [id])
+}
