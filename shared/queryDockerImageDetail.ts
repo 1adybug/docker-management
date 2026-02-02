@@ -1,12 +1,9 @@
-import { readdir } from "node:fs/promises"
-
 import { execAsync } from "soda-nodejs"
 import { parse } from "yaml"
 
-import { ensureProjectRoot } from "@/server/ensureProjectRoot"
-import { getProjectComposePath } from "@/server/getProjectPaths"
+import { prisma } from "@/prisma"
+
 import { isAdmin } from "@/server/isAdmin"
-import { readTextFromFile } from "@/server/readTextFromFile"
 
 export interface ComposeService {
     image?: string
@@ -39,35 +36,33 @@ export interface DockerImageItem {
 }
 
 async function getProjectImageUsageMap() {
-    const root = await ensureProjectRoot()
-    const entries = await readdir(root, { withFileTypes: true })
     const usage = new Map<string, Set<string>>()
+    const projects = await prisma.project.findMany({
+        select: {
+            name: true,
+            content: true,
+        },
+    })
 
     await Promise.all(
-        entries
-            .filter(entry => entry.isDirectory())
-            .map(async entry => {
-                const projectName = entry.name
-                const composePath = getProjectComposePath(projectName)
+        projects.map(async project => {
+            try {
+                const compose = parse(project.content) as ComposeFile | null
+                const services = compose?.services ?? {}
 
-                try {
-                    const content = await readTextFromFile(composePath)
-                    const compose = parse(content) as ComposeFile | null
-                    const services = compose?.services ?? {}
+                Object.values(services).forEach(service => {
+                    const image = service?.image?.trim()
+                    if (!image) return
 
-                    Object.values(services).forEach(service => {
-                        const image = service?.image?.trim()
-                        if (!image) return
+                    const imageItems = image.includes(":") ? [image] : [image, `${image}:latest`]
 
-                        const imageItems = image.includes(":") ? [image] : [image, `${image}:latest`]
-
-                        imageItems.forEach(item => {
-                            if (!usage.has(item)) usage.set(item, new Set<string>())
-                            usage.get(item)?.add(projectName)
-                        })
+                    imageItems.forEach(item => {
+                        if (!usage.has(item)) usage.set(item, new Set<string>())
+                        usage.get(item)?.add(project.name)
                     })
-                } catch {}
-            }),
+                })
+            } catch {}
+        }),
     )
 
     return usage

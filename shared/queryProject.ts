@@ -1,9 +1,11 @@
-import { readdir, stat } from "node:fs/promises"
+import { getPagination } from "deepsea-tools"
 
-import { isNonNullable } from "deepsea-tools"
+import { prisma } from "@/prisma"
 
-import { ensureProjectRoot } from "@/server/ensureProjectRoot"
-import { getProjectComposePath } from "@/server/getProjectPaths"
+import { defaultPageNum } from "@/schemas/pageNum"
+import { defaultPageSize } from "@/schemas/pageSize"
+import { QueryProjectParams } from "@/schemas/queryProject"
+
 import { isAdmin } from "@/server/isAdmin"
 
 export interface ProjectSummary {
@@ -11,30 +13,43 @@ export interface ProjectSummary {
     updatedAt: number
 }
 
-export async function queryProject() {
-    const root = await ensureProjectRoot()
-    const entries = await readdir(root, { withFileTypes: true })
+export async function queryProject({ name = "", updatedAfter, updatedBefore, pageNum = defaultPageNum, pageSize = defaultPageSize }: QueryProjectParams = {}) {
+    const nameItems = name.split(/\s+/).filter(Boolean)
 
-    const results = await Promise.all(
-        entries
-            .filter(entry => entry.isDirectory())
-            .map(async entry => {
-                const name = entry.name
-                const composePath = getProjectComposePath(name)
+    const where = {
+        updatedAt: {
+            gte: updatedAfter,
+            lte: updatedBefore,
+        },
+        AND: nameItems.map(item => ({
+            name: {
+                contains: item,
+            },
+        })),
+    }
 
-                try {
-                    const stats = await stat(composePath)
-                    return {
-                        name,
-                        updatedAt: stats.mtimeMs,
-                    } as ProjectSummary
-                } catch {
-                    return null
-                }
-            }),
-    )
+    const data = await prisma.project.findMany({
+        where,
+        skip: (pageNum - 1) * pageSize,
+        take: pageSize,
+        orderBy: {
+            updatedAt: "desc",
+        },
+        select: {
+            name: true,
+            updatedAt: true,
+        },
+    })
 
-    return results.filter(isNonNullable).sort((prev, next) => next.updatedAt - prev.updatedAt)
+    const total = await prisma.project.count({ where })
+
+    return getPagination({
+        data: data.map(item => ({ name: item.name, updatedAt: item.updatedAt.valueOf() })),
+        exact: true,
+        total,
+        pageNum,
+        pageSize,
+    })
 }
 
 queryProject.filter = isAdmin

@@ -35,13 +35,13 @@ const navs: NavItem[] = [
         filter: isAdmin,
     },
     {
-        href: "/image",
-        name: "镜像管理",
+        href: "/container",
+        name: "容器管理",
         filter: isAdmin,
     },
     {
-        href: "/container",
-        name: "容器管理",
+        href: "/image",
+        name: "镜像管理",
         filter: isAdmin,
     },
     {
@@ -78,7 +78,7 @@ const Header: FC<HeaderProps> = ({ className, ...rest }) => {
                             <Button
                                 key={href}
                                 type="link"
-                                color={pathname === getPathnameAndSearchParams(href).pathname ? "primary" : undefined}
+                                color={pathname === getPathnameAndSearchParams(href).pathname ? "primary" : "default"}
                                 variant="link"
                                 href={href}
                             >

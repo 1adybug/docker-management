@@ -21,3 +21,16 @@ export const IsIntranet = !!process.env.IS_INTRANET
 export const IsBun = typeof Bun !== "undefined"
 
 export const DatabaseUrl = IsDevelopment ? "file:./prisma/development.db" : "file:./prisma/production.db"
+
+/** 容器状态 */
+export const DockerContainerStatus = {
+    运行中: "running",
+    已退出: "exited",
+    重启中: "restarting",
+    已暂停: "paused",
+    已创建: "created",
+    已失效: "dead",
+    其他: "other",
+} as const
+
+export type DockerContainerStatus = (typeof DockerContainerStatus)[keyof typeof DockerContainerStatus]

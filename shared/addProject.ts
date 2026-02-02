@@ -1,5 +1,7 @@
 import { mkdir, stat } from "node:fs/promises"
 
+import { prisma } from "@/prisma"
+
 import { AddProjectParams } from "@/schemas/addProject"
 
 import { ensureProjectRoot } from "@/server/ensureProjectRoot"
@@ -21,6 +23,9 @@ export async function addProject({ name, content }: AddProjectParams) {
     const projectDir = getProjectDir(name)
     const composePath = getProjectComposePath(name)
 
+    const project = await prisma.project.findUnique({ where: { name } })
+    if (project) throw new ClientError("项目已存在")
+
     try {
         await stat(projectDir)
         throw new ClientError("项目已存在")
@@ -29,6 +34,14 @@ export async function addProject({ name, content }: AddProjectParams) {
     await mkdir(projectDir, { recursive: true })
 
     const nextContent = content ?? defaultComposeContent
+
+    await prisma.project.create({
+        data: {
+            name,
+            content: nextContent,
+        },
+    })
+
     await writeTextToFile(composePath, nextContent)
 
     return {

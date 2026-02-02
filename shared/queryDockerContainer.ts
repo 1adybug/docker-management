@@ -1,6 +1,8 @@
-import { readdir } from "node:fs/promises"
+import { normalize, sep } from "node:path"
 
 import { execAsync } from "soda-nodejs"
+
+import { prisma } from "@/prisma"
 
 import { ensureProjectRoot } from "@/server/ensureProjectRoot"
 import { isAdmin } from "@/server/isAdmin"
@@ -31,15 +33,25 @@ export interface DockerLabelMap {
     [key: string]: string
 }
 
+/** 项目配置文件路径标签 */
+const composeConfigLabel = "com.docker.compose.project.config_files"
+
 async function getManagedProjectSet() {
-    const root = await ensureProjectRoot()
-    const entries = await readdir(root, { withFileTypes: true })
-    const names = entries.filter(entry => entry.isDirectory()).map(entry => entry.name)
-    return new Set(names)
+    const projects = await prisma.project.findMany({
+        select: {
+            name: true,
+        },
+    })
+    return new Set(projects.map(project => project.name))
+}
+
+function normalizePath(value: string) {
+    return normalize(value).toLowerCase()
 }
 
 function parseLabels(labels?: string) {
     const result: DockerLabelMap = {}
+
     if (!labels) return result
 
     labels
@@ -61,8 +73,26 @@ function getProjectNameByLabels(labels?: string) {
     return map["com.docker.compose.project"]
 }
 
+function getComposeConfigFilesByLabels(labels?: string) {
+    const map = parseLabels(labels)
+    const raw = map[composeConfigLabel]
+    if (!raw) return []
+    return raw
+        .split(",")
+        .map(item => item.trim())
+        .filter(Boolean)
+}
+
+function isComposeFileManaged(files: string[], projectRoot: string) {
+    if (files.length === 0) return false
+    const normalizedRoot = normalizePath(projectRoot)
+    const rootWithSeparator = normalizedRoot.endsWith(sep) ? normalizedRoot : `${normalizedRoot}${sep}`
+    return files.some(file => normalizePath(file).startsWith(rootWithSeparator))
+}
+
 export async function queryDockerContainer() {
     const output = await execAsync(`docker ps -a --format "{{json .}}"`)
+    const projectRoot = await ensureProjectRoot()
     const managedProjects = await getManagedProjectSet()
 
     const containers = output
@@ -79,7 +109,9 @@ export async function queryDockerContainer() {
         .filter((item): item is DockerContainerRaw => !!item)
         .map(item => {
             const projectName = getProjectNameByLabels(item.Labels)
-            const isManagedProject = projectName ? managedProjects.has(projectName) : false
+            const composeFiles = getComposeConfigFilesByLabels(item.Labels)
+            const isManagedProject =
+                composeFiles.length > 0 ? isComposeFileManaged(composeFiles, projectRoot) : projectName ? managedProjects.has(projectName) : false
 
             return {
                 id: item.ID ?? "",

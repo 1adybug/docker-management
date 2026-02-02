@@ -131,7 +131,7 @@ const Page: FC = () => {
     const [yamlValue, setYamlValue] = useState(defaultComposeContent)
     const [composeData, setComposeData] = useState<ComposeFile | undefined>(undefined)
     const [editorTheme, setEditorTheme] = useState(monacoThemeOptions[0]?.value ?? "night-owl")
-    const [editorFontSize, setEditorFontSize] = useState(13)
+    const [editorFontSize, setEditorFontSize] = useState(16)
     const [monacoInstance, setMonacoInstance] = useState<unknown>(undefined)
 
     const { data, isLoading } = useGetProject(isUpdate ? { name: searchName! } : undefined, { enabled: isUpdate })
@@ -154,12 +154,12 @@ const Page: FC = () => {
     const imageOptions = useMemo(() => (imageData ?? []).map(item => ({ value: item.name })), [imageData])
     const restartOptions = useMemo(() => getRestartOptions(), [])
 
-    useEffect(() => {
-        void ensureMonacoConfigured()
-    }, [])
+    useEffect(() => void ensureMonacoConfigured(), [])
 
     useEffect(() => {
         const content = projectData?.content ?? defaultComposeContent
+
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setYamlValue(content)
 
         try {
@@ -284,163 +284,167 @@ const Page: FC = () => {
                 </div>
             </div>
             <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 px-4 pb-4 lg:grid-cols-2">
-                <div className="flex min-h-0 flex-col rounded border border-solid border-neutral-200 p-4">
-                    <div className="mb-4 flex h-9 items-center text-base font-medium">表单编辑</div>
+                <div className="flex min-h-0 flex-col rounded border border-solid border-neutral-200 py-4">
+                    <div className="mb-4 flex h-9 items-center px-4 text-base font-medium">表单编辑</div>
                     <div className="min-h-0 flex-1 overflow-auto">
-                        <Form<ProjectFormData> form={form} layout="vertical" disabled={isRequesting}>
-                            <FormItem<ProjectFormData> name="name" label="项目名称" rules={[schemaToRule(projectNameSchema)]}>
-                                <Input disabled={isUpdate} placeholder="仅支持字母、数字、下划线和短横线" />
-                            </FormItem>
-                            <div className="grid grid-cols-1 gap-4 rounded border border-solid border-neutral-200 p-4">
-                                <FormItem<ProjectFormData> name="networks" label="网络">
-                                    <Select mode="tags" placeholder="输入并回车创建网络" />
+                        <div className="pl-4 pr-[calc(16px-((100vw-32px)-100%))] lg:pr-[calc(16px-((100vw-48px)/2-100%))]">
+                            <Form<ProjectFormData> form={form} layout="vertical" disabled={isRequesting}>
+                                <FormItem<ProjectFormData> name="name" label="项目名称" rules={[schemaToRule(projectNameSchema)]}>
+                                    <Input disabled={isUpdate} placeholder="仅支持字母、数字、下划线和短横线" />
                                 </FormItem>
-                                <FormItem<ProjectFormData> name="volumes" label="数据卷">
-                                    <Select mode="tags" placeholder="输入并回车创建数据卷" />
-                                </FormItem>
-                            </div>
-                            <Form.List name="services">
-                                {(fields, { add, remove }) => (
-                                    <div className="mt-4 flex flex-col gap-4">
-                                        <div className="flex items-center justify-between">
-                                            <div className="font-medium">服务配置</div>
-                                            <Button type="dashed" onClick={() => add({})}>
-                                                新增服务
-                                            </Button>
-                                        </div>
-                                        {fields.map(field => {
-                                            const serviceName = form.getFieldValue(["services", field.name, "name"])
+                                <div className="grid grid-cols-1 gap-4 rounded border border-solid border-neutral-200 p-4">
+                                    <FormItem<ProjectFormData> name="networks" label="网络">
+                                        <Select mode="tags" placeholder="输入并回车创建网络" />
+                                    </FormItem>
+                                    <FormItem<ProjectFormData> name="volumes" label="数据卷">
+                                        <Select mode="tags" placeholder="输入并回车创建数据卷" />
+                                    </FormItem>
+                                </div>
+                                <Form.List name="services">
+                                    {(fields, { add, remove }) => (
+                                        <div className="mt-4 flex flex-col gap-4">
+                                            <div className="flex items-center justify-between">
+                                                <div className="font-medium">服务配置</div>
+                                                <Button type="dashed" onClick={() => add({})}>
+                                                    新增服务
+                                                </Button>
+                                            </div>
+                                            {fields.map(field => {
+                                                const serviceName = form.getFieldValue(["services", field.name, "name"])
 
-                                            return (
-                                                <div key={field.key} className="rounded border border-solid border-neutral-200 p-4">
-                                                    <div className="mb-4 flex items-center justify-between">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="font-medium">服务</span>
-                                                            {serviceName ? <Tag color="blue">{serviceName}</Tag> : null}
+                                                return (
+                                                    <div key={field.key} className="rounded border border-solid border-neutral-200 p-4">
+                                                        <div className="mb-4 flex items-center justify-between">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-medium">服务</span>
+                                                                {serviceName ? <Tag color="blue">{serviceName}</Tag> : null}
+                                                            </div>
+                                                            <Button danger type="link" onClick={() => remove(field.name)}>
+                                                                删除服务
+                                                            </Button>
                                                         </div>
-                                                        <Button danger type="link" onClick={() => remove(field.name)}>
-                                                            删除服务
-                                                        </Button>
-                                                    </div>
-                                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                                        <FormItem<ProjectFormData>
-                                                            name={[field.name, "name"]}
-                                                            label="服务名称"
-                                                            rules={[{ required: true, message: "请输入服务名称" }]}
-                                                        >
-                                                            <Input placeholder="例如: web" />
-                                                        </FormItem>
-                                                        <FormItem<ProjectFormData> name={[field.name, "image"]} label="镜像">
-                                                            <AutoComplete options={imageOptions} placeholder="例如: nginx:latest" />
-                                                        </FormItem>
-                                                        <FormItem<ProjectFormData> name={[field.name, "containerName"]} label="容器名称">
-                                                            <Input placeholder="例如: web-app" />
-                                                        </FormItem>
-                                                        <FormItem<ProjectFormData> name={[field.name, "restart"]} label="重启策略">
-                                                            <Select allowClear options={restartOptions} placeholder="选择重启策略" />
-                                                        </FormItem>
-                                                        <FormItem<ProjectFormData> name={[field.name, "command"]} label="启动命令">
-                                                            <Input placeholder="例如: npm run start" />
-                                                        </FormItem>
-                                                        <FormItem<ProjectFormData> name={[field.name, "dependsOn"]} label="依赖服务">
-                                                            <Select mode="multiple" options={serviceNameOptions} placeholder="选择依赖服务" />
-                                                        </FormItem>
-                                                        <FormItem<ProjectFormData> name={[field.name, "networks"]} label="服务网络">
-                                                            <Select mode="tags" options={networkOptions} placeholder="输入并回车创建网络" />
-                                                        </FormItem>
-                                                    </div>
-                                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                                        <FormItem<ProjectFormData> label="端口映射" className="mb-0">
-                                                            <Form.List name={[field.name, "ports"]}>
-                                                                {(portFields, { add: addPort, remove: removePort }) => (
-                                                                    <div className="flex flex-col gap-2">
-                                                                        {portFields.map(portField => (
-                                                                            <div key={portField.key} className="flex items-center gap-2">
-                                                                                <FormItem<ProjectFormData> name={portField.name} className="mb-0 flex-1">
-                                                                                    <Input placeholder="例如: 8080:80" />
-                                                                                </FormItem>
-                                                                                <Button type="text" danger onClick={() => removePort(portField.name)}>
-                                                                                    移除
-                                                                                </Button>
-                                                                            </div>
-                                                                        ))}
-                                                                        <Button type="dashed" onClick={() => addPort("")}>
-                                                                            新增端口
-                                                                        </Button>
-                                                                    </div>
-                                                                )}
-                                                            </Form.List>
-                                                        </FormItem>
-                                                        <FormItem<ProjectFormData> label="挂载卷" className="mb-0">
-                                                            <Form.List name={[field.name, "volumes"]}>
-                                                                {(volumeFields, { add: addVolume, remove: removeVolume }) => (
-                                                                    <div className="flex flex-col gap-2">
-                                                                        {volumeFields.map(volumeField => (
-                                                                            <div key={volumeField.key} className="flex items-center gap-2">
-                                                                                <FormItem<ProjectFormData> name={volumeField.name} className="mb-0 flex-1">
-                                                                                    <Input placeholder="例如: ./data:/app/data" />
-                                                                                </FormItem>
-                                                                                <Button type="text" danger onClick={() => removeVolume(volumeField.name)}>
-                                                                                    移除
-                                                                                </Button>
-                                                                            </div>
-                                                                        ))}
-                                                                        <Button type="dashed" onClick={() => addVolume("")}>
-                                                                            新增挂载
-                                                                        </Button>
-                                                                    </div>
-                                                                )}
-                                                            </Form.List>
-                                                        </FormItem>
-                                                    </div>
-                                                    <FormItem<ProjectFormData> label="环境变量" className="mb-0 mt-4">
-                                                        <Form.List name={[field.name, "environment"]}>
-                                                            {(envFields, { add: addEnv, remove: removeEnv }) => (
-                                                                <div className="flex flex-col gap-2">
-                                                                    {envFields.map(envField => (
-                                                                        <div key={envField.key} className="grid grid-cols-[1fr_1fr_auto] gap-2">
-                                                                            <FormItem<ProjectFormData> name={[envField.name, "key"]} className="mb-0">
-                                                                                <Input placeholder="KEY" />
-                                                                            </FormItem>
-                                                                            <FormItem<ProjectFormData> name={[envField.name, "value"]} className="mb-0">
-                                                                                <Input placeholder="VALUE" />
-                                                                            </FormItem>
-                                                                            <Button type="text" danger onClick={() => removeEnv(envField.name)}>
-                                                                                移除
+                                                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                                            <FormItem
+                                                                name={[field.name, "name"]}
+                                                                label="服务名称"
+                                                                rules={[{ required: true, message: "请输入服务名称" }]}
+                                                            >
+                                                                <Input placeholder="例如: web" />
+                                                            </FormItem>
+                                                            <FormItem name={[field.name, "image"]} label="镜像">
+                                                                <AutoComplete options={imageOptions} placeholder="例如: nginx:latest" />
+                                                            </FormItem>
+                                                            <FormItem name={[field.name, "containerName"]} label="容器名称">
+                                                                <Input placeholder="例如: web-app" />
+                                                            </FormItem>
+                                                            <FormItem name={[field.name, "restart"]} label="重启策略">
+                                                                <Select allowClear options={restartOptions} placeholder="选择重启策略" />
+                                                            </FormItem>
+                                                            <FormItem name={[field.name, "command"]} label="启动命令">
+                                                                <Input placeholder="例如: npm run start" />
+                                                            </FormItem>
+                                                            <FormItem name={[field.name, "dependsOn"]} label="依赖服务">
+                                                                <Select mode="multiple" options={serviceNameOptions} placeholder="选择依赖服务" />
+                                                            </FormItem>
+                                                            <FormItem name={[field.name, "networks"]} label="服务网络">
+                                                                <Select mode="tags" options={networkOptions} placeholder="输入并回车创建网络" />
+                                                            </FormItem>
+                                                        </div>
+                                                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                                            <FormItem<ProjectFormData> label="端口映射" className="mb-0">
+                                                                <Form.List name={[field.name, "ports"]}>
+                                                                    {(portFields, { add: addPort, remove: removePort }) => (
+                                                                        <div className="flex flex-col gap-2">
+                                                                            {portFields.map(portField => (
+                                                                                <div key={portField.key} className="flex items-start gap-2">
+                                                                                    <FormItem name={portField.name} className="mb-0 flex-1">
+                                                                                        <Input placeholder="例如: 8080:80" />
+                                                                                    </FormItem>
+                                                                                    <Button type="text" danger onClick={() => removePort(portField.name)}>
+                                                                                        移除
+                                                                                    </Button>
+                                                                                </div>
+                                                                            ))}
+                                                                            <Button type="dashed" onClick={() => addPort("")}>
+                                                                                新增端口
                                                                             </Button>
                                                                         </div>
-                                                                    ))}
-                                                                    <Button type="dashed" onClick={() => addEnv({})}>
-                                                                        新增环境变量
-                                                                    </Button>
-                                                                </div>
-                                                            )}
-                                                        </Form.List>
-                                                    </FormItem>
-                                                </div>
-                                            )
-                                        })}
-                                    </div>
-                                )}
-                            </Form.List>
-                        </Form>
+                                                                    )}
+                                                                </Form.List>
+                                                            </FormItem>
+                                                            <FormItem<ProjectFormData> label="挂载卷" className="mb-0">
+                                                                <Form.List name={[field.name, "volumes"]}>
+                                                                    {(volumeFields, { add: addVolume, remove: removeVolume }) => (
+                                                                        <div className="flex flex-col gap-2">
+                                                                            {volumeFields.map(volumeField => (
+                                                                                <div key={volumeField.key} className="flex items-start gap-2">
+                                                                                    <FormItem name={volumeField.name} className="mb-0 flex-1">
+                                                                                        <Input placeholder="例如: ./data:/app/data" />
+                                                                                    </FormItem>
+                                                                                    <Button type="text" danger onClick={() => removeVolume(volumeField.name)}>
+                                                                                        移除
+                                                                                    </Button>
+                                                                                </div>
+                                                                            ))}
+                                                                            <Button type="dashed" onClick={() => addVolume("")}>
+                                                                                新增挂载
+                                                                            </Button>
+                                                                        </div>
+                                                                    )}
+                                                                </Form.List>
+                                                            </FormItem>
+                                                        </div>
+                                                        <FormItem<ProjectFormData> label="环境变量" className="mb-0 mt-4">
+                                                            <Form.List name={[field.name, "environment"]}>
+                                                                {(envFields, { add: addEnv, remove: removeEnv }) => (
+                                                                    <div className="flex flex-col gap-2">
+                                                                        {envFields.map(envField => (
+                                                                            <div key={envField.key} className="grid grid-cols-[1fr_1fr_auto] gap-2">
+                                                                                <FormItem name={[envField.name, "key"]} className="mb-0">
+                                                                                    <Input placeholder="KEY" />
+                                                                                </FormItem>
+                                                                                <FormItem name={[envField.name, "value"]} className="mb-0">
+                                                                                    <Input placeholder="VALUE" />
+                                                                                </FormItem>
+                                                                                <Button type="text" danger onClick={() => removeEnv(envField.name)}>
+                                                                                    移除
+                                                                                </Button>
+                                                                            </div>
+                                                                        ))}
+                                                                        <Button type="dashed" onClick={() => addEnv({})}>
+                                                                            新增环境变量
+                                                                        </Button>
+                                                                    </div>
+                                                                )}
+                                                            </Form.List>
+                                                        </FormItem>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    )}
+                                </Form.List>
+                            </Form>
+                        </div>
                     </div>
                 </div>
                 <div className="flex min-h-0 flex-col rounded border border-solid border-neutral-200 p-4">
-                    <div className="mb-4 flex h-9 items-center gap-2">
+                    <div className="mb-4 flex h-9 items-center justify-between gap-2">
                         <div className="text-base font-medium">YAML 编辑</div>
-                        <Select
-                            className="ml-auto min-w-[180px]"
-                            value={editorTheme}
-                            options={monacoThemeOptions.map(item => ({ label: item.label, value: item.value }))}
-                            onChange={onThemeChange}
-                        />
-                        <Select
-                            className="min-w-[110px]"
-                            value={editorFontSize}
-                            options={[12, 13, 14, 15, 16].map(value => ({ label: `${value}px`, value }))}
-                            onChange={onFontSizeChange}
-                        />
+                        <div className="flex gap-2">
+                            <Select
+                                className="ml-auto min-w-[180px]"
+                                value={editorTheme}
+                                options={monacoThemeOptions.map(item => ({ label: item.label, value: item.value }))}
+                                onChange={onThemeChange}
+                            />
+                            <Select
+                                className="min-w-[110px]"
+                                value={editorFontSize}
+                                options={[12, 13, 14, 15, 16, 17, 18, 19, 20].map(value => ({ label: `${value}px`, value }))}
+                                onChange={onFontSizeChange}
+                            />
+                        </div>
                     </div>
                     <div className="min-h-0 flex-1 overflow-auto">
                         <Editor

@@ -1,6 +1,8 @@
-import { stat } from "node:fs/promises"
+import { mkdir, stat } from "node:fs/promises"
 
 import { execAsync } from "soda-nodejs"
+
+import { prisma } from "@/prisma"
 
 import { ProjectCommand } from "@/schemas/projectCommand"
 import { RunProjectParams } from "@/schemas/runProject"
@@ -8,6 +10,7 @@ import { RunProjectParams } from "@/schemas/runProject"
 import { ensureProjectRoot } from "@/server/ensureProjectRoot"
 import { getProjectComposePath, getProjectDir } from "@/server/getProjectPaths"
 import { isAdmin } from "@/server/isAdmin"
+import { writeTextToFile } from "@/server/writeTextToFile"
 
 import { ClientError } from "@/utils/clientError"
 
@@ -44,6 +47,12 @@ export async function runProject({ name, command }: RunProjectParams) {
     await ensureProjectRoot()
     const composePath = getProjectComposePath(name)
     const projectDir = getProjectDir(name)
+
+    const project = await prisma.project.findUnique({ where: { name } })
+    if (!project) throw new ClientError("项目不存在")
+
+    await mkdir(projectDir, { recursive: true })
+    await writeTextToFile(composePath, project.content)
 
     try {
         await stat(composePath)
