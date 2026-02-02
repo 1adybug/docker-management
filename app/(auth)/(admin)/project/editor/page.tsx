@@ -47,6 +47,7 @@ async function ensureMonacoConfigured() {
     if (typeof window === "undefined") return
     if (isMonacoConfigured) return
 
+    // @ts-expect-error: monaco-editor ESM internals don't have type declarations
     await import("monaco-editor/esm/vs/basic-languages/yaml/yaml.contribution")
 
     const globalAny = globalThis as unknown as {
