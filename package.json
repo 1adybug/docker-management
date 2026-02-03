@@ -5,9 +5,7 @@
     "scripts": {
         "dev": "sdnext dev next dev --turbopack --hostname 0.0.0.0",
         "build": "sdnext build next build",
-        "build:standalone": "npx cross-env NEXT_OUTPUT=standalone next build",
-        "build:windows": "bun scripts/createInstaller.ts --target=windows",
-        "build:linux": "bun scripts/createInstaller.ts --target=linux",
+        "build:docker": "docker build -t luzixu/docker-management:latest .",
         "start": "next start",
         "lint": "eslint .",
         "format": "prettier --write .",
