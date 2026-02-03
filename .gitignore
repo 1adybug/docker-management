@@ -63,4 +63,4 @@ installer.exe
 dist*
 test*
 
-*.db
+/data
