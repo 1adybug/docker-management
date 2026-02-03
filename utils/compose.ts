@@ -101,6 +101,7 @@ function normalizeKeyList(value: unknown) {
 
 function normalizeEnvList(value: ComposeEnvironmentMap | string[] | undefined) {
     if (!value) return undefined
+
     if (Array.isArray(value)) {
         return value
             .map(item => {
@@ -138,6 +139,7 @@ function normalizeFormList(items?: string[]) {
 
 function normalizeEnvMap(list?: ProjectFormKeyValue[]) {
     if (!list) return undefined
+
     const pairs = list
         .map(item => ({
             key: cleanString(item.key),

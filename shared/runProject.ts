@@ -10,6 +10,7 @@ import { RunProjectParams } from "@/schemas/runProject"
 import { ensureProjectRoot } from "@/server/ensureProjectRoot"
 import { getProjectComposePath, getProjectDir } from "@/server/getProjectPaths"
 import { isAdmin } from "@/server/isAdmin"
+import { readTextFromFile } from "@/server/readTextFromFile"
 import { writeTextToFile } from "@/server/writeTextToFile"
 
 import { ClientError } from "@/utils/clientError"
@@ -22,6 +23,21 @@ export interface ExecAsyncError {
     stdout?: string | Buffer
     stderr?: string | Buffer
     message?: string
+}
+
+/** 路径错误信息 */
+export interface PathError extends Error {
+    code?: string
+}
+
+/** 同步 compose 文件参数 */
+export interface EnsureProjectComposeFileParams {
+    /** 项目目录 */
+    projectDir: string
+    /** compose 文件路径 */
+    composePath: string
+    /** compose 内容 */
+    content: string
 }
 
 function wrapShellValue(value: string) {
@@ -43,6 +59,41 @@ function getDockerComposeCommand(command: ProjectCommand, composePath: string) {
     return `docker compose -f ${composeArg} logs --tail 200`
 }
 
+function isNoEntryError(error: unknown) {
+    const pathError = error as PathError
+    return pathError?.code === "ENOENT"
+}
+
+async function getPathStat(path: string) {
+    try {
+        return await stat(path)
+    } catch (error) {
+        if (isNoEntryError(error)) return undefined
+        throw error
+    }
+}
+
+/** 检查并同步项目的 compose 文件 */
+export async function ensureProjectComposeFile({ projectDir, composePath, content }: EnsureProjectComposeFileParams) {
+    const projectDirStat = await getPathStat(projectDir)
+
+    if (!projectDirStat) await mkdir(projectDir, { recursive: true })
+    else if (!projectDirStat.isDirectory()) throw new ClientError("项目目录无效")
+
+    const composeStat = await getPathStat(composePath)
+
+    if (!composeStat) {
+        await writeTextToFile(composePath, content)
+        return
+    }
+
+    if (!composeStat.isFile()) throw new ClientError("docker-compose.yml 无效")
+
+    const localContent = await readTextFromFile(composePath)
+
+    if (localContent !== content) await writeTextToFile(composePath, content)
+}
+
 export async function runProject({ name, command }: RunProjectParams) {
     await ensureProjectRoot()
     const composePath = getProjectComposePath(name)
@@ -51,14 +102,7 @@ export async function runProject({ name, command }: RunProjectParams) {
     const project = await prisma.project.findUnique({ where: { name } })
     if (!project) throw new ClientError("项目不存在")
 
-    await mkdir(projectDir, { recursive: true })
-    await writeTextToFile(composePath, project.content)
-
-    try {
-        await stat(composePath)
-    } catch {
-        throw new ClientError("项目不存在")
-    }
+    await ensureProjectComposeFile({ projectDir, composePath, content: project.content })
 
     const commandText = getDockerComposeCommand(command, composePath)
 

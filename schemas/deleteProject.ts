@@ -6,6 +6,7 @@ import { projectNameSchema } from "./projectName"
 export const deleteProjectSchema = z.object(
     {
         name: projectNameSchema,
+        cleanup: z.boolean({ message: "无效的清理参数" }).optional(),
     },
     { message: "无效的项目参数" },
 )

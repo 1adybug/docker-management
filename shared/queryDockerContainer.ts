@@ -25,6 +25,8 @@ export interface DockerContainerItem {
     status: string
     createdAt: string
     ports: string
+    projectId?: string
+    composeConfigFiles: string[]
     projectName?: string
     isManagedProject?: boolean
 }
@@ -36,13 +38,14 @@ export interface DockerLabelMap {
 /** 项目配置文件路径标签 */
 const composeConfigLabel = "com.docker.compose.project.config_files"
 
-async function getManagedProjectSet() {
+async function getManagedProjectMap() {
     const projects = await prisma.project.findMany({
         select: {
+            id: true,
             name: true,
         },
     })
-    return new Set(projects.map(project => project.name))
+    return new Map(projects.map(project => [project.name, project.id]))
 }
 
 function normalizePath(value: string) {
@@ -93,7 +96,7 @@ function isComposeFileManaged(files: string[], projectRoot: string) {
 export async function queryDockerContainer() {
     const output = await execAsync(`docker ps -a --format "{{json .}}"`)
     const projectRoot = await ensureProjectRoot()
-    const managedProjects = await getManagedProjectSet()
+    const managedProjectMap = await getManagedProjectMap()
 
     const containers = output
         .split(/\r?\n/u)
@@ -110,8 +113,9 @@ export async function queryDockerContainer() {
         .map(item => {
             const projectName = getProjectNameByLabels(item.Labels)
             const composeFiles = getComposeConfigFilesByLabels(item.Labels)
+            const projectId = projectName ? managedProjectMap.get(projectName) : undefined
             const isManagedProject =
-                composeFiles.length > 0 ? isComposeFileManaged(composeFiles, projectRoot) : projectName ? managedProjects.has(projectName) : false
+                composeFiles.length > 0 ? isComposeFileManaged(composeFiles, projectRoot) : projectName ? managedProjectMap.has(projectName) : false
 
             return {
                 id: item.ID ?? "",
@@ -120,6 +124,8 @@ export async function queryDockerContainer() {
                 status: item.Status ?? "",
                 createdAt: item.CreatedAt ?? "",
                 ports: item.Ports ?? "",
+                projectId,
+                composeConfigFiles: composeFiles,
                 projectName,
                 isManagedProject,
             } as DockerContainerItem

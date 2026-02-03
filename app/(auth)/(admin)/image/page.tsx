@@ -2,6 +2,7 @@
 
 import { FC, useMemo, useRef } from "react"
 
+import { IconTrash } from "@tabler/icons-react"
 import { Button, Form, Input, Popconfirm, Table, Tag } from "antd"
 import FormItem from "antd/es/form/FormItem"
 import { formatTime, showTotal } from "deepsea-tools"
@@ -119,9 +120,15 @@ const Page: FC = () => {
             render(value, record) {
                 return (
                     <Popconfirm title="确认删除镜像" description="删除后可能影响相关容器" onConfirm={() => onDelete(record.name)}>
-                        <Button danger type="link" disabled={isRequesting}>
-                            删除
-                        </Button>
+                        <Button
+                            size="small"
+                            shape="circle"
+                            color="danger"
+                            variant="text"
+                            title="删除"
+                            disabled={isRequesting}
+                            icon={<IconTrash className="size-4" />}
+                        />
                     </Popconfirm>
                 )
             },

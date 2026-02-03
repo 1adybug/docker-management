@@ -131,8 +131,9 @@ const Page: FC = () => {
                         <Button
                             size="small"
                             shape="circle"
-                            color="default"
+                            color="geekblue"
                             variant="text"
+                            title="编辑"
                             disabled={isRequesting}
                             icon={<IconEdit className="size-4" />}
                             onClick={() => onUpdate(value)}
@@ -143,6 +144,7 @@ const Page: FC = () => {
                                 shape="circle"
                                 color="danger"
                                 variant="text"
+                                title="删除"
                                 disabled={isRequesting}
                                 icon={<IconTrash className="size-4" />}
                             />

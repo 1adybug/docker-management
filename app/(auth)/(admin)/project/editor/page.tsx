@@ -39,7 +39,7 @@ import {
     formDataToYaml,
     parseComposeYaml,
     ProjectFormData,
-} from "../_utils/compose"
+} from "@/utils/compose"
 
 let isMonacoConfigured = false
 
@@ -126,7 +126,9 @@ const Page: FC = () => {
     const router = useRouter()
     const searchParams = useSearchParams()
     const searchName = searchParams.get("name") ?? undefined
-    const isUpdate = isNonNullable(searchName)
+    const searchCopyFrom = searchParams.get("copyFrom") ?? undefined
+    const isCopy = isNonNullable(searchCopyFrom)
+    const isUpdate = isNonNullable(searchName) && !isCopy
 
     const [form] = useForm<ProjectFormData>()
     const [yamlValue, setYamlValue] = useState(defaultComposeContent)
@@ -135,8 +137,10 @@ const Page: FC = () => {
     const [editorFontSize, setEditorFontSize] = useState(16)
     const [monacoInstance, setMonacoInstance] = useState<unknown>(undefined)
 
-    const { data, isLoading } = useGetProject(isUpdate ? { name: searchName! } : undefined, { enabled: isUpdate })
-    const projectData = isUpdate ? data : undefined
+    const getProjectParams = isUpdate ? { name: searchName! } : isCopy ? { name: searchCopyFrom! } : undefined
+    const isGetProjectEnabled = isUpdate || isCopy
+    const { data, isLoading } = useGetProject(getProjectParams, { enabled: isGetProjectEnabled })
+    const projectData = isGetProjectEnabled ? data : undefined
     const { data: imageData } = useQueryDockerImage()
 
     const { mutateAsync: addProject, isPending: isAddPending } = useAddProject({
@@ -159,6 +163,7 @@ const Page: FC = () => {
 
     useEffect(() => {
         const content = projectData?.content ?? defaultComposeContent
+        const formName = isUpdate ? (projectData?.name ?? searchName) : undefined
 
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setYamlValue(content)
@@ -166,12 +171,12 @@ const Page: FC = () => {
         try {
             const compose = parseComposeYaml(content)
             setComposeData(compose)
-            form.setFieldsValue({ ...composeToFormData(compose), name: projectData?.name ?? searchName })
+            form.setFieldsValue({ ...composeToFormData(compose), name: formName })
         } catch {
             setComposeData(undefined)
-            form.setFieldsValue({ name: projectData?.name ?? searchName })
+            form.setFieldsValue({ name: formName })
         }
-    }, [projectData, form, searchName])
+    }, [projectData, form, searchName, isUpdate])
 
     useEffect(() => {
         if (!monacoInstance) return
@@ -263,9 +268,9 @@ const Page: FC = () => {
 
     return (
         <div className="flex h-full flex-col gap-4 pt-4">
-            <title>{isUpdate ? "编辑项目" : "新增项目"}</title>
+            <title>{isUpdate ? "编辑项目" : isCopy ? "复制项目" : "新增项目"}</title>
             <div className="flex flex-wrap items-center gap-2 px-4">
-                <div>{isUpdate ? "编辑项目" : "新增项目"}</div>
+                <div>{isUpdate ? "编辑项目" : isCopy ? "复制项目" : "新增项目"}</div>
                 <div className="ml-auto flex flex-wrap gap-2">
                     <Button disabled={isRequesting} onClick={onSyncYamlToForm}>
                         从 YAML 同步

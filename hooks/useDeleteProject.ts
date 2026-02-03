@@ -7,6 +7,28 @@ import { deleteProjectAction } from "@/actions/deleteProject"
 
 import { deleteProjectSchema } from "@/schemas/deleteProject"
 
+/** 删除项目提示文本 */
+export interface DeleteProjectNotice {
+    loading: string
+    success: string
+}
+
+function getDeleteProjectNotice(variables?: Parameters<typeof deleteProjectClient>[0]): DeleteProjectNotice {
+    const isCleanup = variables?.cleanup
+
+    if (isCleanup) {
+        return {
+            loading: "删除项目并清理容器中...",
+            success: "删除项目并清理容器成功",
+        }
+    }
+
+    return {
+        loading: "删除项目中...",
+        success: "删除项目成功",
+    }
+}
+
 export const deleteProjectClient = createRequestFn({
     fn: deleteProjectAction,
     schema: deleteProjectSchema,
@@ -29,23 +51,27 @@ export function useDeleteProject<TOnMutateResult = unknown>({
     return useMutation({
         mutationFn: deleteProjectClient,
         onMutate(variables, context) {
+            const notice = getDeleteProjectNotice(variables)
+
             message.open({
                 key,
                 type: "loading",
-                content: "删除项目中...",
+                content: notice.loading,
                 duration: 0,
             })
 
             return onMutate?.(variables, context) as TOnMutateResult | Promise<TOnMutateResult>
         },
         onSuccess(data, variables, onMutateResult, context) {
+            const notice = getDeleteProjectNotice(variables)
+
             context.client.invalidateQueries({ queryKey: ["query-project"] })
             context.client.invalidateQueries({ queryKey: ["get-project", data.name] })
 
             message.open({
                 key,
                 type: "success",
-                content: "删除项目成功",
+                content: notice.success,
             })
 
             return onSuccess?.(data, variables, onMutateResult, context)
