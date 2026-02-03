@@ -16,7 +16,8 @@ export const CookiePrefix = process.env.COOKIE_PREFIX
 
 export const JwtSecrect = process.env.JWT_SECRET!
 
-export const IsIntranet = !!process.env.IS_INTRANET
+export const IsIntranet =
+    !!process.env.IS_INTRANET?.trim() && process.env.IS_INTRANET?.trim() !== "0" && process.env.IS_INTRANET?.trim().toLowerCase() !== "false"
 
 export const IsBun = typeof Bun !== "undefined"
 
