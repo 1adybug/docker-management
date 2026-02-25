@@ -34,7 +34,7 @@
         "@tabler/icons-react": "^3.37.1",
         "@tanstack/react-query": "^5.90.21",
         "@uiw/react-json-view": "^2.0.0-alpha.41",
-        "antd": "^6.3.0",
+        "antd": "^6.3.1",
         "better-auth": "^1.4.19",
         "better-sqlite3": "^12.6.2",
         "dayjs": "^1.11.19",
@@ -50,7 +50,7 @@
         "soda-next": "^0.7.22",
         "soda-nodejs": "^0.8.9",
         "soda-tailwind": "^0.0.3",
-        "soda-tanstack-query": "^0.0.8",
+        "soda-tanstack-query": "^0.0.9",
         "source-han-sans-sc-vf": "^0.0.1",
         "uuid": "^13.0.0",
         "zod": "^4.3.6"
