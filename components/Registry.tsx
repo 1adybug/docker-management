@@ -44,7 +44,7 @@ const Registry: FC<RegistryProps> = ({ children }) => {
     return (
         <QueryClientProvider client={queryClient}>
             <AntdRegistry hashPriority="high">
-                <ConfigProvider locale={zhCN} theme={{ token: { fontFamily: "Source Han Sans VF" } }}>
+                <ConfigProvider locale={zhCN} theme={{ token: { fontFamily: "Source Han Sans SC VF" } }}>
                     {context}
                     {children}
                 </ConfigProvider>

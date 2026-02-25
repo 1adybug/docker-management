@@ -166,7 +166,7 @@ const Page: FC = () => {
                         onClick={() =>
                             setInfo({
                                 title: "错误参数",
-                                children: <JsonView className="!font-['Source_Han_Sans_VF']" value={JSON.parse(value)} />,
+                                children: <JsonView className="!font-['Source_Han_Sans_SC_VF']" value={JSON.parse(value)} />,
                             })
                         }
                     >
