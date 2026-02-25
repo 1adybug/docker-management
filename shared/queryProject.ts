@@ -34,8 +34,8 @@ export interface GetProjectUserMapParams {
 }
 
 export interface GetOperationUserNameParams {
-    username?: string
-    phone?: string
+    name?: string
+    phoneNumber?: string
 }
 
 function getProjectNameFromParams(params?: string) {
@@ -50,11 +50,11 @@ function getProjectNameFromParams(params?: string) {
     }
 }
 
-function getOperationUserName({ username, phone }: GetOperationUserNameParams) {
-    const cleanUsername = username?.trim()
-    if (cleanUsername) return cleanUsername
-    const cleanPhone = phone?.trim()
-    return cleanPhone || undefined
+function getOperationUserName({ name, phoneNumber }: GetOperationUserNameParams) {
+    const cleanName = name?.trim()
+    if (cleanName) return cleanName
+    const cleanPhoneNumber = phoneNumber?.trim()
+    return cleanPhoneNumber || undefined
 }
 
 async function getProjectUserMap({ names }: GetProjectUserMapParams) {
@@ -81,8 +81,8 @@ async function getProjectUserMap({ names }: GetProjectUserMapParams) {
         select: {
             action: true,
             params: true,
-            username: true,
-            phone: true,
+            name: true,
+            phoneNumber: true,
         },
     })
 
@@ -93,8 +93,8 @@ async function getProjectUserMap({ names }: GetProjectUserMapParams) {
         if (!name || !nameSet.has(name)) continue
 
         const userName = getOperationUserName({
-            username: log.username ?? undefined,
-            phone: log.phone ?? undefined,
+            name: log.name ?? undefined,
+            phoneNumber: log.phoneNumber ?? undefined,
         })
 
         if (!userName) continue

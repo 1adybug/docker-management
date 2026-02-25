@@ -122,3 +122,11 @@ model Verification {
     @@index([identifier])
     @@map("verification")
 }
+
+model Project {
+    id        String   @id @default(uuid()) // 主键ID
+    createdAt DateTime @default(now()) // 创建时间
+    updatedAt DateTime @updatedAt // 更新时间
+    name      String   @unique // 项目名称
+    content   String // docker-compose.yml 内容
+}
