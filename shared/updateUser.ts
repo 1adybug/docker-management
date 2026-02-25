@@ -1,26 +1,61 @@
+import { assignFnName } from "deepsea-tools"
+import { headers } from "next/headers"
+
 import { prisma } from "@/prisma"
 
-import { UpdateUserParams } from "@/schemas/updateUser"
+import { UpdateUserParams, updateUserSchema } from "@/schemas/updateUser"
+import { UserRole } from "@/schemas/userRole"
 
+import { auth } from "@/server/auth"
+import { createFilter } from "@/server/createFilter"
+import { createRateLimit } from "@/server/createRateLimit"
 import { isAdmin } from "@/server/isAdmin"
 
 import { ClientError } from "@/utils/clientError"
 
-export async function updateUser({ id, username, phone, role }: UpdateUserParams) {
+export async function updateUser({ id, name, phoneNumber, role }: UpdateUserParams) {
     const user = await prisma.user.findUnique({ where: { id } })
     if (!user) throw new ClientError("用户不存在")
-    const count = await prisma.user.count({ where: { username, id: { not: id } } })
-    if (count > 0) throw new ClientError("用户名已存在")
-    const count2 = await prisma.user.count({ where: { phone, id: { not: id } } })
-    if (count2 > 0) throw new ClientError("手机号已存在")
 
-    if (role === "USER" && user.role === "ADMIN") {
-        const count = await prisma.user.count({ where: { role: "ADMIN" } })
-        if (count === 1) throw new ClientError("不能将最后一个管理员降级为普通用户")
+    const phoneNumberCount = await prisma.user.count({ where: { phoneNumber: phoneNumber, id: { not: id } } })
+    if (phoneNumberCount > 0) throw new ClientError("手机号已存在")
+
+    if (role === UserRole.用户 && user.role === UserRole.管理员) {
+        const adminCount = await prisma.user.count({ where: { role: UserRole.管理员 } })
+        if (adminCount === 1) throw new ClientError("不能将最后一个管理员降级为普通用户")
     }
 
-    const response = await prisma.user.update({ where: { id }, data: { username, phone, role } })
-    return response
+    try {
+        await auth.api.adminUpdateUser({
+            body: {
+                userId: id,
+                data: {
+                    name,
+                    phoneNumber,
+                    role,
+                },
+            },
+            headers: await headers(),
+        })
+
+        const user3 = await prisma.user.findUniqueOrThrow({ where: { id } })
+        return user3
+    } catch (error) {
+        throw new ClientError({
+            message: "更新用户失败",
+            origin: error,
+        })
+    }
 }
 
-updateUser.filter = isAdmin
+assignFnName(updateUser, "updateUser")
+
+updateUser.schema = updateUserSchema
+
+updateUser.filter = createFilter(isAdmin)
+
+updateUser.rateLimit = createRateLimit({
+    limit: 30,
+    windowMs: 60_000,
+    message: "更新用户操作过于频繁，请稍后再试",
+})

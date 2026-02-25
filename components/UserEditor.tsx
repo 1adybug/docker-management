@@ -11,7 +11,7 @@ import { useGetUser } from "@/hooks/useGetUser"
 import { useUpdateUser } from "@/hooks/useUpdateUser"
 
 import { AddUserParams } from "@/schemas/addUser"
-import { phoneSchema } from "@/schemas/phone"
+import { phoneNumberSchema } from "@/schemas/phoneNumber"
 import { UpdateUserParams } from "@/schemas/updateUser"
 import { usernameSchema } from "@/schemas/username"
 
@@ -25,12 +25,13 @@ export interface UserEditorProps extends Omit<ComponentProps<typeof Modal>, "tit
 const UserEditor: FC<UserEditorProps> = ({
     id,
     open,
-    maskClosable = true,
+    mask = { enabled: true, closable: true, blur: true },
     onClose,
     okButtonProps: { loading: okButtonLoading, ...okButtonProps } = {},
     cancelButtonProps: { disabled: cancelButtonDisabled, ...cancelButtonProps } = {},
     ...rest
 }) => {
+    const { enabled, closable, blur } = typeof mask === "boolean" ? { enabled: mask, closable: true, blur: true } : mask
     const isUpdate = isNonNullable(id)
     const [form] = useForm<AddUserParams>()
     const { data, isLoading } = useGetUser(id, { enabled: !!open })
@@ -69,7 +70,7 @@ const UserEditor: FC<UserEditorProps> = ({
         <Modal
             title={`${isUpdate ? "修改用户" : "新增用户"}`}
             open={open}
-            maskClosable={maskClosable && !isPending}
+            mask={{ enabled, closable: closable && !isPending, blur }}
             onOk={() => form.submit()}
             okButtonProps={{ loading: isRequesting || okButtonLoading, ...okButtonProps }}
             cancelButtonProps={{ disabled: isPending || cancelButtonDisabled, ...cancelButtonProps }}
@@ -77,10 +78,10 @@ const UserEditor: FC<UserEditorProps> = ({
             {...rest}
         >
             <Form<AddUserParams> form={form} disabled={isRequesting} labelCol={{ flex: "56px" }} onFinish={onFinish}>
-                <FormItem<AddUserParams> name="username" label="用户名" rules={[schemaToRule(usernameSchema)]}>
+                <FormItem<AddUserParams> name="name" label="用户名" rules={[schemaToRule(usernameSchema)]}>
                     <Input autoComplete="off" allowClear />
                 </FormItem>
-                <FormItem<AddUserParams> name="phone" label="手机号" rules={[schemaToRule(phoneSchema)]}>
+                <FormItem<AddUserParams> name="phoneNumber" label="手机号" rules={[schemaToRule(phoneNumberSchema)]}>
                     <Input autoComplete="off" allowClear />
                 </FormItem>
                 <FormItem<AddUserParams> name="role" label="角色">

@@ -1,4 +1,4 @@
-import { getPagination } from "deepsea-tools"
+import { assignFnName, getPagination } from "deepsea-tools"
 
 import { prisma } from "@/prisma"
 import { getOperationLogWhere } from "@/prisma/getOperationLogWhere"
@@ -7,8 +7,9 @@ import { OperationLogOrderByWithRelationInput } from "@/prisma/generated/interna
 
 import { defaultPageNum } from "@/schemas/pageNum"
 import { defaultPageSize } from "@/schemas/pageSize"
-import { QueryOperationLogParams } from "@/schemas/queryOperationLog"
+import { QueryOperationLogParams, queryOperationLogSchema } from "@/schemas/queryOperationLog"
 
+import { createFilter } from "@/server/createFilter"
 import { getCurrentUser } from "@/server/getCurrentUser"
 import { isAdmin } from "@/server/isAdmin"
 
@@ -18,7 +19,7 @@ export async function queryOperationLog({
     action = "",
     ip = "",
     userAgent = "",
-    username = "",
+    name = "",
     pageNum = defaultPageNum,
     pageSize = defaultPageSize,
     sortBy = "createdAt",
@@ -40,10 +41,10 @@ export async function queryOperationLog({
                 .split(" ")
                 .filter(Boolean)
                 .map(item => ({ userAgent: { contains: item } })),
-            ...username
+            ...name
                 .split(" ")
                 .filter(Boolean)
-                .map(item => ({ username: { contains: item } })),
+                .map(item => ({ name: { contains: item } })),
         ],
         createdAt: {
             gte: createdAfter,
@@ -75,10 +76,10 @@ export async function queryOperationLog({
                 [sortBy]: sortOrder,
             })
         } else {
-            if (sortBy === "username") {
+            if (sortBy === "name") {
                 orderBy.unshift({
                     user: {
-                        username: sortOrder,
+                        name: sortOrder,
                     },
                 })
             }
@@ -110,4 +111,8 @@ export async function queryOperationLog({
 
 export type OperationLog = Awaited<ReturnType<typeof queryOperationLog>>["list"][number]
 
-queryOperationLog.filter = isAdmin
+assignFnName(queryOperationLog, "queryOperationLog")
+
+queryOperationLog.schema = queryOperationLogSchema
+
+queryOperationLog.filter = createFilter(isAdmin)

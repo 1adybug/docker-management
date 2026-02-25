@@ -21,8 +21,8 @@ model OperationLog {
     params      String? // 请求参数
     ip          String? // IP地址
     userAgent   String? // User Agent
-    username    String? // 用户名
-    phone       String? // 手机号
+    name        String? // 用户名
+    phoneNumber String? // 手机号
     role        Role? // 角色
     userId      String? // 用户ID
     user        User?    @relation(fields: [userId], references: [id])
@@ -38,43 +38,87 @@ model ErrorLog {
     params      String? // 请求参数
     ip          String? // IP地址
     userAgent   String? // User Agent
-    username    String? // 用户名
-    phone       String? // 手机号
+    name        String? // 用户名
+    phoneNumber String? // 手机号
     role        Role? // 角色
     userId      String? // 用户ID
     user        User?    @relation(fields: [userId], references: [id])
 }
 
 enum Role {
-    USER
-    ADMIN
+    admin
+    user
 }
 
 model User {
-    id            String         @id @default(uuid())
-    createdAt     DateTime       @default(now())
-    updatedAt     DateTime       @updatedAt
-    username      String         @unique
-    phone         String         @unique
-    role          Role           @default(USER)
-    operationLogs OperationLog[]
-    errorLogs     ErrorLog[]
-    captcha       Captcha?
+    id                  String         @id @default(uuid())
+    createdAt           DateTime       @default(now())
+    updatedAt           DateTime       @updatedAt
+    name                String         @unique
+    email               String
+    emailVerified       Boolean        @default(false)
+    image               String?
+    operationLogs       OperationLog[]
+    errorLogs           ErrorLog[]
+    sessions            Session[]
+    accounts            Account[]
+    banned              Boolean?       @default(false)
+    banReason           String?
+    banExpires          DateTime?
+    role                Role           @default(user)
+    phoneNumber         String
+    phoneNumberVerified Boolean?
+
+    @@unique([email])
+    @@unique([phoneNumber])
+    @@map("user")
 }
 
-model Captcha {
-    id        String   @id @default(uuid())
-    createdAt DateTime @default(now())
-    code      String
-    expiredAt DateTime
-    userId    String   @unique
-    user      User     @relation(fields: [userId], references: [id])
+model Session {
+    id             String   @id
+    expiresAt      DateTime
+    token          String
+    createdAt      DateTime @default(now())
+    updatedAt      DateTime @updatedAt
+    ipAddress      String?
+    userAgent      String?
+    userId         String
+    user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    impersonatedBy String?
+
+    @@unique([token])
+    @@index([userId])
+    @@map("session")
 }
 
-model Project {
-    id        String   @id @default(uuid()) // 主键ID
-    createdAt DateTime @default(now()) // 创建时间
-    updatedAt DateTime @updatedAt // 更新时间
-    name      String   @unique // 项目名称
-    content   String // docker-compose.yml 内容
+model Account {
+    id                    String    @id
+    accountId             String
+    providerId            String
+    userId                String
+    user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+    accessToken           String?
+    refreshToken          String?
+    idToken               String?
+    accessTokenExpiresAt  DateTime?
+    refreshTokenExpiresAt DateTime?
+    scope                 String?
+    password              String?
+    createdAt             DateTime  @default(now())
+    updatedAt             DateTime  @updatedAt
+
+    @@index([userId])
+    @@map("account")
+}
+
+model Verification {
+    id         String   @id
+    identifier String
+    value      String
+    expiresAt  DateTime
+    createdAt  DateTime @default(now())
+    updatedAt  DateTime @updatedAt
+
+    @@index([identifier])
+    @@map("verification")
 }

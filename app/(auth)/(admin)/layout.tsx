@@ -2,6 +2,8 @@ import { FC, ReactNode } from "react"
 
 import { redirect } from "next/navigation"
 
+import { UserRole } from "@/schemas/userRole"
+
 import { getCurrentUser } from "@/server/getCurrentUser"
 
 export interface LayoutProps {
@@ -10,7 +12,7 @@ export interface LayoutProps {
 
 const Layout: FC<LayoutProps> = async ({ children }) => {
     const user = await getCurrentUser()
-    if (user?.role !== "ADMIN") return redirect("/")
+    if (user?.role !== UserRole.管理员) return redirect("/")
     return children
 }
 

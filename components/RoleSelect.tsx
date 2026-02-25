@@ -1,7 +1,7 @@
 import { createEnumSelect } from "soda-antd"
 
-import { Role } from "@/schemas/role"
+import { UserRole } from "@/schemas/userRole"
 
-const RoleSelect = createEnumSelect(Role)
+const RoleSelect = createEnumSelect(UserRole)
 
 export default RoleSelect

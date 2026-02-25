@@ -33,7 +33,7 @@ export const queryErrorLogSchema = z.object(
             .trim()
             .max(255, { message: `UserAgent 长度不能超过 ${255} 个字符` })
             .optional(),
-        username: z
+        name: z
             .string({ message: "无效的用户名" })
             .trim()
             .max(63, { message: `用户名长度不能超过 ${63} 个字符` })

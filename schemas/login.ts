@@ -1,12 +1,12 @@
 import { getParser } from "."
-import { z } from "zod/v4"
+import { z } from "zod"
 
 import { accountSchema } from "./account"
-import { captchaSchema } from "./captcha"
+import { otpSchema } from "./otp"
 
 export const loginSchema = z.object({
     account: accountSchema,
-    captcha: captchaSchema,
+    otp: otpSchema,
 })
 
 export type LoginParams = z.infer<typeof loginSchema>

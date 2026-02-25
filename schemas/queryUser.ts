@@ -3,19 +3,20 @@ import { z } from "zod/v4"
 
 import { createdAfterSchema } from "./createdAfter"
 import { createdBeforeSchema } from "./createdBefore"
-import { idSchema } from "./id"
 import { pageNumSchema } from "./pageNum"
 import { pageSizeSchema } from "./pageSize"
 import { sortOrderSchema } from "./sortOrder"
 import { updatedAfterSchema } from "./updatedAfter"
 import { updatedBeforeSchema } from "./updatedBefore"
+import { userIdSchema } from "./userId"
 import { userSortBySchema } from "./userSortBy"
 
 export const queryUserSchema = z.object(
     {
-        id: idSchema.optional(),
-        username: z.string({ message: "无效的用户名" }).trim().optional(),
-        phone: z.string({ message: "无效的手机号" }).trim().optional(),
+        id: userIdSchema.optional(),
+        name: z.string({ message: "无效的用户名" }).trim().optional(),
+        email: z.string({ message: "无效的邮箱" }).trim().optional(),
+        phoneNumber: z.string({ message: "无效的手机号" }).trim().optional(),
         createdBefore: createdBeforeSchema.optional(),
         createdAfter: createdAfterSchema.optional(),
         updatedBefore: updatedBeforeSchema.optional(),

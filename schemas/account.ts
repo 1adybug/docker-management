@@ -1,10 +1,10 @@
 import { getParser } from "."
-import { z } from "zod/v4"
+import { z } from "zod"
 
-import { phoneSchema } from "./phone"
+import { phoneNumberSchema } from "./phoneNumber"
 import { usernameSchema } from "./username"
 
-export const accountSchema = z.union([usernameSchema, phoneSchema], { message: "无效的用户名或手机号" })
+export const accountSchema = z.union([usernameSchema, phoneNumberSchema], "无效的用户名或手机号")
 
 export type AccountParams = z.infer<typeof accountSchema>
 

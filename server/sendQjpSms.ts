@@ -1,3 +1,5 @@
+import { QjpSmsUrl } from "@/constants"
+
 export interface SendQjpSmsParams {
     phone: string | string[]
     content: string
@@ -18,7 +20,7 @@ export async function sendQjpSms({ phone, content }: SendQjpSmsParams) {
     const invalidPhones = phone.filter(p => !phoneReg.test(p))
     if (invalidPhones.length > 0) throw new Error(`invalid phone${invalidPhones.length > 1 ? "s" : ""}: ${invalidPhones.join(",")}`)
     phone = phone.join(",")
-    const url = new URL(process.env.QJP_SMS_URL!)
+    const url = new URL(QjpSmsUrl!)
     url.searchParams.set("u_key", "")
     url.searchParams.set("a_key", "")
     url.searchParams.set("mobiles", phone)

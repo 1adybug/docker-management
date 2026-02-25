@@ -1,18 +1,51 @@
+import { assignFnName } from "deepsea-tools"
+
 import { prisma } from "@/prisma"
 
-import { AddUserParams } from "@/schemas/addUser"
+import { AddUserParams, addUserSchema } from "@/schemas/addUser"
 
+import { auth } from "@/server/auth"
+import { createFilter } from "@/server/createFilter"
+import { getRandomPassword } from "@/server/getRandomPassword"
+import { getTempEmail } from "@/server/getTempEmail"
 import { isAdmin } from "@/server/isAdmin"
 
 import { ClientError } from "@/utils/clientError"
 
-export async function addUser({ username, phone, role }: AddUserParams) {
-    const count = await prisma.user.count({ where: { username } })
-    if (count > 0) throw new ClientError("用户名已存在")
-    const count2 = await prisma.user.count({ where: { phone } })
-    if (count2 > 0) throw new ClientError("手机号已存在")
-    const user = await prisma.user.create({ data: { username, phone, role } })
-    return user
+export async function addUser({ name, phoneNumber, role }: AddUserParams) {
+    const phoneNumberCount = await prisma.user.count({ where: { phoneNumber } })
+    if (phoneNumberCount > 0) throw new ClientError("手机号已被注册")
+
+    const email = getTempEmail(phoneNumber)
+    const emailCount = await prisma.user.count({ where: { email: email } })
+    if (emailCount > 0) throw new ClientError("邮箱已被注册")
+
+    try {
+        const { user } = await auth.api.createUser({
+            body: {
+                name,
+                email,
+                password: getRandomPassword(),
+                role,
+                data: {
+                    phoneNumber,
+                },
+            },
+        })
+
+        const user2 = await prisma.user.findUniqueOrThrow({ where: { id: user.id } })
+
+        return user2
+    } catch (error) {
+        throw new ClientError({
+            message: "新增用户失败",
+            origin: error,
+        })
+    }
 }
 
-addUser.filter = isAdmin
+assignFnName(addUser, "addUser")
+
+addUser.schema = addUserSchema
+
+addUser.filter = createFilter(isAdmin)

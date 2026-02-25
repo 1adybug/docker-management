@@ -13,31 +13,44 @@ import { getParser } from "@/schemas"
 
 import { addErrorLog } from "@/server/addErrorLog"
 import { addOperationLog } from "@/server/addOperationLog"
+import { FilterConfig } from "@/server/createFilter"
+import { checkRateLimit, isGlobalRateLimitEnabled, RateLimitConfig } from "@/server/createRateLimit"
 import { getCurrentUser } from "@/server/getCurrentUser"
+import { getIp } from "@/server/getIp"
 
 import { ClientError } from "@/utils/clientError"
 
 export interface OriginalResponseFn<T extends [arg?: unknown], P> {
     (...args: T): Promise<P>
-    filter?: boolean | ((user: User) => boolean)
+    schema?: T extends [] ? undefined : $ZodType<T[0]>
+    filter?: FilterConfig
+    rateLimit?: boolean | RateLimitConfig
 }
 
 export interface ResponseFn<T extends [arg?: unknown], P> {
     (...args: T): Promise<ResponseData<P>>
-    filter?: boolean | ((user: User) => boolean)
+    filter?: FilterConfig
+    rateLimit?: boolean | RateLimitConfig
 }
 
 const globalResponseFnMiddlewares: Middleware[] = []
 
-export interface CreateResponseFnParams<T extends [arg?: unknown], P> {
-    fn: OriginalResponseFn<T, P>
-    schema?: T extends [] ? undefined : $ZodType<T[0]>
-    name?: string
+const responseContextUser = Symbol("responseContextUser")
+
+export interface ResponseContextWithUser {
+    [responseContextUser]?: Promise<User | undefined>
 }
 
-export function createResponseFn<T extends [arg?: unknown], P>({ fn, schema, name }: CreateResponseFnParams<T, P>): ResponseFn<T, P> {
+async function getCachedCurrentUser(context: unknown) {
+    const contextWithUser = context as ResponseContextWithUser
+    if (!contextWithUser[responseContextUser]) contextWithUser[responseContextUser] = getCurrentUser()
+    return contextWithUser[responseContextUser]
+}
+
+export function createResponseFn<T extends [arg?: unknown], P>(fn: OriginalResponseFn<T, P>): ResponseFn<T, P> {
     async function response(...args: T) {
         args = args.slice(0, 1) as T
+        const schema = fn.schema
         if (args.length > 0 && schema) args = [getParser(schema)(args[0])] as unknown as T
         const data = await fn!(...args)
         return {
@@ -47,15 +60,16 @@ export function createResponseFn<T extends [arg?: unknown], P>({ fn, schema, nam
         }
     }
 
-    assignFnName(response, name ?? fn)
+    assignFnName(response, fn.name || fn)
 
     const newResponse = createFnWithMiddleware(response, {
         global: globalResponseFnMiddlewares,
     })
 
-    assignFnName(newResponse, name ?? fn)
+    assignFnName(newResponse, fn.name || fn)
 
     Object.defineProperty(response, "filter", { value: fn.filter })
+    Object.defineProperty(response, "rateLimit", { value: fn.rateLimit })
 
     return newResponse
 }
@@ -72,7 +86,7 @@ createResponseFn.use(async context =>
     }))
 
 createResponseFn.use(async (context, next) => {
-    const user = await getCurrentUser()
+    const user = await getCachedCurrentUser(context)
     const filter = context.fn.filter ?? true
 
     if (typeof filter === "function") {
@@ -80,6 +94,32 @@ createResponseFn.use(async (context, next) => {
         if (!filter(user)) throw new ClientError({ message: "无权限", code: 403 })
     } else {
         if (filter === true && !user) throw new ClientError({ message: "请先登录", code: 401 })
+    }
+
+    await next()
+})
+
+createResponseFn.use(async (context, next) => {
+    if (!isGlobalRateLimitEnabled()) {
+        await next()
+        return
+    }
+
+    const rateLimitResult = await checkRateLimit({
+        context: {
+            action: context.fn.name,
+            args: context.args,
+            user: await getCachedCurrentUser(context),
+            ip: await getIp(),
+        },
+        rateLimit: context.fn.rateLimit,
+    })
+
+    if (rateLimitResult && !rateLimitResult.allowed) {
+        throw new ClientError({
+            message: rateLimitResult.message,
+            code: 429,
+        })
     }
 
     await next()

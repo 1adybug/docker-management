@@ -4,19 +4,17 @@ import { ComponentProps, FC } from "react"
 
 import { Button } from "antd"
 import { clsx, StrictOmit } from "deepsea-tools"
-import { usePathname } from "next/navigation"
-
-import { logoutAction } from "@/actions/logout"
-
-import { useGetUserOwn } from "@/hooks/useGetUserOwn"
+import { usePathname, useRouter } from "next/navigation"
 
 import { User } from "@/prisma/generated/client"
 
 import { isAdmin } from "@/server/isAdmin"
 
+import { authClient } from "@/utils/authClient"
 import { getPathnameAndSearchParams } from "@/utils/getPathnameAndSearchParams"
 
 import Brand from "./Brand"
+import { useUser } from "./UserProvider"
 
 interface NavItem {
     href: string
@@ -28,21 +26,6 @@ const navs: NavItem[] = [
     {
         href: "/",
         name: "首页",
-    },
-    {
-        href: "/project",
-        name: "项目管理",
-        filter: isAdmin,
-    },
-    {
-        href: "/container",
-        name: "容器管理",
-        filter: isAdmin,
-    },
-    {
-        href: "/image",
-        name: "镜像管理",
-        filter: isAdmin,
     },
     {
         href: "/user",
@@ -64,9 +47,14 @@ const navs: NavItem[] = [
 export interface HeaderProps extends StrictOmit<ComponentProps<"header">, "children"> {}
 
 const Header: FC<HeaderProps> = ({ className, ...rest }) => {
+    const router = useRouter()
     const pathname = usePathname()
+    const user = useUser()
 
-    const { data } = useGetUserOwn()
+    async function signOut() {
+        await authClient.signOut({})
+        router.refresh()
+    }
 
     return (
         <header className={clsx("flex h-16 items-center gap-2 px-4", className)} {...rest}>
@@ -74,7 +62,7 @@ const Header: FC<HeaderProps> = ({ className, ...rest }) => {
             <div className="flex flex-auto items-center gap-2">
                 {navs.map(
                     ({ href, name, filter }) =>
-                        (!filter || (!!data && filter(data))) && (
+                        (!filter || filter(user)) && (
                             <Button
                                 key={href}
                                 type="link"
@@ -88,8 +76,8 @@ const Header: FC<HeaderProps> = ({ className, ...rest }) => {
                 )}
             </div>
             <div className="flex items-center gap-2">
-                <div>{data?.username}</div>
-                <Button size="small" color="orange" variant="filled" onClick={logoutAction}>
+                <div>{user?.name}</div>
+                <Button size="small" color="orange" variant="filled" onClick={signOut}>
                     注销
                 </Button>
             </div>

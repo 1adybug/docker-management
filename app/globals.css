@@ -42,3 +42,7 @@ button:disabled {
 .ant-modal-body {
     margin-top: 20px;
 }
+
+.ant-table-body .ant-table-cell:empty::before {
+    content: "-";
+}

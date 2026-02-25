@@ -10,7 +10,7 @@ import { Columns, getTimeRange, useScroll } from "soda-antd"
 import { transformState } from "soda-hooks"
 import { useQueryState } from "soda-next"
 
-import Userw from "@/components/User"
+import Userw from "@/components/UserButton"
 
 import { useQueryErrorLog } from "@/hooks/useQueryErrorLog"
 
@@ -18,17 +18,25 @@ import { getParser } from "@/schemas"
 import { ErrorLogSortByParams, errorLogSortBySchema } from "@/schemas/errorLogSortBy"
 import { pageNumParser } from "@/schemas/pageNum"
 import { pageSizeParser } from "@/schemas/pageSize"
-import { Role } from "@/schemas/role"
 import { SortOrderParams, sortOrderSchema } from "@/schemas/sortOrder"
+import { UserRole } from "@/schemas/userRole"
 
 import { ErrorLog } from "@/shared/queryErrorLog"
 
 import { getSortOrder } from "@/utils/getSortOrder"
 
+function parseJson(value: string) {
+    try {
+        return JSON.parse(value)
+    } catch {
+        return value
+    }
+}
+
 const Page: FC = () => {
     const [query, setQuery] = transformState(
         useQueryState({
-            keys: ["type", "message", "action", "ip", "userAgent", "username"],
+            keys: ["type", "message", "action", "ip", "userAgent", "name"],
             parse: {
                 createdBefore: naturalParser,
                 createdAfter: naturalParser,
@@ -83,28 +91,25 @@ const Page: FC = () => {
         },
         {
             title: "用户",
-            dataIndex: "username",
+            dataIndex: "name",
             align: "center",
             sorter: true,
-            sortOrder: getSortOrder(query, "username"),
+            sortOrder: getSortOrder(query, "name"),
             render(value, record) {
-                return record.userId && value ? <Userw data={{ id: record.userId, username: value }} /> : "—"
+                return !!record.userId && !!value && <Userw data={{ id: record.userId, name: value }} />
             },
         },
         {
             title: "手机号",
-            dataIndex: "phone",
+            dataIndex: "phoneNumber",
             align: "center",
-            render(value) {
-                return value || "—"
-            },
         },
         {
             title: "角色",
             dataIndex: "role",
             align: "center",
             render(value) {
-                return (value && getEnumKey(Role, value)) || "—"
+                return value && getEnumKey(UserRole, value)
             },
         },
         {
@@ -120,12 +125,12 @@ const Page: FC = () => {
             align: "center",
             ellipsis: true,
             render(value) {
-                if (!value) return "—"
-
                 return (
-                    <Button type="link" size="small" className="!px-0" onClick={() => setInfo({ title: "错误消息", children: value })}>
-                        <span className="line-clamp-1 max-w-48 break-all">{value}</span>
-                    </Button>
+                    !!value && (
+                        <Button type="link" size="small" className="!px-0" onClick={() => setInfo({ title: "错误消息", children: value })}>
+                            <span className="line-clamp-1 max-w-48 break-all">{value}</span>
+                        </Button>
+                    )
                 )
             },
         },
@@ -135,12 +140,12 @@ const Page: FC = () => {
             align: "center",
             ellipsis: true,
             render(value) {
-                if (!value) return "—"
-
                 return (
-                    <Button type="link" size="small" className="!px-0" onClick={() => setInfo({ title: "错误堆栈", children: value })}>
-                        <span className="line-clamp-1 max-w-48 break-all">{value}</span>
-                    </Button>
+                    !!value && (
+                        <Button type="link" size="small" className="!px-0" onClick={() => setInfo({ title: "错误堆栈", children: value })}>
+                            <span className="line-clamp-1 max-w-48 break-all">{value}</span>
+                        </Button>
+                    )
                 )
             },
         },
@@ -157,21 +162,21 @@ const Page: FC = () => {
             align: "center",
             ellipsis: true,
             render(value) {
-                if (!value) return "—"
-
                 return (
-                    <Button
-                        type="link"
-                        size="small"
-                        onClick={() =>
-                            setInfo({
-                                title: "错误参数",
-                                children: <JsonView className="!font-['Source_Han_Sans_SC_VF']" value={JSON.parse(value)} />,
-                            })
-                        }
-                    >
-                        <span className="line-clamp-1 max-w-48 break-all">{value}</span>
-                    </Button>
+                    !!value && (
+                        <Button
+                            type="link"
+                            size="small"
+                            onClick={() =>
+                                setInfo({
+                                    title: "错误参数",
+                                    children: <JsonView className="!font-['Source_Han_Sans_SC_VF']" value={parseJson(value)} />,
+                                })
+                            }
+                        >
+                            <span className="line-clamp-1 max-w-48 break-all">{value}</span>
+                        </Button>
+                    )
                 )
             },
         },
@@ -189,17 +194,17 @@ const Page: FC = () => {
             sorter: true,
             sortOrder: getSortOrder(query, "userAgent"),
             render(value) {
-                return isNonNullable(value) ? (
-                    <button
-                        type="button"
-                        className="line-clamp-1 max-w-48 break-all text-blue-500"
-                        title={value}
-                        onClick={() => setInfo({ title: "UserAgent", children: value })}
-                    >
-                        {value}
-                    </button>
-                ) : (
-                    "—"
+                return (
+                    isNonNullable(value) && (
+                        <button
+                            type="button"
+                            className="line-clamp-1 max-w-48 break-all text-blue-500"
+                            title={value}
+                            onClick={() => setInfo({ title: "UserAgent", children: value })}
+                        >
+                            {value}
+                        </button>
+                    )
                 )
             },
         },
@@ -241,7 +246,7 @@ const Page: FC = () => {
                     <FormItem<FormParams> name="action" label="函数名">
                         <Input allowClear />
                     </FormItem>
-                    <FormItem<FormParams> name="username" label="用户名">
+                    <FormItem<FormParams> name="name" label="用户名">
                         <Input allowClear />
                     </FormItem>
                     <FormItem<FormParams> name="ip" label="IP">

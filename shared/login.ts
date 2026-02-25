@@ -1,27 +1,56 @@
-import { cookies } from "next/headers"
+import { assignFnName } from "deepsea-tools"
 
 import { prisma } from "@/prisma"
 
-import { LoginParams } from "@/schemas/login"
+import { LoginParams, loginSchema } from "@/schemas/login"
+import { phoneNumberRegex } from "@/schemas/phoneNumber"
 
-import { getUserFromAccount } from "@/server/getUserFromAccount"
-import { sign } from "@/server/sign"
+import { auth } from "@/server/auth"
+import { createFilter } from "@/server/createFilter"
+import { createRateLimit, RateLimitContext } from "@/server/createRateLimit"
 
 import { ClientError } from "@/utils/clientError"
-import { getCookieKey } from "@/utils/getCookieKey"
-import { redirectFromLogin } from "@/utils/redirectFromLogin"
 
-export async function login({ account, captcha }: LoginParams) {
-    const user = await getUserFromAccount(account)
-    if (!user) throw new ClientError({ message: "用户不存在", code: 404 })
-    const captchaStore = await prisma.captcha.findUnique({ where: { userId: user.id } })
-    if (!captchaStore || captchaStore.expiredAt < new Date()) throw new ClientError({ message: "验证码不存在或已过期", code: 400 })
-    if (captchaStore.code !== captcha) throw new ClientError({ message: "验证码错误", code: 400 })
-    await prisma.captcha.delete({ where: { userId: user.id } })
-    const token = await sign(user.id)
-    const cookieStore = await cookies()
-    cookieStore.set(getCookieKey("token"), token)
-    await redirectFromLogin()
+function getLoginRateLimitKey(context: RateLimitContext) {
+    const params = context.args[0] as LoginParams | undefined
+    const account = params?.account || "unknown-account"
+    const ip = context.ip || "unknown-ip"
+    return `login:${ip}:${account}`
 }
 
-login.filter = false
+export async function login({ account, otp }: LoginParams) {
+    const user = await prisma.user.findUnique({
+        where: phoneNumberRegex.test(account) ? { phoneNumber: account } : { name: account },
+    })
+
+    if (!user) throw new ClientError("账号或验证码错误")
+
+    try {
+        await auth.api.verifyPhoneNumber({
+            body: {
+                phoneNumber: user.phoneNumber,
+                code: otp,
+            },
+        })
+    } catch (error) {
+        throw new ClientError({
+            message: "账号或验证码错误",
+            origin: error,
+        })
+    }
+
+    return user
+}
+
+assignFnName(login, "login")
+
+login.schema = loginSchema
+
+login.filter = createFilter(false)
+
+login.rateLimit = createRateLimit({
+    limit: 5,
+    windowMs: 60_000,
+    message: "登录尝试过于频繁，请稍后再试",
+    getKey: getLoginRateLimitKey,
+})

@@ -43,6 +43,7 @@ export function useLogin<TOnMutateResult = unknown>({ onMutate, onSuccess, onErr
         },
         onError(error, variables, onMutateResult, context) {
             message.destroy(key)
+
             return onError?.(error, variables, onMutateResult, context)
         },
         onSettled(data, error, variables, onMutateResult, context) {

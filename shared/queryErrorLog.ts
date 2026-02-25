@@ -1,4 +1,4 @@
-import { getPagination } from "deepsea-tools"
+import { assignFnName, getPagination } from "deepsea-tools"
 
 import { prisma } from "@/prisma"
 import { getErrorLogWhere } from "@/prisma/getErrorLogWhere"
@@ -7,8 +7,9 @@ import { ErrorLogOrderByWithRelationInput } from "@/prisma/generated/internal/pr
 
 import { defaultPageNum } from "@/schemas/pageNum"
 import { defaultPageSize } from "@/schemas/pageSize"
-import { QueryErrorLogParams } from "@/schemas/queryErrorLog"
+import { QueryErrorLogParams, queryErrorLogSchema } from "@/schemas/queryErrorLog"
 
+import { createFilter } from "@/server/createFilter"
 import { isAdmin } from "@/server/isAdmin"
 
 export async function queryErrorLog({
@@ -19,7 +20,7 @@ export async function queryErrorLog({
     action = "",
     ip = "",
     userAgent = "",
-    username = "",
+    name = "",
     pageNum = defaultPageNum,
     pageSize = defaultPageSize,
     sortBy = "createdAt",
@@ -47,10 +48,10 @@ export async function queryErrorLog({
                 .split(" ")
                 .filter(Boolean)
                 .map(item => ({ userAgent: { contains: item } })),
-            ...username
+            ...name
                 .split(" ")
                 .filter(Boolean)
-                .map(item => ({ username: { contains: item } })),
+                .map(item => ({ name: { contains: item } })),
         ],
         createdAt: {
             gte: createdAfter,
@@ -70,10 +71,10 @@ export async function queryErrorLog({
                 [sortBy]: sortOrder,
             })
         } else {
-            if (sortBy === "username") {
+            if (sortBy === "name") {
                 orderBy.unshift({
                     user: {
-                        username: sortOrder,
+                        name: sortOrder,
                     },
                 })
             }
@@ -105,4 +106,8 @@ export async function queryErrorLog({
 
 export type ErrorLog = Awaited<ReturnType<typeof queryErrorLog>>["list"][number]
 
-queryErrorLog.filter = isAdmin
+assignFnName(queryErrorLog, "queryErrorLog")
+
+queryErrorLog.schema = queryErrorLogSchema
+
+queryErrorLog.filter = createFilter(isAdmin)

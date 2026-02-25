@@ -2,12 +2,12 @@ import { getParser } from "."
 import { z } from "zod/v4"
 
 import { addUserSchema } from "./addUser"
-import { idSchema } from "./id"
+import { userIdSchema } from "./userId"
 
-export const updateUserSchema = addUserSchema.merge(
+export const updateUserSchema = addUserSchema.partial().extend(
     z.object({
-        id: idSchema,
-    }),
+        id: userIdSchema,
+    }).shape,
 )
 
 export type UpdateUserParams = z.infer<typeof updateUserSchema>

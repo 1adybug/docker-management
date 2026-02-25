@@ -7,6 +7,8 @@ import { getUrl } from "@/server/getUrl"
 import { redirectFromLogin } from "@/server/redirectFromLogin"
 import { redirectToLogin } from "@/server/redirectToLogin"
 
+import UserProvider from "./UserProvider"
+
 export interface AuthProps {
     children?: ReactNode
 }
@@ -16,7 +18,8 @@ const Auth: FC<AuthProps> = async ({ children }) => {
     const url = await getUrl()
     const { pathname } = new URL(url)
     const isLogin = pathname === LoginPathname
-    if ((isLogin && !user) || (!isLogin && user)) return children
+    if (isLogin && !user) return children
+    if (!isLogin && user) return <UserProvider value={user}>{children}</UserProvider>
     if (isLogin) await redirectFromLogin()
     await redirectToLogin()
 }

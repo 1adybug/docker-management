@@ -14,9 +14,16 @@ export const defaultUserSelect = getUserSelect({
     id: true,
     createdAt: true,
     updatedAt: true,
-    username: true,
-    phone: true,
+    email: true,
+    phoneNumber: true,
     role: true,
+    name: true,
+    image: true,
+    emailVerified: true,
+    phoneNumberVerified: true,
+    banned: true,
+    banReason: true,
+    banExpires: true,
 })
 
 checkSelect<User>(defaultUserSelect)

@@ -1,7 +1,7 @@
 import { User } from "@/prisma/generated/client"
 
-import { Role } from "@/schemas/role"
+import { UserRole } from "@/schemas/userRole"
 
 export function isAdmin(user: User) {
-    return user.role === Role.管理员
+    return user.role === UserRole.管理员
 }
