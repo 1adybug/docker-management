@@ -2,6 +2,14 @@
 
 格数科技 Next.js 项目模板
 
+## 创建新项目
+
+```bash
+git clone https://github.com/1adybug/geshu-next-template.git my-new-project
+cd my-new-project
+git remote add template https://github.com/1adybug/geshu-next-template.git
+```
+
 ## env 文件
 
 项目目前主要使用服务端环境变量，建议在本地使用 `.env` 或 `.env.local`，生产环境使用部署平台注入变量。
