@@ -5,19 +5,16 @@
     "scripts": {
         "dev": "sdnext dev next dev --turbopack --hostname 0.0.0.0",
         "build": "sdnext build next build",
-        "build:standalone": "npx cross-env NEXT_OUTPUT=standalone next build",
-        "build:windows": "bun scripts/createInstaller.ts --target=windows",
-        "build:linux": "bun scripts/createInstaller.ts --target=linux",
         "start": "next start",
         "auth:secret": "node -e \"console.log(require('node:crypto').randomBytes(32).toString('hex'))\"",
         "lint": "eslint .",
         "format": "prettier --write .",
         "fg": "npm run format && git add . && git commit -m \"✨feature: format\"",
         "prepare": "husky",
-        "db:dev": "cross-env NODE_ENV=development RUST_LOG=info prisma db push",
-        "db:prod": "cross-env NODE_ENV=production RUST_LOG=info prisma db push",
-        "studio:dev": "cross-env NODE_ENV=development RUST_LOG=info prisma studio",
-        "studio:prod": "cross-env NODE_ENV=production RUST_LOG=info prisma studio",
+        "db:dev": "cross-env NODE_ENV=development prisma db push",
+        "db:prod": "cross-env NODE_ENV=production prisma db push",
+        "studio:dev": "cross-env NODE_ENV=development prisma studio",
+        "studio:prod": "cross-env NODE_ENV=production prisma studio",
         "postinstall": "prisma generate"
     },
     "dependencies": {
