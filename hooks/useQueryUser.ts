@@ -3,12 +3,7 @@ import { createUseQuery } from "soda-tanstack-query"
 
 import { queryUserAction } from "@/actions/queryUser"
 
-import { queryUserSchema } from "@/schemas/queryUser"
-
-export const queryUserClient = createRequestFn({
-    fn: queryUserAction,
-    schema: queryUserSchema,
-})
+export const queryUserClient = createRequestFn(queryUserAction)
 
 export const useQueryUser = createUseQuery({
     queryFn: queryUserClient,

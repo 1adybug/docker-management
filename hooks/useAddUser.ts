@@ -5,12 +5,7 @@ import { createRequestFn } from "deepsea-tools"
 
 import { addUserAction } from "@/actions/addUser"
 
-import { addUserSchema } from "@/schemas/addUser"
-
-export const addUserClient = createRequestFn({
-    fn: addUserAction,
-    schema: addUserSchema,
-})
+export const addUserClient = createRequestFn(addUserAction)
 
 export interface UseAddUserParams<TOnMutateResult = unknown> extends Omit<
     UseMutationOptions<Awaited<ReturnType<typeof addUserClient>>, Error, Parameters<typeof addUserClient>[0], TOnMutateResult>,

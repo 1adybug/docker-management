@@ -3,12 +3,9 @@ import { createUseQuery } from "soda-tanstack-query"
 
 import { getUserAction } from "@/actions/getUser"
 
-import { UserIdParams, userIdSchema } from "@/schemas/userId"
+import { UserIdParams } from "@/schemas/userId"
 
-export const getUserClient = createRequestFn({
-    fn: getUserAction,
-    schema: userIdSchema,
-})
+export const getUserClient = createRequestFn(getUserAction)
 
 export function getUserClientOptional(id?: UserIdParams | undefined) {
     return isNonNullable(id) ? getUserClient(id) : null

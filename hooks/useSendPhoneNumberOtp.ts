@@ -5,12 +5,7 @@ import { createRequestFn } from "deepsea-tools"
 
 import { sendPhoneNumberOtpAction } from "@/actions/sendPhoneNumberOtp"
 
-import { accountSchema } from "@/schemas/account"
-
-export const sendPhoneNumberOtpClient = createRequestFn({
-    fn: sendPhoneNumberOtpAction,
-    schema: accountSchema,
-})
+export const sendPhoneNumberOtpClient = createRequestFn(sendPhoneNumberOtpAction)
 
 export interface UseSendPhoneNumberOtpParams<TOnMutateResult = unknown> extends Omit<
     UseMutationOptions<Awaited<ReturnType<typeof sendPhoneNumberOtpClient>>, Error, Parameters<typeof sendPhoneNumberOtpClient>[0], TOnMutateResult>,

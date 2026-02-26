@@ -20,15 +20,16 @@ import { getIp } from "@/server/getIp"
 
 import { ClientError } from "@/utils/clientError"
 
-export interface OriginalResponseFn<T extends [arg?: unknown], P> {
-    (...args: T): Promise<P>
-    schema?: T extends [] ? undefined : $ZodType<T[0]>
+export interface OriginalResponseFn<TParams extends [arg?: unknown], TData> {
+    (...args: TParams): Promise<TData>
+    schema?: TParams extends [] ? undefined : $ZodType<TParams[0]>
     filter?: FilterConfig
     rateLimit?: boolean | RateLimitConfig
 }
 
-export interface ResponseFn<T extends [arg?: unknown], P> {
-    (...args: T): Promise<ResponseData<P>>
+export interface ResponseFn<TParams extends [arg?: unknown], TData> {
+    (...args: TParams): Promise<ResponseData<TData>>
+    schema?: TParams extends [] ? undefined : $ZodType<TParams[0]>
     filter?: FilterConfig
     rateLimit?: boolean | RateLimitConfig
 }
@@ -47,11 +48,11 @@ async function getCachedCurrentUser(context: unknown) {
     return contextWithUser[responseContextUser]
 }
 
-export function createResponseFn<T extends [arg?: unknown], P>(fn: OriginalResponseFn<T, P>): ResponseFn<T, P> {
-    async function response(...args: T) {
-        args = args.slice(0, 1) as T
+export function createResponseFn<TParams extends [arg?: unknown], TData>(fn: OriginalResponseFn<TParams, TData>): ResponseFn<TParams, TData> {
+    async function response(...args: TParams) {
+        args = args.slice(0, 1) as TParams
         const schema = fn.schema
-        if (args.length > 0 && schema) args = [getParser(schema)(args[0])] as unknown as T
+        if (args.length > 0 && schema) args = [getParser(schema)(args[0])] as unknown as TParams
         const data = await fn!(...args)
         return {
             success: true,
@@ -62,14 +63,19 @@ export function createResponseFn<T extends [arg?: unknown], P>(fn: OriginalRespo
 
     assignFnName(response, fn.name || fn)
 
+    Object.defineProperty(response, "schema", { value: fn.schema })
+    Object.defineProperty(response, "filter", { value: fn.filter })
+    Object.defineProperty(response, "rateLimit", { value: fn.rateLimit })
+
     const newResponse = createFnWithMiddleware(response, {
         global: globalResponseFnMiddlewares,
     })
 
     assignFnName(newResponse, fn.name || fn)
 
-    Object.defineProperty(response, "filter", { value: fn.filter })
-    Object.defineProperty(response, "rateLimit", { value: fn.rateLimit })
+    Object.defineProperty(newResponse, "schema", { value: fn.schema })
+    Object.defineProperty(newResponse, "filter", { value: fn.filter })
+    Object.defineProperty(newResponse, "rateLimit", { value: fn.rateLimit })
 
     return newResponse
 }

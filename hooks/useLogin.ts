@@ -5,12 +5,7 @@ import { createRequestFn } from "deepsea-tools"
 
 import { loginAction } from "@/actions/login"
 
-import { loginSchema } from "@/schemas/login"
-
-export const loginClient = createRequestFn({
-    fn: loginAction,
-    schema: loginSchema,
-})
+export const loginClient = createRequestFn(loginAction)
 
 export interface UseLoginParams<TOnMutateResult = unknown> extends Omit<
     UseMutationOptions<Awaited<ReturnType<typeof loginClient>>, Error, Parameters<typeof loginClient>[0], TOnMutateResult>,

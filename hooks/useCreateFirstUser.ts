@@ -5,12 +5,7 @@ import { createRequestFn } from "deepsea-tools"
 
 import { createFirstUserAction } from "@/actions/createFirstUser"
 
-import { createFirstUserSchema } from "@/schemas/createFirstUser"
-
-export const createFirstUserClient = createRequestFn({
-    fn: createFirstUserAction,
-    schema: createFirstUserSchema,
-})
+export const createFirstUserClient = createRequestFn(createFirstUserAction)
 
 export interface UseCreateFirstUserParams<TOnMutateResult = unknown> extends Omit<
     UseMutationOptions<Awaited<ReturnType<typeof createFirstUserClient>>, Error, Parameters<typeof createFirstUserClient>[0], TOnMutateResult>,
