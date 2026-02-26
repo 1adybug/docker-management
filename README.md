@@ -5,9 +5,10 @@
 ## 创建新项目
 
 ```bash
-git clone https://github.com/1adybug/geshu-next-template.git my-new-project
+git clone https://github.com/1adybug/geshu-next-template my-new-project
 cd my-new-project
-git remote add template https://github.com/1adybug/geshu-next-template.git
+git remote rename origin template
+git remote set-url --push template no_push://template
 ```
 
 ## env 文件
