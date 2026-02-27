@@ -294,7 +294,7 @@ const Page: FC = () => {
                     <div className="mb-4 flex h-9 items-center px-4 text-base font-medium">表单编辑</div>
                     <div className="min-h-0 flex-1 overflow-auto">
                         <div className="pl-4 pr-[calc(16px-((100vw-32px)-100%))] lg:pr-[calc(16px-((100vw-48px)/2-100%))]">
-                            <Form<ProjectFormData> form={form} layout="vertical" disabled={isRequesting}>
+                            <Form<ProjectFormData> name="project-editor" form={form} layout="vertical" disabled={isRequesting}>
                                 <FormItem<ProjectFormData> name="name" label="项目名称" rules={[schemaToRule(projectNameSchema)]}>
                                     <Input disabled={isUpdate} placeholder="仅支持字母、数字、下划线和短横线" />
                                 </FormItem>

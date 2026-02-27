@@ -337,7 +337,7 @@ const Page: FC = () => {
         <div className="flex h-full flex-col gap-4 pt-4">
             <title>项目管理</title>
             <div className="flex-none px-4">
-                <Form<FormParams> className="gap-y-4" layout="inline" onFinish={setQuery}>
+                <Form<FormParams> name="query-project-form" className="gap-y-4" layout="inline" onFinish={setQuery}>
                     <FormItem<FormParams> name="name" label="项目名称">
                         <Input allowClear />
                     </FormItem>

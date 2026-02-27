@@ -575,7 +575,7 @@ const Page: FC = () => {
         <div className="flex h-full flex-col gap-4 pt-4">
             <title>容器管理</title>
             <div className="flex-none px-4">
-                <Form<FormParams> className="gap-y-4" layout="inline" onFinish={setQuery}>
+                <Form<FormParams> name="query-container-form" className="gap-y-4" layout="inline" onFinish={setQuery}>
                     <FormItem<FormParams> name="name" label="容器名称">
                         <Input />
                     </FormItem>
