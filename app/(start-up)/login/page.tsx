@@ -43,7 +43,7 @@ const Page: FC = () => {
     }
 
     return (
-        <Form<LoginParams> form={form} className="!mx-auto flex w-64 flex-col" onFinish={login} disabled={isLoginPending}>
+        <Form<LoginParams> name="login-form" form={form} className="!mx-auto flex w-64 flex-col" onFinish={login} disabled={isLoginPending}>
             <FormItem<LoginParams> name="account" rules={[schemaToRule(accountSchema)]}>
                 <Input placeholder="用户名或手机号" autoComplete="off" />
             </FormItem>

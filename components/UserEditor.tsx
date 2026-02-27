@@ -77,7 +77,7 @@ const UserEditor: FC<UserEditorProps> = ({
             onCancel={() => onClose?.()}
             {...rest}
         >
-            <Form<AddUserParams> form={form} disabled={isRequesting} labelCol={{ flex: "56px" }} onFinish={onFinish}>
+            <Form<AddUserParams> name="user-editor" form={form} disabled={isRequesting} labelCol={{ flex: "56px" }} onFinish={onFinish}>
                 <FormItem<AddUserParams> name="name" label="用户名" rules={[schemaToRule(usernameSchema)]}>
                     <Input autoComplete="off" allowClear />
                 </FormItem>

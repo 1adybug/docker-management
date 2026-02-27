@@ -60,7 +60,7 @@ const BanUserEditor: FC<BanUserEditorProps> = ({
             onCancel={() => onClose?.()}
             {...rest}
         >
-            <Form<BanUserFormData> form={form} labelCol={{ flex: "70px" }} disabled={isRequesting} onFinish={onFinish}>
+            <Form<BanUserFormData> name="ban-user-editor" form={form} labelCol={{ flex: "70px" }} disabled={isRequesting} onFinish={onFinish}>
                 <FormItem<BanUserFormData> name="banReason" label="封禁理由">
                     <Input allowClear autoComplete="off" />
                 </FormItem>
