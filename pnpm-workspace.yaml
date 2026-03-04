@@ -1,0 +1,7 @@
+onlyBuiltDependencies:
+    - "@alicloud/openapi-core"
+    - "@prisma/engines"
+    - better-sqlite3
+    - prisma
+    - sharp
+    - unrs-resolver
