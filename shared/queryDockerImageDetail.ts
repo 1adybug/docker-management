@@ -3,6 +3,7 @@ import { parse } from "yaml"
 
 import { prisma } from "@/prisma"
 
+import { createSharedFn } from "@/server/createSharedFn"
 import { isAdmin } from "@/server/isAdmin"
 
 export interface ComposeService {
@@ -74,7 +75,10 @@ function normalizeImageName(repository: string, tag: string) {
     return `${repository}:${tag}`
 }
 
-export async function queryDockerImageDetail() {
+export const queryDockerImageDetail = createSharedFn<never>({
+    name: "queryDockerImageDetail",
+    filter: isAdmin,
+})(async function queryDockerImageDetail() {
     const output = await execAsync(`docker images --format "{{json .}}"`)
     const usageMap = await getProjectImageUsageMap()
 
@@ -111,6 +115,4 @@ export async function queryDockerImageDetail() {
         .filter((item): item is DockerImageItem => !!item)
 
     return images
-}
-
-queryDockerImageDetail.filter = isAdmin
+})

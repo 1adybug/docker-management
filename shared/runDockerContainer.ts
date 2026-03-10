@@ -1,8 +1,9 @@
 import { execAsync } from "soda-nodejs"
 
 import { DockerContainerCommand } from "@/schemas/dockerContainerCommand"
-import { RunDockerContainerParams } from "@/schemas/runDockerContainer"
+import { runDockerContainerSchema } from "@/schemas/runDockerContainer"
 
+import { createSharedFn } from "@/server/createSharedFn"
 import { isAdmin } from "@/server/isAdmin"
 
 export interface RunDockerContainerResult {
@@ -17,7 +18,11 @@ function getContainerArgs(command: DockerContainerCommand, id: string) {
     return ["rm", "-f", id]
 }
 
-export async function runDockerContainer({ id, command }: RunDockerContainerParams) {
+export const runDockerContainer = createSharedFn({
+    name: "runDockerContainer",
+    schema: runDockerContainerSchema,
+    filter: isAdmin,
+})(async function runDockerContainer({ id, command }) {
     const args = getContainerArgs(command, id)
     const output = await execAsync(`docker ${args.join(" ")}`)
 
@@ -25,6 +30,4 @@ export async function runDockerContainer({ id, command }: RunDockerContainerPara
         id,
         output,
     } as RunDockerContainerResult
-}
-
-runDockerContainer.filter = isAdmin
+})

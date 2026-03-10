@@ -2,8 +2,9 @@ import { execAsync } from "soda-nodejs"
 
 import { prisma } from "@/prisma"
 
-import { DeleteProjectParams } from "@/schemas/deleteProject"
+import { deleteProjectSchema } from "@/schemas/deleteProject"
 
+import { createSharedFn } from "@/server/createSharedFn"
 import { deleteFileOrFolder } from "@/server/deleteFileOrFolder"
 import { ensureProjectRoot } from "@/server/ensureProjectRoot"
 import { getProjectComposePath, getProjectDir } from "@/server/getProjectPaths"
@@ -34,7 +35,11 @@ function getDockerComposeDownCommand(composePath: string) {
     return `docker compose -f ${composeArg} down`
 }
 
-export async function deleteProject({ name, cleanup }: DeleteProjectParams) {
+export const deleteProject = createSharedFn({
+    name: "deleteProject",
+    schema: deleteProjectSchema,
+    filter: isAdmin,
+})(async function deleteProject({ name, cleanup }) {
     await ensureProjectRoot()
     const projectDir = getProjectDir(name)
     const composePath = getProjectComposePath(name)
@@ -67,6 +72,4 @@ export async function deleteProject({ name, cleanup }: DeleteProjectParams) {
     return {
         name,
     }
-}
-
-deleteProject.filter = isAdmin
+})

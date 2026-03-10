@@ -4,6 +4,7 @@ import { execAsync } from "soda-nodejs"
 
 import { prisma } from "@/prisma"
 
+import { createSharedFn } from "@/server/createSharedFn"
 import { ensureProjectRoot } from "@/server/ensureProjectRoot"
 import { isAdmin } from "@/server/isAdmin"
 
@@ -93,7 +94,10 @@ function isComposeFileManaged(files: string[], projectRoot: string) {
     return files.some(file => normalizePath(file).startsWith(rootWithSeparator))
 }
 
-export async function queryDockerContainer() {
+export const queryDockerContainer = createSharedFn<never>({
+    name: "queryDockerContainer",
+    filter: isAdmin,
+})(async function queryDockerContainer() {
     const output = await execAsync(`docker ps -a --format "{{json .}}"`)
     const projectRoot = await ensureProjectRoot()
     const managedProjectMap = await getManagedProjectMap()
@@ -132,6 +136,4 @@ export async function queryDockerContainer() {
         })
 
     return containers
-}
-
-queryDockerContainer.filter = isAdmin
+})

@@ -4,8 +4,9 @@ import { dirname } from "node:path"
 import { execAsync } from "soda-nodejs"
 
 import { ComposeProjectCommand } from "@/schemas/composeProjectCommand"
-import { RunComposeProjectParams } from "@/schemas/runComposeProject"
+import { runComposeProjectSchema } from "@/schemas/runComposeProject"
 
+import { createSharedFn } from "@/server/createSharedFn"
 import { isAdmin } from "@/server/isAdmin"
 
 import { ClientError } from "@/utils/clientError"
@@ -68,7 +69,11 @@ async function ensureComposeFiles(files: string[]) {
     return normalized
 }
 
-export async function runComposeProject({ composeFiles, command }: RunComposeProjectParams) {
+export const runComposeProject = createSharedFn({
+    name: "runComposeProject",
+    schema: runComposeProjectSchema,
+    filter: isAdmin,
+})(async function runComposeProject({ composeFiles, command }) {
     const files = await ensureComposeFiles(composeFiles)
     const commandText = getDockerComposeCommand(command, files)
     const cwd = dirname(files[0])
@@ -88,6 +93,4 @@ export async function runComposeProject({ composeFiles, command }: RunComposePro
 
         throw new ClientError(output || "项目执行失败")
     }
-}
-
-runComposeProject.filter = isAdmin
+})

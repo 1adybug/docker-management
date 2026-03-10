@@ -1,19 +1,22 @@
 import { execAsync } from "soda-nodejs"
 
-import { DeleteDockerImageParams } from "@/schemas/deleteDockerImage"
+import { deleteDockerImageSchema } from "@/schemas/deleteDockerImage"
 
+import { createSharedFn } from "@/server/createSharedFn"
 import { isAdmin } from "@/server/isAdmin"
 
 export interface DeleteDockerImageResult {
     name: string
 }
 
-export async function deleteDockerImage({ name }: DeleteDockerImageParams) {
+export const deleteDockerImage = createSharedFn({
+    name: "deleteDockerImage",
+    schema: deleteDockerImageSchema,
+    filter: isAdmin,
+})(async function deleteDockerImage({ name }) {
     await execAsync(`docker rmi ${name}`)
 
     return {
         name,
     } as DeleteDockerImageResult
-}
-
-deleteDockerImage.filter = isAdmin
+})

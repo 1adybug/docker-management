@@ -2,8 +2,9 @@ import { mkdir } from "node:fs/promises"
 
 import { prisma } from "@/prisma"
 
-import { UpdateProjectParams } from "@/schemas/updateProject"
+import { updateProjectSchema } from "@/schemas/updateProject"
 
+import { createSharedFn } from "@/server/createSharedFn"
 import { ensureProjectRoot } from "@/server/ensureProjectRoot"
 import { getProjectComposePath, getProjectDir } from "@/server/getProjectPaths"
 import { isAdmin } from "@/server/isAdmin"
@@ -11,7 +12,11 @@ import { writeTextToFile } from "@/server/writeTextToFile"
 
 import { ClientError } from "@/utils/clientError"
 
-export async function updateProject({ name, content }: UpdateProjectParams) {
+export const updateProject = createSharedFn({
+    name: "updateProject",
+    schema: updateProjectSchema,
+    filter: isAdmin,
+})(async function updateProject({ name, content }) {
     await ensureProjectRoot()
     const projectDir = getProjectDir(name)
     const composePath = getProjectComposePath(name)
@@ -31,6 +36,4 @@ export async function updateProject({ name, content }: UpdateProjectParams) {
     return {
         name,
     }
-}
-
-updateProject.filter = isAdmin
+})

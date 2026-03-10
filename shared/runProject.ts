@@ -5,8 +5,9 @@ import { execAsync } from "soda-nodejs"
 import { prisma } from "@/prisma"
 
 import { ProjectCommand } from "@/schemas/projectCommand"
-import { RunProjectParams } from "@/schemas/runProject"
+import { runProjectSchema } from "@/schemas/runProject"
 
+import { createSharedFn } from "@/server/createSharedFn"
 import { ensureProjectRoot } from "@/server/ensureProjectRoot"
 import { getProjectComposePath, getProjectDir } from "@/server/getProjectPaths"
 import { isAdmin } from "@/server/isAdmin"
@@ -94,7 +95,11 @@ export async function ensureProjectComposeFile({ projectDir, composePath, conten
     if (localContent !== content) await writeTextToFile(composePath, content)
 }
 
-export async function runProject({ name, command }: RunProjectParams) {
+export const runProject = createSharedFn({
+    name: "runProject",
+    schema: runProjectSchema,
+    filter: isAdmin,
+})(async function runProject({ name, command }) {
     await ensureProjectRoot()
     const composePath = getProjectComposePath(name)
     const projectDir = getProjectDir(name)
@@ -121,6 +126,4 @@ export async function runProject({ name, command }: RunProjectParams) {
 
         throw new ClientError(output || "项目执行失败")
     }
-}
-
-runProject.filter = isAdmin
+})

@@ -4,8 +4,9 @@ import { prisma } from "@/prisma"
 
 import { defaultPageNum } from "@/schemas/pageNum"
 import { defaultPageSize } from "@/schemas/pageSize"
-import { QueryProjectParams } from "@/schemas/queryProject"
+import { queryProjectSchema } from "@/schemas/queryProject"
 
+import { createSharedFn } from "@/server/createSharedFn"
 import { isAdmin } from "@/server/isAdmin"
 
 export interface ProjectSummary {
@@ -110,7 +111,11 @@ async function getProjectUserMap({ names }: GetProjectUserMapParams) {
     return map
 }
 
-export async function queryProject({
+export const queryProject = createSharedFn({
+    name: "queryProject",
+    schema: queryProjectSchema,
+    filter: isAdmin,
+})(async function queryProject({
     id,
     name = "",
     contentKeyword = "",
@@ -120,7 +125,7 @@ export async function queryProject({
     updatedBefore,
     pageNum = defaultPageNum,
     pageSize = defaultPageSize,
-}: QueryProjectParams = {}) {
+} = {}) {
     const projectId = id?.trim() || undefined
     const nameItems = name.split(/\s+/).filter(Boolean)
     const contentItems = contentKeyword.split(/\s+/).filter(Boolean)
@@ -181,6 +186,4 @@ export async function queryProject({
         pageNum,
         pageSize,
     })
-}
-
-queryProject.filter = isAdmin
+})

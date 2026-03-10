@@ -2,8 +2,9 @@ import { mkdir, stat } from "node:fs/promises"
 
 import { prisma } from "@/prisma"
 
-import { AddProjectParams } from "@/schemas/addProject"
+import { addProjectSchema } from "@/schemas/addProject"
 
+import { createSharedFn } from "@/server/createSharedFn"
 import { ensureProjectRoot } from "@/server/ensureProjectRoot"
 import { getProjectComposePath, getProjectDir } from "@/server/getProjectPaths"
 import { isAdmin } from "@/server/isAdmin"
@@ -18,7 +19,11 @@ const defaultComposeContent = `services:
             - "80:80"
 `
 
-export async function addProject({ name, content }: AddProjectParams) {
+export const addProject = createSharedFn({
+    name: "addProject",
+    schema: addProjectSchema,
+    filter: isAdmin,
+})(async function addProject({ name, content }) {
     await ensureProjectRoot()
     const projectDir = getProjectDir(name)
     const composePath = getProjectComposePath(name)
@@ -47,6 +52,4 @@ export async function addProject({ name, content }: AddProjectParams) {
     return {
         name,
     }
-}
-
-addProject.filter = isAdmin
+})
