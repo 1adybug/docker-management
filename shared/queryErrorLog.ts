@@ -1,4 +1,4 @@
-import { assignFnName, getPagination } from "deepsea-tools"
+import { getPagination } from "deepsea-tools"
 
 import { prisma } from "@/prisma"
 import { getErrorLogWhere } from "@/prisma/getErrorLogWhere"
@@ -7,12 +7,16 @@ import { ErrorLogOrderByWithRelationInput } from "@/prisma/generated/internal/pr
 
 import { defaultPageNum } from "@/schemas/pageNum"
 import { defaultPageSize } from "@/schemas/pageSize"
-import { QueryErrorLogParams, queryErrorLogSchema } from "@/schemas/queryErrorLog"
+import { queryErrorLogSchema } from "@/schemas/queryErrorLog"
 
-import { createFilter } from "@/server/createFilter"
+import { createSharedFn } from "@/server/createSharedFn"
 import { isAdmin } from "@/server/isAdmin"
 
-export async function queryErrorLog({
+export const queryErrorLog = createSharedFn({
+    name: "queryErrorLog",
+    schema: queryErrorLogSchema,
+    filter: isAdmin,
+})(async function queryErrorLog({
     createdBefore,
     createdAfter,
     type = "",
@@ -25,7 +29,7 @@ export async function queryErrorLog({
     pageSize = defaultPageSize,
     sortBy = "createdAt",
     sortOrder = "desc",
-}: QueryErrorLogParams) {
+}) {
     const where = getErrorLogWhere({
         AND: [
             ...type
@@ -102,12 +106,6 @@ export async function queryErrorLog({
         pageNum,
         pageSize,
     })
-}
+})
 
 export type ErrorLog = Awaited<ReturnType<typeof queryErrorLog>>["list"][number]
-
-assignFnName(queryErrorLog, "queryErrorLog")
-
-queryErrorLog.schema = queryErrorLogSchema
-
-queryErrorLog.filter = createFilter(isAdmin)

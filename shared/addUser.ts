@@ -1,18 +1,20 @@
-import { assignFnName } from "deepsea-tools"
-
 import { prisma } from "@/prisma"
 
-import { AddUserParams, addUserSchema } from "@/schemas/addUser"
+import { addUserSchema } from "@/schemas/addUser"
 
 import { auth } from "@/server/auth"
-import { createFilter } from "@/server/createFilter"
+import { createSharedFn } from "@/server/createSharedFn"
 import { getRandomPassword } from "@/server/getRandomPassword"
 import { getTempEmail } from "@/server/getTempEmail"
 import { isAdmin } from "@/server/isAdmin"
 
 import { ClientError } from "@/utils/clientError"
 
-export async function addUser({ name, phoneNumber, role }: AddUserParams) {
+export const addUser = createSharedFn({
+    name: "addUser",
+    schema: addUserSchema,
+    filter: isAdmin,
+})(async function addUser({ name, phoneNumber, role }) {
     const phoneNumberCount = await prisma.user.count({ where: { phoneNumber } })
     if (phoneNumberCount > 0) throw new ClientError("手机号已被注册")
 
@@ -42,10 +44,4 @@ export async function addUser({ name, phoneNumber, role }: AddUserParams) {
             origin: error,
         })
     }
-}
-
-assignFnName(addUser, "addUser")
-
-addUser.schema = addUserSchema
-
-addUser.filter = createFilter(isAdmin)
+})

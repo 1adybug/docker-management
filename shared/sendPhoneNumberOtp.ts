@@ -1,13 +1,11 @@
-import { assignFnName } from "deepsea-tools"
-
 import { prisma } from "@/prisma"
 
-import { AccountParams, accountSchema } from "@/schemas/account"
+import { accountSchema } from "@/schemas/account"
 import { phoneNumberRegex } from "@/schemas/phoneNumber"
 
 import { auth } from "@/server/auth"
-import { createFilter } from "@/server/createFilter"
 import { createRateLimit, RateLimitContext } from "@/server/createRateLimit"
+import { createSharedFn } from "@/server/createSharedFn"
 
 import { ClientError } from "@/utils/clientError"
 
@@ -21,7 +19,17 @@ function getSendPhoneNumberOtpRateLimitKey(context: RateLimitContext) {
     return `send-phone-number-otp:${ip}:${account}`
 }
 
-export async function sendPhoneNumberOtp(params: AccountParams): Promise<SendPhoneNumberOtpResponse> {
+export const sendPhoneNumberOtp = createSharedFn({
+    name: "sendPhoneNumberOtp",
+    schema: accountSchema,
+    filter: false,
+    rateLimit: createRateLimit({
+        limit: 1,
+        windowMs: 60_000,
+        message: "验证码发送过于频繁，请稍后再试",
+        getKey: getSendPhoneNumberOtpRateLimitKey,
+    }),
+})(async function sendPhoneNumberOtp(params): Promise<SendPhoneNumberOtpResponse> {
     const user = await prisma.user.findUnique({
         where: phoneNumberRegex.test(params) ? { phoneNumber: params } : { name: params },
     })
@@ -44,17 +52,4 @@ export async function sendPhoneNumberOtp(params: AccountParams): Promise<SendPho
     return {
         phoneNumber: user.phoneNumber.replace(/(\d{3})\d{4}(\d{4})/, "$1****$2"),
     }
-}
-
-assignFnName(sendPhoneNumberOtp, "sendPhoneNumberOtp")
-
-sendPhoneNumberOtp.schema = accountSchema
-
-sendPhoneNumberOtp.filter = createFilter(false)
-
-sendPhoneNumberOtp.rateLimit = createRateLimit({
-    limit: 1,
-    windowMs: 60_000,
-    message: "验证码发送过于频繁，请稍后再试",
-    getKey: getSendPhoneNumberOtpRateLimitKey,
 })

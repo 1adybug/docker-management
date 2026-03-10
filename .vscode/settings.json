@@ -1,6 +1,0 @@
-{
-    "files.exclude": {
-        "actions/**": true,
-        "app/api/actions/**": true
-    }
-}

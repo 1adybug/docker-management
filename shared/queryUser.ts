@@ -1,4 +1,4 @@
-import { assignFnName, getPagination } from "deepsea-tools"
+import { getPagination } from "deepsea-tools"
 
 import { prisma } from "@/prisma"
 import { defaultUserSelect } from "@/prisma/getUserSelect"
@@ -8,12 +8,16 @@ import { UserOrderByWithRelationInput } from "@/prisma/generated/internal/prisma
 
 import { defaultPageNum } from "@/schemas/pageNum"
 import { defaultPageSize } from "@/schemas/pageSize"
-import { QueryUserParams, queryUserSchema } from "@/schemas/queryUser"
+import { queryUserSchema } from "@/schemas/queryUser"
 
-import { createFilter } from "@/server/createFilter"
+import { createSharedFn } from "@/server/createSharedFn"
 import { isAdmin } from "@/server/isAdmin"
 
-export async function queryUser({
+export const queryUser = createSharedFn({
+    name: "queryUser",
+    schema: queryUserSchema,
+    filter: isAdmin,
+})(async function queryUser({
     id,
     name = "",
     email = "",
@@ -26,7 +30,7 @@ export async function queryUser({
     pageSize = defaultPageSize,
     sortBy = "createdAt",
     sortOrder = "asc",
-}: QueryUserParams) {
+}) {
     const phoneNumberItems = phoneNumber.split(/\s+/).filter(Boolean)
     const nameItems = name.split(/\s+/).filter(Boolean)
     const emailItems = email.split(/\s+/).filter(Boolean)
@@ -92,10 +96,4 @@ export async function queryUser({
         pageNum,
         pageSize,
     })
-}
-
-assignFnName(queryUser, "queryUser")
-
-queryUser.schema = queryUserSchema
-
-queryUser.filter = createFilter(isAdmin)
+})

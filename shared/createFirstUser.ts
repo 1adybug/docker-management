@@ -1,13 +1,11 @@
-import { assignFnName } from "deepsea-tools"
-
 import { prisma } from "@/prisma"
 
-import { CreateFirstUserParams, createFirstUserSchema } from "@/schemas/createFirstUser"
+import { createFirstUserSchema } from "@/schemas/createFirstUser"
 import { UserRole } from "@/schemas/userRole"
 
 import { auth } from "@/server/auth"
-import { createFilter } from "@/server/createFilter"
 import { createRateLimit, RateLimitContext } from "@/server/createRateLimit"
+import { createSharedFn } from "@/server/createSharedFn"
 import { getRandomPassword } from "@/server/getRandomPassword"
 import { getTempEmail } from "@/server/getTempEmail"
 
@@ -18,7 +16,17 @@ function getCreateFirstUserRateLimitKey(context: RateLimitContext) {
     return `create-first-user:${ip}`
 }
 
-export async function createFirstUser({ name, phoneNumber }: CreateFirstUserParams) {
+export const createFirstUser = createSharedFn({
+    name: "createFirstUser",
+    schema: createFirstUserSchema,
+    filter: false,
+    rateLimit: createRateLimit({
+        limit: 2,
+        windowMs: 300_000,
+        message: "初始化尝试过于频繁，请稍后再试",
+        getKey: getCreateFirstUserRateLimitKey,
+    }),
+})(async function createFirstUser({ name, phoneNumber }) {
     const count = await prisma.user.count()
     if (count > 0) throw new ClientError("禁止操作")
 
@@ -44,17 +52,4 @@ export async function createFirstUser({ name, phoneNumber }: CreateFirstUserPara
             origin: error,
         })
     }
-}
-
-assignFnName(createFirstUser, "createFirstUser")
-
-createFirstUser.schema = createFirstUserSchema
-
-createFirstUser.filter = createFilter(false)
-
-createFirstUser.rateLimit = createRateLimit({
-    limit: 2,
-    windowMs: 300_000,
-    message: "初始化尝试过于频繁，请稍后再试",
-    getKey: getCreateFirstUserRateLimitKey,
 })

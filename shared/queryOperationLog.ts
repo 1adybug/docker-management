@@ -1,4 +1,4 @@
-import { assignFnName, getPagination } from "deepsea-tools"
+import { getPagination } from "deepsea-tools"
 
 import { prisma } from "@/prisma"
 import { getOperationLogWhere } from "@/prisma/getOperationLogWhere"
@@ -7,13 +7,17 @@ import { OperationLogOrderByWithRelationInput } from "@/prisma/generated/interna
 
 import { defaultPageNum } from "@/schemas/pageNum"
 import { defaultPageSize } from "@/schemas/pageSize"
-import { QueryOperationLogParams, queryOperationLogSchema } from "@/schemas/queryOperationLog"
+import { queryOperationLogSchema } from "@/schemas/queryOperationLog"
 
-import { createFilter } from "@/server/createFilter"
+import { createSharedFn } from "@/server/createSharedFn"
 import { getCurrentUser } from "@/server/getCurrentUser"
 import { isAdmin } from "@/server/isAdmin"
 
-export async function queryOperationLog({
+export const queryOperationLog = createSharedFn({
+    name: "queryOperationLog",
+    schema: queryOperationLogSchema,
+    filter: isAdmin,
+})(async function queryOperationLog({
     createdBefore,
     createdAfter,
     action = "",
@@ -24,7 +28,7 @@ export async function queryOperationLog({
     pageSize = defaultPageSize,
     sortBy = "createdAt",
     sortOrder = "desc",
-}: QueryOperationLogParams) {
+}) {
     const user = await getCurrentUser()
 
     const where = getOperationLogWhere({
@@ -107,12 +111,6 @@ export async function queryOperationLog({
         pageNum,
         pageSize,
     })
-}
+})
 
 export type OperationLog = Awaited<ReturnType<typeof queryOperationLog>>["list"][number]
-
-assignFnName(queryOperationLog, "queryOperationLog")
-
-queryOperationLog.schema = queryOperationLogSchema
-
-queryOperationLog.filter = createFilter(isAdmin)

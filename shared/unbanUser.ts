@@ -1,15 +1,18 @@
-import { assignFnName } from "deepsea-tools"
 import { headers } from "next/headers"
 
 import { prisma } from "@/prisma"
 
-import { UserIdParams, userIdSchema } from "@/schemas/userId"
+import { userIdSchema } from "@/schemas/userId"
 
 import { auth } from "@/server/auth"
+import { createSharedFn } from "@/server/createSharedFn"
 
 import { ClientError } from "@/utils/clientError"
 
-export async function unbanUser(userId: UserIdParams) {
+export const unbanUser = createSharedFn({
+    name: "unbanUser",
+    schema: userIdSchema,
+})(async function unbanUser(userId) {
     try {
         const { user } = await auth.api.unbanUser({
             body: { userId },
@@ -24,8 +27,4 @@ export async function unbanUser(userId: UserIdParams) {
             origin: error,
         })
     }
-}
-
-assignFnName(unbanUser, "unbanUser")
-
-unbanUser.schema = userIdSchema
+})

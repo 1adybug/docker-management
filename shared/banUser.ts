@@ -1,15 +1,18 @@
-import { assignFnName } from "deepsea-tools"
 import { headers } from "next/headers"
 
 import { prisma } from "@/prisma"
 
-import { BanUserParams, banUserSchema } from "@/schemas/banUser"
+import { banUserSchema } from "@/schemas/banUser"
 
 import { auth } from "@/server/auth"
+import { createSharedFn } from "@/server/createSharedFn"
 
 import { ClientError } from "@/utils/clientError"
 
-export async function banUser(params: BanUserParams) {
+export const banUser = createSharedFn({
+    name: "banUser",
+    schema: banUserSchema,
+})(async function banUser(params) {
     try {
         const { user } = await auth.api.banUser({
             body: params,
@@ -24,8 +27,4 @@ export async function banUser(params: BanUserParams) {
             origin: error,
         })
     }
-}
-
-assignFnName(banUser, "banUser")
-
-banUser.schema = banUserSchema
+})

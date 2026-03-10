@@ -1,19 +1,27 @@
-import { assignFnName } from "deepsea-tools"
 import { headers } from "next/headers"
 
 import { prisma } from "@/prisma"
 
-import { UpdateUserParams, updateUserSchema } from "@/schemas/updateUser"
+import { updateUserSchema } from "@/schemas/updateUser"
 import { UserRole } from "@/schemas/userRole"
 
 import { auth } from "@/server/auth"
-import { createFilter } from "@/server/createFilter"
 import { createRateLimit } from "@/server/createRateLimit"
+import { createSharedFn } from "@/server/createSharedFn"
 import { isAdmin } from "@/server/isAdmin"
 
 import { ClientError } from "@/utils/clientError"
 
-export async function updateUser({ id, name, phoneNumber, role }: UpdateUserParams) {
+export const updateUser = createSharedFn({
+    name: "updateUser",
+    schema: updateUserSchema,
+    filter: isAdmin,
+    rateLimit: createRateLimit({
+        limit: 30,
+        windowMs: 60_000,
+        message: "更新用户操作过于频繁，请稍后再试",
+    }),
+})(async function updateUser({ id, name, phoneNumber, role }) {
     const user = await prisma.user.findUnique({ where: { id } })
     if (!user) throw new ClientError("用户不存在")
 
@@ -46,16 +54,4 @@ export async function updateUser({ id, name, phoneNumber, role }: UpdateUserPara
             origin: error,
         })
     }
-}
-
-assignFnName(updateUser, "updateUser")
-
-updateUser.schema = updateUserSchema
-
-updateUser.filter = createFilter(isAdmin)
-
-updateUser.rateLimit = createRateLimit({
-    limit: 30,
-    windowMs: 60_000,
-    message: "更新用户操作过于频繁，请稍后再试",
 })
