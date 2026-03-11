@@ -1,4 +1,5 @@
 import { IsNever, IsParamRequired } from "deepsea-tools"
+import { parse } from "zod"
 
 import { ExtendedResponseData, OriginalResponseFn } from "@/server/createResponseFn"
 
@@ -12,7 +13,10 @@ export type GetPathname<TPathname extends string> = `/${TPathname extends `/${in
 
 export type IsRouteFn<TFn extends OriginalResponseFn<any, any, any, any>> = IsNever<NonNullable<TFn["route"]>["pathname"]> extends true ? false : true
 
-export type CreateApiFnConfig<TFn extends OriginalResponseFn<any, any, any, any>> = (IsRouteFn<TFn> extends true
+export type CreateApiFnConfig<TFn extends OriginalResponseFn<any, any, any, any>> = {
+    /** 如果没有传入 schema，传入的参数会被丢弃 */
+    schema?: TFn["schema"]
+} & (IsRouteFn<TFn> extends true
     ? {
           pathname: GetPathname<NonNullable<TFn["route"]>["pathname"]>
       }
@@ -32,17 +36,29 @@ export type ApiFn<TFn extends OriginalResponseFn<any, any, any, any>> =
         ? (params: Parameters<TFn>[0]) => Promise<Awaited<ReturnType<TFn>>>
         : (params?: Parameters<TFn>[0]) => Promise<Awaited<ReturnType<TFn>>>
 
-export function createApiFn<TFn extends OriginalResponseFn<any, any, any, any>>({ pathname, bodyType }: CreateApiFnConfig<TFn>): ApiFn<TFn> {
+let baseUrl: string | undefined
+
+export function setHostname(newBaseUrl: string) {
+    baseUrl = newBaseUrl
+}
+
+export function createApiFn<TFn extends OriginalResponseFn<any, any, any, any>>({ schema, pathname, bodyType }: CreateApiFnConfig<TFn>): ApiFn<TFn> {
     return async function request(params: any) {
         if (pathname === undefined) throw new Error("not found")
 
         if (bodyType === "formData" && !(params instanceof FormData)) throw new Error("params must be FormData")
 
-        const body = params === undefined || params instanceof FormData ? params : JSON.stringify(params)
+        const body = params === undefined || params instanceof FormData ? params : schema ? JSON.stringify(parse(schema, params)) : undefined
+
         const headers = new Headers()
+
         if (typeof body === "string") headers.set("Content-Type", "application/json")
 
-        const response = await fetch(`/api/action/${pathname}`, {
+        const pathname2 = `/api/action/${pathname}`.replace(/(\/)(\/+)/g, "$1")
+
+        const url = new URL(pathname2, baseUrl ?? location.origin)
+
+        const response = await fetch(url, {
             method: "POST",
             body,
             headers,

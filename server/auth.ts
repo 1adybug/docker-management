@@ -15,6 +15,8 @@ import { getTempEmail } from "@/server/getTempEmail"
 
 import { sendOtp } from "./sendOtp"
 
+const DevPhoneOtp = "1234"
+
 function getAuthBaseUrl() {
     const baseUrl = BetterAuthUrl?.trim() || AuthBaseUrl?.trim()
     if (baseUrl) return baseUrl
@@ -46,13 +48,18 @@ export const auth = betterAuth({
         admin(),
         phoneNumber({
             otpLength: 4,
+            verifyOTP: IsDevelopment
+                ? function verifyOTP({ code }) {
+                      return code === DevPhoneOtp
+                  }
+                : undefined,
             phoneNumberValidator(phoneNumber) {
                 return phoneNumberRegex.test(phoneNumber)
             },
             sendOTP({ phoneNumber, code }) {
                 if (IsDevelopment) {
-                    console.log(`手机号验证码: ${phoneNumber} -> ${code}`)
-                    setDevOtp({ phoneNumber }, code)
+                    console.log(`手机号验证码: ${phoneNumber} -> ${DevPhoneOtp}`)
+                    setDevOtp({ phoneNumber }, DevPhoneOtp)
                     return
                 }
 
