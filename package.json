@@ -19,6 +19,7 @@
         "postinstall": "prisma generate"
     },
     "dependencies": {
+        "7zip-bin": "^5.2.0",
         "@alicloud/credentials": "^2.4.4",
         "@alicloud/dysmsapi20170525": "^4.5.0",
         "@alicloud/openapi-client": "^0.4.15",
