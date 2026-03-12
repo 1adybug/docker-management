@@ -165,7 +165,6 @@ const Page: FC = () => {
         const content = projectData?.content ?? defaultComposeContent
         const formName = isUpdate ? (projectData?.name ?? searchName) : undefined
 
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setYamlValue(content)
 
         try {
