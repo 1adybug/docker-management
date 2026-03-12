@@ -5,12 +5,14 @@ import { FC, useMemo, useRef } from "react"
 import { IconTrash } from "@tabler/icons-react"
 import { Button, Form, Input, Popconfirm, Table, Tag } from "antd"
 import FormItem from "antd/es/form/FormItem"
+import { InputFileButton } from "deepsea-components"
 import { formatTime, showTotal } from "deepsea-tools"
 import { Columns, useScroll } from "soda-antd"
 import { useQueryState } from "soda-next"
 
 import { useDeleteDockerImage } from "@/hooks/useDeleteDockerImage"
 import { useQueryDockerImageDetail } from "@/hooks/useQueryDockerImageDetail"
+import { useUploadDockerImage } from "@/hooks/useUploadDockerImage"
 
 import { pageNumParser } from "@/schemas/pageNum"
 import { pageSizeParser } from "@/schemas/pageSize"
@@ -25,6 +27,7 @@ export interface DockerImageFilterParams {
 const Page: FC = () => {
     const { data, isLoading, refetch } = useQueryDockerImageDetail()
     const { mutateAsync: deleteDockerImage, isPending: isDeletePending } = useDeleteDockerImage()
+    const { mutateAsync: uploadDockerImage, isPending: isUploadPending } = useUploadDockerImage()
 
     const [query, setQuery] = useQueryState({
         keys: ["name", "project"],
@@ -39,10 +42,19 @@ const Page: FC = () => {
     const container = useRef<HTMLDivElement>(null)
     const { y } = useScroll(container, { paginationMargin: 32 })
 
-    const isRequesting = isLoading || isDeletePending
+    const isRequesting = isLoading || isDeletePending || isUploadPending
 
     function onRefresh() {
         refetch()
+    }
+
+    async function onFileChange(file: File) {
+        if (!file.name.toLowerCase().endsWith(".tar")) return message.error("仅支持上传 tar 文件")
+
+        const formData = new FormData()
+        formData.set("file", file)
+
+        await uploadDockerImage(formData)
     }
 
     async function onDelete(name: string) {
@@ -156,9 +168,14 @@ const Page: FC = () => {
                             重置
                         </Button>
                     </FormItem>
-                    <Button className="ml-auto" color="primary" disabled={isRequesting} onClick={onRefresh}>
-                        刷新
-                    </Button>
+                    <div className="ml-auto flex items-center gap-2">
+                        <InputFileButton as={Button} disabled={isRequesting} accept=".tar,application/x-tar" onValueChange={onFileChange} clearAfterChange>
+                            上传镜像
+                        </InputFileButton>
+                        <Button color="primary" disabled={isRequesting} onClick={onRefresh}>
+                            刷新
+                        </Button>
+                    </div>
                 </Form>
             </div>
             <div ref={container} className="px-4 fill-y">

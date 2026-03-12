@@ -37,6 +37,7 @@
         "better-auth": "^1.5.4",
         "better-sqlite3": "^12.6.2",
         "dayjs": "^1.11.19",
+        "deepsea-components": "^5.17.33",
         "deepsea-tools": "^5.47.8",
         "monaco-editor": "^0.55.1",
         "next": "^16.1.6",
