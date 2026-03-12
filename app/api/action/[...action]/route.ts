@@ -5,6 +5,7 @@ import { createRouteFn, OriginalResponseFn, RouteBodyType, RouteHandler } from "
 import { addProject } from "@/shared/addProject"
 import { addUser } from "@/shared/addUser"
 import { banUser } from "@/shared/banUser"
+import { buildJarDockerImage } from "@/shared/buildJarDockerImage"
 import { buildStaticDockerImage } from "@/shared/buildStaticDockerImage"
 import { createFirstUser } from "@/shared/createFirstUser"
 import { deleteDockerImage } from "@/shared/deleteDockerImage"
@@ -43,6 +44,7 @@ function registerRoute<TParams extends [arg?: unknown], TData, TPathname extends
 registerRoute(addProject)
 registerRoute(addUser)
 registerRoute(banUser)
+registerRoute(buildJarDockerImage)
 registerRoute(buildStaticDockerImage)
 registerRoute(createFirstUser)
 registerRoute(deleteDockerImage)
