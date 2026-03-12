@@ -11,12 +11,11 @@ import { User } from "@/prisma/generated/client"
 import { isAdmin } from "@/server/isAdmin"
 
 import { authClient } from "@/utils/authClient"
-import { getPathnameAndSearchParams } from "@/utils/getPathnameAndSearchParams"
 
 import Brand from "./Brand"
 import { useUser } from "./UserProvider"
 
-interface NavItem {
+export interface NavItem {
     href: string
     name: string
     filter?: (user: User) => boolean
@@ -24,8 +23,19 @@ interface NavItem {
 
 const navs: NavItem[] = [
     {
-        href: "/",
-        name: "首页",
+        href: "/container",
+        name: "容器管理",
+        filter: isAdmin,
+    },
+    {
+        href: "/project",
+        name: "项目管理",
+        filter: isAdmin,
+    },
+    {
+        href: "/image",
+        name: "镜像管理",
+        filter: isAdmin,
     },
     {
         href: "/user",
@@ -46,6 +56,11 @@ const navs: NavItem[] = [
 
 export interface HeaderProps extends StrictOmit<ComponentProps<"header">, "children"> {}
 
+function isNavActive(pathname: string, href: string) {
+    if (href === "/") return pathname === href
+    return pathname === href || pathname.startsWith(`${href}/`)
+}
+
 const Header: FC<HeaderProps> = ({ className, ...rest }) => {
     const router = useRouter()
     const pathname = usePathname()
@@ -63,13 +78,7 @@ const Header: FC<HeaderProps> = ({ className, ...rest }) => {
                 {navs.map(
                     ({ href, name, filter }) =>
                         (!filter || filter(user)) && (
-                            <Button
-                                key={href}
-                                type="link"
-                                color={pathname === getPathnameAndSearchParams(href).pathname ? "primary" : "default"}
-                                variant="link"
-                                href={href}
-                            >
+                            <Button key={href} type="link" color={isNavActive(pathname, href) ? "primary" : "default"} variant="link" href={href}>
                                 {name}
                             </Button>
                         ),

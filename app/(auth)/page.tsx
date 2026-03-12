@@ -1,5 +1,5 @@
-import { FC } from "react"
+import { redirect } from "next/navigation"
 
-const Page: FC = () => <div>Hello, World!</div>
-
-export default Page
+export default function Page() {
+    redirect("/container")
+}
