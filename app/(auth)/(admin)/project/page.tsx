@@ -372,7 +372,7 @@ const Page: FC = () => {
                     open={deleteOpen}
                     okText={deleteMode === ProjectDeleteMode.删除并清理容器 ? "删除并清理" : "删除"}
                     cancelText="取消"
-                    maskClosable={!isDeletePending}
+                    mask={{ closable: !isDeletePending }}
                     okButtonProps={{ danger: true, disabled: !deleteName, loading: isDeletePending }}
                     cancelButtonProps={{ disabled: isDeletePending }}
                     onOk={onDeleteConfirm}
