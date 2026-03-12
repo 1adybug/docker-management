@@ -2,17 +2,29 @@ import { NextRequest, NextResponse } from "next/server"
 
 import { createRouteFn, OriginalResponseFn, RouteBodyType, RouteHandler } from "@/server/createResponseFn"
 
+import { addProject } from "@/shared/addProject"
 import { addUser } from "@/shared/addUser"
 import { banUser } from "@/shared/banUser"
 import { createFirstUser } from "@/shared/createFirstUser"
+import { deleteDockerImage } from "@/shared/deleteDockerImage"
+import { deleteProject } from "@/shared/deleteProject"
 import { deleteUser } from "@/shared/deleteUser"
+import { getProject } from "@/shared/getProject"
 import { getUser } from "@/shared/getUser"
 import { login } from "@/shared/login"
+import { queryDockerContainer } from "@/shared/queryDockerContainer"
+import { queryDockerImage } from "@/shared/queryDockerImage"
+import { queryDockerImageDetail } from "@/shared/queryDockerImageDetail"
 import { queryErrorLog } from "@/shared/queryErrorLog"
 import { queryOperationLog } from "@/shared/queryOperationLog"
+import { queryProject } from "@/shared/queryProject"
 import { queryUser } from "@/shared/queryUser"
+import { runComposeProject } from "@/shared/runComposeProject"
+import { runDockerContainer } from "@/shared/runDockerContainer"
+import { runProject } from "@/shared/runProject"
 import { sendPhoneNumberOtp } from "@/shared/sendPhoneNumberOtp"
 import { unbanUser } from "@/shared/unbanUser"
+import { updateProject } from "@/shared/updateProject"
 import { updateUser } from "@/shared/updateUser"
 
 const routeMap = new Map<string, RouteHandler>()
@@ -26,17 +38,29 @@ function registerRoute<TParams extends [arg?: unknown], TData, TPathname extends
     routeMap.set(pathname, createRouteFn(fn))
 }
 
+registerRoute(addProject)
 registerRoute(addUser)
 registerRoute(banUser)
 registerRoute(createFirstUser)
+registerRoute(deleteDockerImage)
+registerRoute(deleteProject)
 registerRoute(deleteUser)
+registerRoute(getProject)
 registerRoute(getUser)
 registerRoute(login)
+registerRoute(queryDockerContainer)
+registerRoute(queryDockerImage)
+registerRoute(queryDockerImageDetail)
 registerRoute(queryErrorLog)
 registerRoute(queryOperationLog)
+registerRoute(queryProject)
 registerRoute(queryUser)
+registerRoute(runComposeProject)
+registerRoute(runDockerContainer)
+registerRoute(runProject)
 registerRoute(sendPhoneNumberOtp)
 registerRoute(unbanUser)
+registerRoute(updateProject)
 registerRoute(updateUser)
 
 export function POST(request: NextRequest) {
