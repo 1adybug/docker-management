@@ -1,5 +1,3 @@
-import { mkdtemp, rm } from "node:fs/promises"
-import { tmpdir } from "node:os"
 import { join } from "node:path"
 
 import { execAsync } from "soda-nodejs"
@@ -7,6 +5,7 @@ import { execAsync } from "soda-nodejs"
 import { uploadDockerImageSchema } from "@/schemas/uploadDockerImage"
 
 import { createSharedFn } from "@/server/createSharedFn"
+import { createDockerTempDirectory, deleteDockerTempDirectory } from "@/server/dockerTempDirectory"
 import { isAdmin } from "@/server/isAdmin"
 import { writeWebFileToPath } from "@/server/writeWebFileToPath"
 
@@ -35,7 +34,9 @@ export const uploadDockerImage = createSharedFn<FormData>({
     filter: isAdmin,
 })(async function uploadDockerImage(formData) {
     const file = getUploadFile(formData)
-    const directory = await mkdtemp(join(tmpdir(), "docker-management-image-"))
+    const directory = await createDockerTempDirectory({
+        prefix: "docker-management-image-",
+    })
     const path = join(directory, "image.tar")
 
     try {
@@ -47,6 +48,6 @@ export const uploadDockerImage = createSharedFn<FormData>({
             output,
         } as UploadDockerImageResult
     } finally {
-        await rm(directory, { recursive: true, force: true })
+        await deleteDockerTempDirectory(directory)
     }
 })

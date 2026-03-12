@@ -1,7 +1,6 @@
 import { execFile } from "node:child_process"
-import { cp, mkdir, mkdtemp, readdir, rm, stat } from "node:fs/promises"
+import { cp, mkdir, readdir, stat } from "node:fs/promises"
 import { createRequire } from "node:module"
-import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { promisify } from "node:util"
 
@@ -11,6 +10,7 @@ import { buildStaticDockerImageSchema } from "@/schemas/buildStaticDockerImage"
 import { dockerImageNameParser } from "@/schemas/dockerImageName"
 
 import { createSharedFn } from "@/server/createSharedFn"
+import { createDockerTempDirectory, deleteDockerTempDirectory } from "@/server/dockerTempDirectory"
 import { isAdmin } from "@/server/isAdmin"
 import { writeTextToFile } from "@/server/writeTextToFile"
 import { writeWebFileToPath } from "@/server/writeWebFileToPath"
@@ -205,7 +205,9 @@ export const buildStaticDockerImage = createSharedFn<FormData>({
     const { file, extension } = getUploadFile(formData)
     const { imageName, nginxImage } = getBuildStaticDockerImageFields(formData)
 
-    const directory = await mkdtemp(join(tmpdir(), "docker-management-static-image-"))
+    const directory = await createDockerTempDirectory({
+        prefix: "docker-management-static-image-",
+    })
     const archivePath = join(directory, `static.${extension}`)
     const extractDirectory = join(directory, "extract")
     const contextDirectory = join(directory, "context")
@@ -231,6 +233,6 @@ export const buildStaticDockerImage = createSharedFn<FormData>({
             output,
         } as BuildStaticDockerImageResult
     } finally {
-        await rm(directory, { recursive: true, force: true })
+        await deleteDockerTempDirectory(directory)
     }
 })

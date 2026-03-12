@@ -1,5 +1,4 @@
-import { copyFile, mkdir, mkdtemp, rm } from "node:fs/promises"
-import { tmpdir } from "node:os"
+import { copyFile, mkdir } from "node:fs/promises"
 import { join } from "node:path"
 
 import { execAsync } from "soda-nodejs"
@@ -9,6 +8,7 @@ import { dockerImageNameParser } from "@/schemas/dockerImageName"
 import { dockerStartCommandParser } from "@/schemas/dockerStartCommand"
 
 import { createSharedFn } from "@/server/createSharedFn"
+import { createDockerTempDirectory, deleteDockerTempDirectory } from "@/server/dockerTempDirectory"
 import { isAdmin } from "@/server/isAdmin"
 import { writeTextToFile } from "@/server/writeTextToFile"
 import { writeWebFileToPath } from "@/server/writeWebFileToPath"
@@ -109,7 +109,9 @@ export const buildJarDockerImage = createSharedFn<FormData>({
     const file = getUploadFile(formData)
     const { imageName, javaImage, startCommand } = getBuildJarDockerImageFields(formData)
 
-    const directory = await mkdtemp(join(tmpdir(), "docker-management-jar-image-"))
+    const directory = await createDockerTempDirectory({
+        prefix: "docker-management-jar-image-",
+    })
     const jarPath = join(directory, "source.jar")
     const contextDirectory = join(directory, "context")
 
@@ -131,6 +133,6 @@ export const buildJarDockerImage = createSharedFn<FormData>({
             output,
         } as BuildJarDockerImageResult
     } finally {
-        await rm(directory, { recursive: true, force: true })
+        await deleteDockerTempDirectory(directory)
     }
 })
