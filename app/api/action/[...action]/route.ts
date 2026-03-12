@@ -26,6 +26,7 @@ import { sendPhoneNumberOtp } from "@/shared/sendPhoneNumberOtp"
 import { unbanUser } from "@/shared/unbanUser"
 import { updateProject } from "@/shared/updateProject"
 import { updateUser } from "@/shared/updateUser"
+import { uploadDockerImage } from "@/shared/uploadDockerImage"
 
 const routeMap = new Map<string, RouteHandler>()
 
@@ -62,6 +63,7 @@ registerRoute(sendPhoneNumberOtp)
 registerRoute(unbanUser)
 registerRoute(updateProject)
 registerRoute(updateUser)
+registerRoute(uploadDockerImage)
 
 export function POST(request: NextRequest) {
     const { pathname } = new URL(request.url)
