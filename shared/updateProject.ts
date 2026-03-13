@@ -7,7 +7,6 @@ import { updateProjectSchema } from "@/schemas/updateProject"
 import { createSharedFn } from "@/server/createSharedFn"
 import { ensureProjectRoot } from "@/server/ensureProjectRoot"
 import { getProjectComposePath, getProjectDir } from "@/server/getProjectPaths"
-import { isAdmin } from "@/server/isAdmin"
 import { writeTextToFile } from "@/server/writeTextToFile"
 
 import { ClientError } from "@/utils/clientError"
@@ -15,7 +14,6 @@ import { ClientError } from "@/utils/clientError"
 export const updateProject = createSharedFn({
     name: "updateProject",
     schema: updateProjectSchema,
-    filter: isAdmin,
 })(async function updateProject({ name, content }) {
     await ensureProjectRoot()
     const projectDir = getProjectDir(name)

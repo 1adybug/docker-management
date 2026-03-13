@@ -10,7 +10,6 @@ import { dockerStartCommandParser } from "@/schemas/dockerStartCommand"
 import { createSharedFn } from "@/server/createSharedFn"
 import { getReplaceDockerTemporaryName, inspectDockerImage, replaceDockerImage } from "@/server/dockerImage"
 import { createDockerTempDirectory, deleteDockerTempDirectory } from "@/server/dockerTempDirectory"
-import { isAdmin } from "@/server/isAdmin"
 import { writeTextToFile } from "@/server/writeTextToFile"
 import { writeWebFileToPath } from "@/server/writeWebFileToPath"
 
@@ -117,7 +116,6 @@ async function prepareBuildContext({ contextDirectory, jarPath, javaImage, start
 export const buildJarDockerImage = createSharedFn<FormData>({
     name: "buildJarDockerImage",
     schema: buildJarDockerImageSchema,
-    filter: isAdmin,
 })(async function buildJarDockerImage(formData) {
     const file = getUploadFile(formData)
     const targetName = getOptionalFormText(formData, "targetName")

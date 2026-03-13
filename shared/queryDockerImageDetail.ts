@@ -4,7 +4,6 @@ import { parse } from "yaml"
 import { prisma } from "@/prisma"
 
 import { createSharedFn } from "@/server/createSharedFn"
-import { isAdmin } from "@/server/isAdmin"
 
 export interface ComposeService {
     image?: string
@@ -77,7 +76,6 @@ function normalizeImageName(repository: string, tag: string) {
 
 export const queryDockerImageDetail = createSharedFn<never>({
     name: "queryDockerImageDetail",
-    filter: isAdmin,
 })(async function queryDockerImageDetail() {
     const output = await execAsync(`docker images --format "{{json .}}"`)
     const usageMap = await getProjectImageUsageMap()

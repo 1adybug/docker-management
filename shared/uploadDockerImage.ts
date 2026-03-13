@@ -7,7 +7,6 @@ import { uploadDockerImageSchema } from "@/schemas/uploadDockerImage"
 import { createSharedFn } from "@/server/createSharedFn"
 import { getReplaceDockerTemporaryName, inspectDockerImage, replaceDockerImage } from "@/server/dockerImage"
 import { createDockerTempDirectory, deleteDockerTempDirectory } from "@/server/dockerTempDirectory"
-import { isAdmin } from "@/server/isAdmin"
 import { writeWebFileToPath } from "@/server/writeWebFileToPath"
 
 import { ClientError } from "@/utils/clientError"
@@ -99,7 +98,6 @@ async function resolveLoadedDockerImage({ output, targetName }: ResolveLoadedDoc
 export const uploadDockerImage = createSharedFn<FormData>({
     name: "uploadDockerImage",
     schema: uploadDockerImageSchema,
-    filter: isAdmin,
 })(async function uploadDockerImage(formData) {
     const file = getUploadFile(formData)
     const targetName = getOptionalFormText(formData, "targetName")

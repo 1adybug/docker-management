@@ -1,7 +1,6 @@
 import { execAsync } from "soda-nodejs"
 
 import { createSharedFn } from "@/server/createSharedFn"
-import { isAdmin } from "@/server/isAdmin"
 
 export interface DockerImageItem {
     name: string
@@ -9,7 +8,6 @@ export interface DockerImageItem {
 
 export const queryDockerImage = createSharedFn<never>({
     name: "queryDockerImage",
-    filter: isAdmin,
 })(async function queryDockerImage() {
     const output = await execAsync(`docker images --format "{{.Repository}}:{{.Tag}}"`)
 

@@ -7,7 +7,6 @@ import { ComposeProjectCommand } from "@/schemas/composeProjectCommand"
 import { runComposeProjectSchema } from "@/schemas/runComposeProject"
 
 import { createSharedFn } from "@/server/createSharedFn"
-import { isAdmin } from "@/server/isAdmin"
 
 import { ClientError } from "@/utils/clientError"
 
@@ -72,7 +71,6 @@ async function ensureComposeFiles(files: string[]) {
 export const runComposeProject = createSharedFn({
     name: "runComposeProject",
     schema: runComposeProjectSchema,
-    filter: isAdmin,
 })(async function runComposeProject({ composeFiles, command }) {
     const files = await ensureComposeFiles(composeFiles)
     const commandText = getDockerComposeCommand(command, files)

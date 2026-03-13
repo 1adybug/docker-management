@@ -4,7 +4,6 @@ import { DockerContainerCommand } from "@/schemas/dockerContainerCommand"
 import { runDockerContainerSchema } from "@/schemas/runDockerContainer"
 
 import { createSharedFn } from "@/server/createSharedFn"
-import { isAdmin } from "@/server/isAdmin"
 
 export interface RunDockerContainerResult {
     id: string
@@ -21,7 +20,6 @@ function getContainerArgs(command: DockerContainerCommand, id: string) {
 export const runDockerContainer = createSharedFn({
     name: "runDockerContainer",
     schema: runDockerContainerSchema,
-    filter: isAdmin,
 })(async function runDockerContainer({ id, command }) {
     const args = getContainerArgs(command, id)
     const output = await execAsync(`docker ${args.join(" ")}`)

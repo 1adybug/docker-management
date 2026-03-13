@@ -7,7 +7,6 @@ import { addProjectSchema } from "@/schemas/addProject"
 import { createSharedFn } from "@/server/createSharedFn"
 import { ensureProjectRoot } from "@/server/ensureProjectRoot"
 import { getProjectComposePath, getProjectDir } from "@/server/getProjectPaths"
-import { isAdmin } from "@/server/isAdmin"
 import { writeTextToFile } from "@/server/writeTextToFile"
 
 import { ClientError } from "@/utils/clientError"
@@ -22,7 +21,6 @@ const defaultComposeContent = `services:
 export const addProject = createSharedFn({
     name: "addProject",
     schema: addProjectSchema,
-    filter: isAdmin,
 })(async function addProject({ name, content }) {
     await ensureProjectRoot()
     const projectDir = getProjectDir(name)

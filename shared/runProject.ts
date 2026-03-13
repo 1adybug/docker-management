@@ -10,7 +10,6 @@ import { runProjectSchema } from "@/schemas/runProject"
 import { createSharedFn } from "@/server/createSharedFn"
 import { ensureProjectRoot } from "@/server/ensureProjectRoot"
 import { getProjectComposePath, getProjectDir } from "@/server/getProjectPaths"
-import { isAdmin } from "@/server/isAdmin"
 import { readTextFromFile } from "@/server/readTextFromFile"
 import { writeTextToFile } from "@/server/writeTextToFile"
 
@@ -98,7 +97,6 @@ export async function ensureProjectComposeFile({ projectDir, composePath, conten
 export const runProject = createSharedFn({
     name: "runProject",
     schema: runProjectSchema,
-    filter: isAdmin,
 })(async function runProject({ name, command }) {
     await ensureProjectRoot()
     const composePath = getProjectComposePath(name)

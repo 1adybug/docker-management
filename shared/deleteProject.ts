@@ -8,7 +8,6 @@ import { createSharedFn } from "@/server/createSharedFn"
 import { deleteFileOrFolder } from "@/server/deleteFileOrFolder"
 import { ensureProjectRoot } from "@/server/ensureProjectRoot"
 import { getProjectComposePath, getProjectDir } from "@/server/getProjectPaths"
-import { isAdmin } from "@/server/isAdmin"
 
 import { ensureProjectComposeFile } from "@/shared/runProject"
 
@@ -38,7 +37,6 @@ function getDockerComposeDownCommand(composePath: string) {
 export const deleteProject = createSharedFn({
     name: "deleteProject",
     schema: deleteProjectSchema,
-    filter: isAdmin,
 })(async function deleteProject({ name, cleanup }) {
     await ensureProjectRoot()
     const projectDir = getProjectDir(name)

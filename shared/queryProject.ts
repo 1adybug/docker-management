@@ -7,7 +7,6 @@ import { defaultPageSize } from "@/schemas/pageSize"
 import { queryProjectSchema } from "@/schemas/queryProject"
 
 import { createSharedFn } from "@/server/createSharedFn"
-import { isAdmin } from "@/server/isAdmin"
 
 export interface ProjectSummary {
     name: string
@@ -114,7 +113,6 @@ async function getProjectUserMap({ names }: GetProjectUserMapParams) {
 export const queryProject = createSharedFn({
     name: "queryProject",
     schema: queryProjectSchema,
-    filter: isAdmin,
 })(async function queryProject({
     id,
     name = "",

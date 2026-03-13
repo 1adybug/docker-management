@@ -6,7 +6,6 @@ import { prisma } from "@/prisma"
 
 import { createSharedFn } from "@/server/createSharedFn"
 import { ensureProjectRoot } from "@/server/ensureProjectRoot"
-import { isAdmin } from "@/server/isAdmin"
 
 export interface DockerContainerRaw {
     ID?: string
@@ -96,7 +95,6 @@ function isComposeFileManaged(files: string[], projectRoot: string) {
 
 export const queryDockerContainer = createSharedFn<never>({
     name: "queryDockerContainer",
-    filter: isAdmin,
 })(async function queryDockerContainer() {
     const output = await execAsync(`docker ps -a --format "{{json .}}"`)
     const projectRoot = await ensureProjectRoot()

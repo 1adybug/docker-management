@@ -25,17 +25,14 @@ const navs: NavItem[] = [
     {
         href: "/container",
         name: "容器管理",
-        filter: isAdmin,
     },
     {
         href: "/project",
         name: "项目管理",
-        filter: isAdmin,
     },
     {
         href: "/image",
         name: "镜像管理",
-        filter: isAdmin,
     },
     {
         href: "/user",

@@ -3,7 +3,6 @@ import { prisma } from "@/prisma"
 import { getProjectSchema } from "@/schemas/getProject"
 
 import { createSharedFn } from "@/server/createSharedFn"
-import { isAdmin } from "@/server/isAdmin"
 
 import { ClientError } from "@/utils/clientError"
 
@@ -16,7 +15,6 @@ export interface ProjectDetail {
 export const getProject = createSharedFn({
     name: "getProject",
     schema: getProjectSchema,
-    filter: isAdmin,
 })(async function getProject({ name }) {
     const project = await prisma.project.findUnique({ where: { name } })
     if (!project) throw new ClientError("项目不存在")

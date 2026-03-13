@@ -12,7 +12,6 @@ import { dockerImageNameParser } from "@/schemas/dockerImageName"
 import { createSharedFn } from "@/server/createSharedFn"
 import { getReplaceDockerTemporaryName, inspectDockerImage, replaceDockerImage } from "@/server/dockerImage"
 import { createDockerTempDirectory, deleteDockerTempDirectory } from "@/server/dockerTempDirectory"
-import { isAdmin } from "@/server/isAdmin"
 import { writeTextToFile } from "@/server/writeTextToFile"
 import { writeWebFileToPath } from "@/server/writeWebFileToPath"
 
@@ -213,7 +212,6 @@ async function prepareBuildContext({ contextDirectory, nginxImage, sourceDirecto
 export const buildStaticDockerImage = createSharedFn<FormData>({
     name: "buildStaticDockerImage",
     schema: buildStaticDockerImageSchema,
-    filter: isAdmin,
 })(async function buildStaticDockerImage(formData) {
     const { file, extension } = getUploadFile(formData)
     const targetName = getOptionalFormText(formData, "targetName")
