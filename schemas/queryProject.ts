@@ -5,6 +5,8 @@ import { createdAfterSchema } from "./createdAfter"
 import { createdBeforeSchema } from "./createdBefore"
 import { pageNumSchema } from "./pageNum"
 import { pageSizeSchema } from "./pageSize"
+import { projectSortBySchema } from "./projectSortBy"
+import { sortOrderSchema } from "./sortOrder"
 import { updatedAfterSchema } from "./updatedAfter"
 import { updatedBeforeSchema } from "./updatedBefore"
 
@@ -19,6 +21,8 @@ export const queryProjectSchema = z.object(
         updatedBefore: updatedBeforeSchema.optional(),
         pageNum: pageNumSchema.optional(),
         pageSize: pageSizeSchema.optional(),
+        sortBy: projectSortBySchema.optional(),
+        sortOrder: sortOrderSchema.optional(),
     },
     { message: "无效的项目参数" },
 )

@@ -3,7 +3,7 @@
 import { FC, useEffect, useMemo, useRef, useState } from "react"
 
 import { IconBrandDocker, IconBrandReact, IconCoffee, IconTrash } from "@tabler/icons-react"
-import { Button, Checkbox, Form, Input, message, Modal, Popconfirm, Select, Table, Tag } from "antd"
+import { Button, Checkbox, Form, Input, message, Modal, Popconfirm, Select, Table, TableProps, Tag } from "antd"
 import { useForm } from "antd/es/form/Form"
 import FormItem from "antd/es/form/FormItem"
 import { InputFileButton } from "deepsea-components"
@@ -19,22 +19,29 @@ import { useQueryDockerImageDetail } from "@/hooks/useQueryDockerImageDetail"
 import { runProjectClient } from "@/hooks/useRunProject"
 import { useUploadDockerImage } from "@/hooks/useUploadDockerImage"
 
+import { getParser } from "@/schemas"
 import { dockerImageNameSchema } from "@/schemas/dockerImageName"
+import { DockerImageSortByParams, dockerImageSortBySchema } from "@/schemas/dockerImageSortBy"
 import { dockerStartCommandSchema } from "@/schemas/dockerStartCommand"
 import { pageNumParser } from "@/schemas/pageNum"
 import { pageSizeParser } from "@/schemas/pageSize"
 import { ProjectCommand } from "@/schemas/projectCommand"
+import { SortOrderParams, sortOrderSchema } from "@/schemas/sortOrder"
 
 import { DockerImageItem } from "@/shared/queryDockerImageDetail"
 
+import { getSortOrder } from "@/utils/getSortOrder"
+
 export interface DockerImageFilterParams {
-    name?: string
+    repository?: string
     project?: string
 }
 
 export interface QueryImageFormParams extends DockerImageFilterParams {
     pageNum?: number
     pageSize?: number
+    sortBy?: DockerImageSortByParams
+    sortOrder?: SortOrderParams
 }
 
 export interface StaticDockerImageFormParams {
@@ -87,6 +94,111 @@ function getDefaultJavaImage(imageNames: string[]) {
     return imageNames.find(item => /eclipse-temurin|openjdk|amazoncorretto|liberica|sapmachine|semeru|dragonwell/i.test(item))
 }
 
+function compareName(first?: string, second?: string) {
+    return (first?.trim() ?? "").localeCompare(second?.trim() ?? "", "zh-CN", { numeric: true })
+}
+
+function getCreatedAtTimestamp(value?: string) {
+    const timestamp = Date.parse(value ?? "")
+    return Number.isNaN(timestamp) ? undefined : timestamp
+}
+
+function compareOptionalNumber(first?: number, second?: number) {
+    if (first === undefined && second === undefined) return 0
+    if (first === undefined) return 1
+    if (second === undefined) return -1
+    return first - second
+}
+
+function getDockerSizeValue(value?: string) {
+    const match = value?.trim().match(/^([\d.]+)\s*([a-zA-Z]+)$/u)
+    if (!match) return undefined
+
+    const size = Number(match[1])
+
+    if (Number.isNaN(size)) return undefined
+
+    const unitMap = {
+        B: 1,
+        KB: 1024,
+        MB: 1024 ** 2,
+        GB: 1024 ** 3,
+        TB: 1024 ** 4,
+        PB: 1024 ** 5,
+    }
+
+    const unit = match[2].toUpperCase()
+    const factor = unitMap[unit as keyof typeof unitMap]
+
+    if (!factor) return undefined
+
+    return size * factor
+}
+
+function compareCreatedAt(first?: string, second?: string) {
+    const timestampDiff = compareOptionalNumber(getCreatedAtTimestamp(first), getCreatedAtTimestamp(second))
+    if (timestampDiff !== 0) return timestampDiff
+    return compareName(first, second)
+}
+
+function compareSize(first?: string, second?: string) {
+    const sizeDiff = compareOptionalNumber(getDockerSizeValue(first), getDockerSizeValue(second))
+    if (sizeDiff !== 0) return sizeDiff
+    return compareName(first, second)
+}
+
+function getProjectSortText(projects: string[]) {
+    return projects.slice().sort(compareName).join(" | ")
+}
+
+function compareProjects(first: string[], second: string[]) {
+    const textDiff = compareName(getProjectSortText(first), getProjectSortText(second))
+    if (textDiff !== 0) return textDiff
+    return first.length - second.length
+}
+
+function compareTag(first?: string, second?: string, sortOrder?: SortOrderParams) {
+    const firstTag = first?.trim().toLowerCase() ?? ""
+    const secondTag = second?.trim().toLowerCase() ?? ""
+    const isFirstLatest = firstTag === "latest"
+    const isSecondLatest = secondTag === "latest"
+
+    if (isFirstLatest && !isSecondLatest) return -1
+    if (!isFirstLatest && isSecondLatest) return 1
+
+    const result = compareName(first, second)
+    return sortOrder === "desc" ? result * -1 : result
+}
+
+function compareDockerImage(first: DockerImageItem, second: DockerImageItem, sortBy?: DockerImageSortByParams, sortOrder?: SortOrderParams) {
+    switch (sortBy) {
+        case "repository":
+            return compareName(first.repository, second.repository) || compareName(first.tag, second.tag) || compareName(first.id, second.id)
+        case "tag":
+            return compareTag(first.tag, second.tag, sortOrder) || compareName(first.repository, second.repository) || compareName(first.id, second.id)
+        case "id":
+            return compareName(first.id, second.id) || compareName(first.name, second.name)
+        case "size":
+            return compareSize(first.size, second.size) || compareName(first.name, second.name)
+        case "createdAt":
+            return compareCreatedAt(first.createdAt, second.createdAt) || compareName(first.name, second.name)
+        case "projects":
+            return compareProjects(first.projects, second.projects) || compareName(first.name, second.name)
+        default:
+            return compareName(first.name, second.name) || compareName(first.id, second.id)
+    }
+}
+
+function getSortResult(result: number, sortOrder?: SortOrderParams) {
+    return sortOrder === "desc" ? result * -1 : result
+}
+
+function getSorterOrder(order?: string | null) {
+    if (order === "ascend") return "asc"
+    if (order === "descend") return "desc"
+    return undefined
+}
+
 const Page: FC = () => {
     const { data, isLoading, refetch } = useQueryDockerImageDetail()
     const { mutateAsync: deleteDockerImage, isPending: isDeletePending } = useDeleteDockerImage()
@@ -95,10 +207,12 @@ const Page: FC = () => {
     const { mutateAsync: buildStaticDockerImage, isPending: isBuildStaticPending } = useBuildStaticDockerImage()
 
     const [query, setQuery] = useQueryState({
-        keys: ["name", "project"],
+        keys: ["repository", "project"],
         parse: {
             pageNum: pageNumParser,
             pageSize: pageSizeParser,
+            sortBy: getParser(dockerImageSortBySchema.optional().catch(undefined)),
+            sortOrder: getParser(sortOrderSchema.optional().catch(undefined)),
         },
     })
 
@@ -120,8 +234,27 @@ const Page: FC = () => {
 
     const [selectedRestartProjectNames, setSelectedRestartProjectNames] = useState<string[]>([])
     const { y } = useScroll(container, { paginationMargin: 32 })
+    const pageNum = query.pageNum ?? 1
+    const pageSize = query.pageSize ?? 10
 
     const imageNames = useMemo(() => Array.from(new Set((data ?? []).map(item => item.name))), [data])
+
+    const repositoryOptions = useMemo(
+        () =>
+            Array.from(new Set((data ?? []).map(item => item.repository).filter(Boolean)))
+                .sort(compareName)
+                .map(item => ({ label: item, value: item })),
+        [data],
+    )
+
+    const projectOptions = useMemo(
+        () =>
+            Array.from(new Set((data ?? []).flatMap(item => item.projects).filter(Boolean)))
+                .sort(compareName)
+                .map(item => ({ label: item, value: item })),
+        [data],
+    )
+
     const nginxImageNames = useMemo(() => imageNames.filter(name => name.startsWith("nginx:")), [imageNames])
     const defaultNginxImage = useMemo(() => getDefaultNginxImage(nginxImageNames), [nginxImageNames])
     const defaultJavaImage = useMemo(() => getDefaultJavaImage(imageNames), [imageNames])
@@ -356,34 +489,72 @@ const Page: FC = () => {
 
     const filteredData = useMemo(() => {
         const list = data ?? []
-        const nameKeyword = query.name?.trim()
-        const projectKeyword = query.project?.trim()
+        const repository = query.repository?.trim()
+        const project = query.project?.trim()
 
         return list.filter(item => {
-            const isNameMatch = nameKeyword ? item.name.includes(nameKeyword) : true
-            const isProjectMatch = projectKeyword ? item.projects.some(project => project.includes(projectKeyword)) : true
-            return isNameMatch && isProjectMatch
+            const isRepositoryMatch = repository ? item.repository === repository : true
+            const isProjectMatch = project ? item.projects.includes(project) : true
+            return isRepositoryMatch && isProjectMatch
         })
-    }, [data, query.name, query.project])
+    }, [data, query.project, query.repository])
+
+    const sortedData = useMemo(() => {
+        if (!query.sortBy) return filteredData
+
+        return filteredData.slice().sort((first, second) => {
+            if (query.sortBy === "tag") return compareDockerImage(first, second, query.sortBy, query.sortOrder)
+            return getSortResult(compareDockerImage(first, second, query.sortBy, query.sortOrder), query.sortOrder)
+        })
+    }, [filteredData, query.sortBy, query.sortOrder])
 
     const pagedData = useMemo(() => {
-        const pageNum = query.pageNum ?? 1
-        const pageSize = query.pageSize ?? 10
         const start = (pageNum - 1) * pageSize
         const end = start + pageSize
-        return filteredData.slice(start, end)
-    }, [filteredData, query.pageNum, query.pageSize])
+        return sortedData.slice(start, end)
+    }, [pageNum, pageSize, sortedData])
+
+    const onTableChange: TableProps<DockerImageItem>["onChange"] = function onTableChange(pagination, filters, sorter) {
+        if (Array.isArray(sorter)) return
+
+        const sortBy = (typeof sorter.columnKey === "string" ? sorter.columnKey : typeof sorter.field === "string" ? sorter.field : undefined) ?? undefined
+
+        setQuery(prev => ({
+            ...prev,
+            pageNum: pagination.current ?? prev.pageNum,
+            pageSize: pagination.pageSize ?? prev.pageSize,
+            sortBy: sortBy as DockerImageSortByParams | undefined,
+            sortOrder: getSorterOrder(sorter.order),
+        }))
+    }
 
     const columns: Columns<DockerImageItem> = [
         {
             title: "镜像名称",
-            dataIndex: "name",
+            dataIndex: "repository",
+            key: "repository",
             align: "left",
+            sorter: true,
+            sortOrder: getSortOrder(query, "repository"),
+        },
+        {
+            title: "Tag",
+            dataIndex: "tag",
+            key: "tag",
+            align: "center",
+            sorter: true,
+            sortOrder: getSortOrder(query, "tag"),
+            render(value: string) {
+                return value || "-"
+            },
         },
         {
             title: "镜像 ID",
             dataIndex: "id",
+            key: "id",
             align: "center",
+            sorter: true,
+            sortOrder: getSortOrder(query, "id"),
             render(value: string) {
                 return value ? value.slice(0, 12) : "-"
             },
@@ -391,12 +562,18 @@ const Page: FC = () => {
         {
             title: "大小",
             dataIndex: "size",
+            key: "size",
             align: "center",
+            sorter: true,
+            sortOrder: getSortOrder(query, "size"),
         },
         {
             title: "创建时间",
             dataIndex: "createdAt",
+            key: "createdAt",
             align: "center",
+            sorter: true,
+            sortOrder: getSortOrder(query, "createdAt"),
             render(value: string) {
                 return formatTime(value)
             },
@@ -404,7 +581,10 @@ const Page: FC = () => {
         {
             title: "关联项目",
             dataIndex: "projects",
+            key: "projects",
             align: "center",
+            sorter: true,
+            sortOrder: getSortOrder(query, "projects"),
             render(value: string[]) {
                 if (!value || value.length === 0) return "-"
                 return (
@@ -480,11 +660,11 @@ const Page: FC = () => {
             <title>镜像管理</title>
             <div className="flex-none px-4">
                 <Form<QueryImageFormParams> name="query-image-form" className="gap-y-4" layout="inline" onFinish={setQuery}>
-                    <FormItem<QueryImageFormParams> name="name" label="镜像名称">
-                        <Input allowClear />
+                    <FormItem<QueryImageFormParams> name="repository" label="镜像名称">
+                        <Select className="!w-48" allowClear showSearch options={repositoryOptions} placeholder="选择镜像名称" />
                     </FormItem>
                     <FormItem<QueryImageFormParams> name="project" label="关联项目">
-                        <Input allowClear />
+                        <Select className="!w-48" allowClear showSearch options={projectOptions} placeholder="选择关联项目" />
                     </FormItem>
                     <FormItem<QueryImageFormParams>>
                         <Button htmlType="submit" type="primary" disabled={isRequesting}>
@@ -544,14 +724,12 @@ const Page: FC = () => {
                     columns={columns}
                     dataSource={pagedData}
                     loading={isLoading}
+                    onChange={onTableChange}
                     pagination={{
-                        current: query.pageNum,
-                        pageSize: query.pageSize,
-                        total: filteredData.length,
+                        current: pageNum,
+                        pageSize,
+                        total: sortedData.length,
                         showTotal,
-                        onChange(page, size) {
-                            setQuery(prev => ({ ...prev, pageNum: page, pageSize: size }))
-                        },
                     }}
                     rowKey={({ name, id }) => `${name}-${id}`}
                     scroll={{ y }}

@@ -2,6 +2,8 @@ import { getPagination } from "deepsea-tools"
 
 import { prisma } from "@/prisma"
 
+import { ProjectOrderByWithRelationInput } from "@/prisma/generated/internal/prismaNamespace"
+
 import { defaultPageNum } from "@/schemas/pageNum"
 import { defaultPageSize } from "@/schemas/pageSize"
 import { queryProjectSchema } from "@/schemas/queryProject"
@@ -123,6 +125,8 @@ export const queryProject = createSharedFn({
     updatedBefore,
     pageNum = defaultPageNum,
     pageSize = defaultPageSize,
+    sortBy = "updatedAt",
+    sortOrder = "desc",
 } = {}) {
     const projectId = id?.trim() || undefined
     const nameItems = name.split(/\s+/).filter(Boolean)
@@ -154,13 +158,25 @@ export const queryProject = createSharedFn({
         AND: andFilters,
     }
 
+    const orderBy: ProjectOrderByWithRelationInput[] = [
+        {
+            updatedAt: sortBy === "updatedAt" ? sortOrder : "desc",
+        },
+    ]
+
+    if (sortBy !== "updatedAt") {
+        if (sortBy === "name" || sortBy === "createdAt") {
+            orderBy.unshift({
+                [sortBy]: sortOrder,
+            })
+        }
+    }
+
     const data = await prisma.project.findMany({
         where,
         skip: (pageNum - 1) * pageSize,
         take: pageSize,
-        orderBy: {
-            updatedAt: "desc",
-        },
+        orderBy,
         select: {
             name: true,
             createdAt: true,

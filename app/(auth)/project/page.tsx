@@ -3,7 +3,7 @@
 import { FC, useMemo, useRef, useState } from "react"
 
 import { IconCopy, IconDownload, IconEdit, IconFileText, IconPlayerPlay, IconPlayerStop, IconRefresh, IconTrash } from "@tabler/icons-react"
-import { Button, DatePicker, Form, Input, Modal, Table, Tabs } from "antd"
+import { Button, DatePicker, Form, Input, Modal, Table, TableProps, Tabs } from "antd"
 import FormItem from "antd/es/form/FormItem"
 import { clsx, formatTime, naturalParser, showTotal } from "deepsea-tools"
 import { useRouter } from "next/navigation"
@@ -20,12 +20,17 @@ import { useQueryDockerContainer } from "@/hooks/useQueryDockerContainer"
 import { useQueryProject } from "@/hooks/useQueryProject"
 import { useRunProject } from "@/hooks/useRunProject"
 
+import { getParser } from "@/schemas"
 import { pageNumParser } from "@/schemas/pageNum"
 import { pageSizeParser } from "@/schemas/pageSize"
 import { ProjectCommand } from "@/schemas/projectCommand"
+import { ProjectSortByParams, projectSortBySchema } from "@/schemas/projectSortBy"
+import { sortOrderSchema } from "@/schemas/sortOrder"
 
 import { DockerContainerItem } from "@/shared/queryDockerContainer"
 import { ProjectSummary } from "@/shared/queryProject"
+
+import { getSortOrder } from "@/utils/getSortOrder"
 
 /** 项目删除方式 */
 export const ProjectDeleteMode = {
@@ -96,6 +101,8 @@ const Page: FC = () => {
                 updatedAfter: naturalParser,
                 pageNum: pageNumParser,
                 pageSize: pageSizeParser,
+                sortBy: getParser(projectSortBySchema.optional().catch(undefined)),
+                sortOrder: getParser(sortOrderSchema.optional().catch(undefined)),
             },
         }),
         {
@@ -197,6 +204,20 @@ const Page: FC = () => {
         return <span className={clsx("text-sm", deleteMode === mode ? "text-red-500" : "text-slate-600")}>{label}</span>
     }
 
+    const onTableChange: TableProps<ProjectSummary>["onChange"] = function onTableChange(pagination, filters, sorter) {
+        if (Array.isArray(sorter)) return
+
+        const sortBy = (typeof sorter.columnKey === "string" ? sorter.columnKey : typeof sorter.field === "string" ? sorter.field : undefined) ?? undefined
+
+        setQuery(prev => ({
+            ...prev,
+            pageNum: pagination.current ?? prev.pageNum,
+            pageSize: pagination.pageSize ?? prev.pageSize,
+            sortBy: sortBy as ProjectSortByParams | undefined,
+            sortOrder: getSorterOrder(sorter.order),
+        }))
+    }
+
     const projectStatusMap = useMemo(() => getProjectContainerStatusMap(containerData ?? []), [containerData])
 
     const columns: Columns<ProjectSummary> = [
@@ -204,6 +225,8 @@ const Page: FC = () => {
             title: "项目名称",
             dataIndex: "name",
             align: "center",
+            sorter: true,
+            sortOrder: getSortOrder(query, "name"),
         },
         {
             title: "创建用户",
@@ -217,6 +240,8 @@ const Page: FC = () => {
             title: "创建时间",
             dataIndex: "createdAt",
             align: "center",
+            sorter: true,
+            sortOrder: getSortOrder(query, "createdAt"),
             render(value) {
                 return formatTime(value)
             },
@@ -233,6 +258,8 @@ const Page: FC = () => {
             title: "更新时间",
             dataIndex: "updatedAt",
             align: "center",
+            sorter: true,
+            sortOrder: getSortOrder(query, "updatedAt"),
             render(value) {
                 return formatTime(value)
             },
@@ -399,14 +426,12 @@ const Page: FC = () => {
                     columns={columns}
                     dataSource={data?.list}
                     loading={isLoading}
+                    onChange={onTableChange}
                     pagination={{
                         current: pageNum,
                         pageSize,
                         total: data?.total,
                         showTotal,
-                        onChange(page, size) {
-                            setQuery(prev => ({ ...prev, pageNum: page, pageSize: size }))
-                        },
                     }}
                     rowKey="name"
                     scroll={{ y }}
@@ -414,6 +439,12 @@ const Page: FC = () => {
             </div>
         </div>
     )
+}
+
+function getSorterOrder(order?: string | null) {
+    if (order === "ascend") return "asc"
+    if (order === "descend") return "desc"
+    return undefined
 }
 
 export default Page

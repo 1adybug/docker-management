@@ -3,7 +3,7 @@
 import { FC, useMemo, useRef, useState } from "react"
 
 import { IconDownload, IconFileText, IconPlayerPause, IconPlayerPlay, IconPlayerStop, IconRefresh, IconTrash } from "@tabler/icons-react"
-import { Button, Form, Input, Popconfirm, Select, Table, Tag } from "antd"
+import { Button, Form, Input, Popconfirm, Select, Table, TableProps, Tag } from "antd"
 import FormItem from "antd/es/form/FormItem"
 import { formatTime, showTotal } from "deepsea-tools"
 import Link from "next/link"
@@ -19,12 +19,18 @@ import { useQueryDockerContainer } from "@/hooks/useQueryDockerContainer"
 import { useRunComposeProject } from "@/hooks/useRunComposeProject"
 import { useRunDockerContainer } from "@/hooks/useRunDockerContainer"
 
+import { getParser } from "@/schemas"
 import { ComposeProjectCommand } from "@/schemas/composeProjectCommand"
+import { DockerContainerChildSortByParams, dockerContainerChildSortBySchema } from "@/schemas/dockerContainerChildSortBy"
 import { DockerContainerCommand } from "@/schemas/dockerContainerCommand"
+import { DockerContainerSortByParams, dockerContainerSortBySchema } from "@/schemas/dockerContainerSortBy"
 import { pageNumParser } from "@/schemas/pageNum"
 import { pageSizeParser } from "@/schemas/pageSize"
+import { SortOrderParams, sortOrderSchema } from "@/schemas/sortOrder"
 
 import { DockerContainerItem } from "@/shared/queryDockerContainer"
+
+import { getSortOrder } from "@/utils/getSortOrder"
 
 /** 容器筛选参数 */
 export interface ContainerFilterParams {
@@ -32,6 +38,16 @@ export interface ContainerFilterParams {
     image?: string
     status?: DockerContainerStatus
     project?: string
+}
+
+/** 容器列表查询参数 */
+export interface ContainerTableQuery extends ContainerFilterParams {
+    pageNum?: number
+    pageSize?: number
+    sortBy?: DockerContainerSortByParams
+    sortOrder?: SortOrderParams
+    childSortBy?: DockerContainerChildSortByParams
+    childSortOrder?: SortOrderParams
 }
 
 /** 容器列表行类型 */
@@ -119,6 +135,73 @@ function getProjectSortWeight(record: DockerContainerTableRow) {
     return 1
 }
 
+function getCreatedAtTimestamp(value?: string) {
+    const timestamp = Date.parse(value ?? "")
+    return Number.isNaN(timestamp) ? undefined : timestamp
+}
+
+function compareOptionalNumber(first?: number, second?: number) {
+    if (first === undefined && second === undefined) return 0
+    if (first === undefined) return 1
+    if (second === undefined) return -1
+    return first - second
+}
+
+function compareCreatedAt(first?: string, second?: string) {
+    const timestampDiff = compareOptionalNumber(getCreatedAtTimestamp(first), getCreatedAtTimestamp(second))
+    if (timestampDiff !== 0) return timestampDiff
+    return compareName(first, second)
+}
+
+function compareContainerStatus(first?: string, second?: string) {
+    const statusDiff = compareName(getStatusValue(first), getStatusValue(second))
+    if (statusDiff !== 0) return statusDiff
+    return compareName(first, second)
+}
+
+function compareProject(record: DockerContainerTableRow, nextRecord: DockerContainerTableRow) {
+    const projectDiff = getProjectSortWeight(record) - getProjectSortWeight(nextRecord)
+    if (projectDiff !== 0) return projectDiff
+    return compareName(record.projectName ?? noProjectGroupName, nextRecord.projectName ?? noProjectGroupName)
+}
+
+function getSortResult(result: number, sortOrder?: SortOrderParams) {
+    return sortOrder === "desc" ? result * -1 : result
+}
+
+function compareTableRow(first: DockerContainerTableRow, second: DockerContainerTableRow, sortBy?: DockerContainerSortByParams) {
+    switch (sortBy) {
+        case "name":
+            return compareName(first.name, second.name) || compareProject(first, second)
+        case "project":
+            return compareProject(first, second) || compareName(first.name, second.name)
+        default:
+            return compareProject(first, second) || compareName(first.name, second.name)
+    }
+}
+
+function compareContainerItem(first: DockerContainerItem, second: DockerContainerItem, sortBy?: DockerContainerChildSortByParams) {
+    switch (sortBy) {
+        case "id":
+            return compareName(first.id, second.id) || compareName(first.name, second.name)
+        case "image":
+            return compareName(first.image, second.image) || compareName(first.name, second.name)
+        case "status":
+            return compareContainerStatus(first.status, second.status) || compareName(first.name, second.name)
+        case "createdAt":
+            return compareCreatedAt(first.createdAt, second.createdAt) || compareName(first.name, second.name)
+        case "name":
+        default:
+            return compareName(first.name, second.name) || compareName(first.id, second.id)
+    }
+}
+
+function getSorterOrder(order?: string | null) {
+    if (order === "ascend") return "asc"
+    if (order === "descend") return "desc"
+    return undefined
+}
+
 const Page: FC = () => {
     const [logOpen, setLogOpen] = useState(false)
     const [logName, setLogName] = useState<string | undefined>(undefined)
@@ -135,13 +218,19 @@ const Page: FC = () => {
         parse: {
             pageNum: pageNumParser,
             pageSize: pageSizeParser,
+            sortBy: getParser(dockerContainerSortBySchema.optional().catch(undefined)),
+            sortOrder: getParser(sortOrderSchema.optional().catch(undefined)),
+            childSortBy: getParser(dockerContainerChildSortBySchema.optional().catch(undefined)),
+            childSortOrder: getParser(sortOrderSchema.optional().catch(undefined)),
         },
     })
 
-    type FormParams = typeof query
+    type FormParams = ContainerTableQuery
 
     const container = useRef<HTMLDivElement>(null)
     const { y } = useScroll(container, { paginationMargin: 32 })
+    const pageNum = query.pageNum ?? 1
+    const pageSize = query.pageSize ?? 10
 
     function onRefresh() {
         refetch()
@@ -452,31 +541,56 @@ const Page: FC = () => {
 
         const sortedRows = rows.map(row => ({
             ...row,
-            containers: row.containers ? [...row.containers].sort((first, second) => compareName(first.name, second.name)) : row.containers,
+            containers:
+                row.containers?.slice().sort((first, second) => getSortResult(compareContainerItem(first, second, query.childSortBy), query.childSortOrder)) ??
+                row.containers,
         }))
 
-        sortedRows.sort((first, second) => {
-            const weightDiff = getProjectSortWeight(first) - getProjectSortWeight(second)
-            if (weightDiff !== 0) return weightDiff
-            return compareName(first.name, second.name)
-        })
+        sortedRows.sort((first, second) => getSortResult(compareTableRow(first, second, query.sortBy), query.sortOrder))
 
         return sortedRows
-    }, [filteredData])
+    }, [filteredData, query.childSortBy, query.childSortOrder, query.sortBy, query.sortOrder])
 
     const pagedData = useMemo(() => {
-        const pageNum = query.pageNum ?? 1
-        const pageSize = query.pageSize ?? 10
         const start = (pageNum - 1) * pageSize
         const end = start + pageSize
         return tableRows.slice(start, end)
-    }, [query.pageNum, query.pageSize, tableRows])
+    }, [pageNum, pageSize, tableRows])
+
+    const onTableChange: TableProps<DockerContainerTableRow>["onChange"] = function onTableChange(pagination, filters, sorter) {
+        if (Array.isArray(sorter)) return
+
+        const sortBy = (typeof sorter.columnKey === "string" ? sorter.columnKey : typeof sorter.field === "string" ? sorter.field : undefined) ?? undefined
+
+        setQuery(prev => ({
+            ...prev,
+            pageNum: pagination.current ?? prev.pageNum,
+            pageSize: pagination.pageSize ?? prev.pageSize,
+            sortBy: sortBy as DockerContainerSortByParams | undefined,
+            sortOrder: getSorterOrder(sorter.order),
+        }))
+    }
+
+    const onContainerTableChange: TableProps<DockerContainerItem>["onChange"] = function onContainerTableChange(pagination, filters, sorter) {
+        if (Array.isArray(sorter)) return
+
+        const childSortBy = (typeof sorter.columnKey === "string" ? sorter.columnKey : typeof sorter.field === "string" ? sorter.field : undefined) ?? undefined
+
+        setQuery(prev => ({
+            ...prev,
+            childSortBy: childSortBy as DockerContainerChildSortByParams | undefined,
+            childSortOrder: getSorterOrder(sorter.order),
+        }))
+    }
 
     const columns: Columns<DockerContainerTableRow> = [
         {
             title: "名称",
             dataIndex: "name",
+            key: "name",
             align: "left",
+            sorter: true,
+            sortOrder: getSortOrder(query, "name"),
             render(value: string, record) {
                 if (!isProjectRow(record)) return value
                 return (
@@ -489,7 +603,10 @@ const Page: FC = () => {
         {
             title: "项目归属",
             dataIndex: "isManagedProject",
+            key: "project",
             align: "center",
+            sorter: true,
+            sortOrder: getSortOrder(query, "project"),
             render(value: boolean | undefined, record) {
                 if (isProjectRow(record) && !record.projectName) return <Tag>未归属项目</Tag>
                 if (!isProjectRow(record) && !record.projectName) return "-"
@@ -522,17 +639,26 @@ const Page: FC = () => {
         {
             title: "容器名称",
             dataIndex: "name",
+            key: "name",
             align: "left",
+            sorter: true,
+            sortOrder: getSortOrder({ sortBy: query.childSortBy, sortOrder: query.childSortOrder }, "name"),
         },
         {
             title: "容器 ID",
             dataIndex: "id",
+            key: "id",
             align: "center",
+            sorter: true,
+            sortOrder: getSortOrder({ sortBy: query.childSortBy, sortOrder: query.childSortOrder }, "id"),
         },
         {
             title: "镜像",
             dataIndex: "image",
+            key: "image",
             align: "center",
+            sorter: true,
+            sortOrder: getSortOrder({ sortBy: query.childSortBy, sortOrder: query.childSortOrder }, "image"),
             render(value: string | undefined) {
                 return value || "-"
             },
@@ -540,7 +666,10 @@ const Page: FC = () => {
         {
             title: "状态",
             dataIndex: "status",
+            key: "status",
             align: "center",
+            sorter: true,
+            sortOrder: getSortOrder({ sortBy: query.childSortBy, sortOrder: query.childSortOrder }, "status"),
             render(value: string | undefined) {
                 return value || "-"
             },
@@ -548,7 +677,10 @@ const Page: FC = () => {
         {
             title: "创建时间",
             dataIndex: "createdAt",
+            key: "createdAt",
             align: "center",
+            sorter: true,
+            sortOrder: getSortOrder({ sortBy: query.childSortBy, sortOrder: query.childSortOrder }, "createdAt"),
             render(value: string | undefined) {
                 return value ? formatTime(value) : "-"
             },
@@ -611,14 +743,12 @@ const Page: FC = () => {
                     columns={columns}
                     dataSource={pagedData}
                     loading={isLoading}
+                    onChange={onTableChange}
                     pagination={{
-                        current: query.pageNum,
-                        pageSize: query.pageSize,
+                        current: pageNum,
+                        pageSize,
                         showTotal,
                         total: tableRows.length,
-                        onChange(page, size) {
-                            setQuery(prev => ({ ...prev, pageNum: page, pageSize: size }))
-                        },
                     }}
                     expandable={{
                         expandedRowRender(record) {
@@ -631,6 +761,7 @@ const Page: FC = () => {
                                         size="small"
                                         columns={containerColumns}
                                         dataSource={containers}
+                                        onChange={onContainerTableChange}
                                         pagination={false}
                                     />
                                 </div>
