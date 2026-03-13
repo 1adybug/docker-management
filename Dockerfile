@@ -54,12 +54,12 @@ COPY --from=builder --chown=nextjs:bun /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:bun /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
-RUN mkdir -p /app/data && chown -R nextjs:bun /app/data
+RUN mkdir -p /app/data /app/projects && chown -R nextjs:bun /app/data /app/projects
 
 RUN bun add prisma --registry=https://registry.npmmirror.com --global
 
 # 创建启动脚本，先以 root 执行 prisma db push，然后切换用户运行应用
-RUN printf '#!/bin/sh\nset -eu\nmkdir -p /app/data\nchown -R nextjs:bun /app/data\nchmod -R u+rwX,g+rwX /app/data\nif [ -S /var/run/docker.sock ]; then\n    docker_gid=$(stat -c "%%g" /var/run/docker.sock)\n    docker_group=$(getent group "${docker_gid}" | cut -d: -f1 || true)\n    if [ -z "${docker_group}" ]; then\n        docker_group=dockerhost\n        groupadd --system --gid "${docker_gid}" "${docker_group}"\n    fi\n    usermod -aG "${docker_group}" nextjs\nfi\nprisma db push\nchown -R nextjs:bun /app/data\nchmod -R u+rwX,g+rwX /app/data\nexec runuser -u nextjs -- bun run server.js\n' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+RUN printf '#!/bin/sh\nset -eu\nmkdir -p /app/data /app/projects\nchown -R nextjs:bun /app/data /app/projects\nchmod -R u+rwX,g+rwX /app/data /app/projects\nif [ -S /var/run/docker.sock ]; then\n    docker_gid=$(stat -c "%%g" /var/run/docker.sock)\n    docker_group=$(getent group "${docker_gid}" | cut -d: -f1 || true)\n    if [ -z "${docker_group}" ]; then\n        docker_group=dockerhost\n        groupadd --system --gid "${docker_gid}" "${docker_group}"\n    fi\n    usermod -aG "${docker_group}" nextjs\nfi\nprisma db push\nchown -R nextjs:bun /app/data /app/projects\nchmod -R u+rwX,g+rwX /app/data /app/projects\nexec runuser -u nextjs -- bun run server.js\n' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
 
 EXPOSE 3000
 

@@ -4,7 +4,7 @@ import { ClientError } from "@/utils/clientError"
 
 /** 项目根目录 */
 export function getProjectRoot() {
-    return resolve(process.cwd(), "data", "projects")
+    return resolve(process.cwd(), "projects")
 }
 
 /** 项目目录 */
