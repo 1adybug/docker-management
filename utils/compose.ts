@@ -47,6 +47,8 @@ export interface ComposeVolumeMap {
 }
 
 export interface ComposeFile {
+    name?: string
+    description?: string
     services?: ComposeServiceMap
     networks?: ComposeNetworkMap
     volumes?: ComposeVolumeMap
@@ -73,6 +75,7 @@ export interface ProjectFormService {
 
 export interface ProjectFormData {
     name?: string
+    description?: string
     services?: ProjectFormService[]
     networks?: string[]
     volumes?: string[]
@@ -129,6 +132,11 @@ function normalizeCommand(value: string | string[] | undefined) {
 function cleanString(value?: string) {
     const next = value?.trim()
     return next ? next : undefined
+}
+
+function normalizeComposeField(value: unknown) {
+    if (typeof value !== "string") return undefined
+    return cleanString(value)
 }
 
 function normalizeFormList(items?: string[]) {
@@ -206,6 +214,20 @@ function buildNamedMap<T extends Record<string, unknown>>(names?: string[], orig
     }, {}) as T
 }
 
+function getComposeRest(original?: ComposeFile) {
+    if (!original) return {}
+
+    const rest = { ...original }
+
+    delete rest.name
+    delete rest.description
+    delete rest.services
+    delete rest.networks
+    delete rest.volumes
+
+    return rest
+}
+
 export function parseComposeYaml(content: string) {
     const result = parse(content) as ComposeFile | null
     if (!result || typeof result !== "object") throw new Error("解析失败")
@@ -227,6 +249,8 @@ export function composeToFormData(compose: ComposeFile) {
     }))
 
     return {
+        name: normalizeComposeField(compose.name),
+        description: normalizeComposeField(compose.description),
         services,
         networks: normalizeKeyList(compose.networks),
         volumes: normalizeKeyList(compose.volumes),
@@ -234,6 +258,9 @@ export function composeToFormData(compose: ComposeFile) {
 }
 
 export function formDataToCompose(form: ProjectFormData, original?: ComposeFile) {
+    const composeName = cleanString(form.name)
+    const composeDescription = cleanString(form.description)
+
     const services = (form.services ?? [])
         .map(service => {
             const name = cleanString(service.name)
@@ -249,16 +276,18 @@ export function formDataToCompose(form: ProjectFormData, original?: ComposeFile)
             return acc
         }, {})
 
-    const next: ComposeFile = {
-        ...(original ?? {}),
-        services: Object.keys(services).length > 0 ? services : undefined,
-        networks: buildNamedMap(form.networks, original?.networks),
-        volumes: buildNamedMap(form.volumes, original?.volumes),
-    }
+    const networks = buildNamedMap(form.networks, original?.networks)
+    const volumes = buildNamedMap(form.volumes, original?.volumes)
 
-    if (!next.services) delete next.services
-    if (!next.networks) delete next.networks
-    if (!next.volumes) delete next.volumes
+    const next: ComposeFile = {}
+
+    if (composeName) next.name = composeName
+    if (composeDescription) next.description = composeDescription
+    if (Object.keys(services).length > 0) next.services = services
+    if (networks) next.networks = networks
+    if (volumes) next.volumes = volumes
+
+    Object.assign(next, getComposeRest(original))
 
     return next
 }

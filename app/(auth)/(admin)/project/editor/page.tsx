@@ -122,6 +122,17 @@ function getServiceNames(services?: ProjectFormData["services"]) {
         .filter(Boolean)
 }
 
+function getComposeFormData(compose: ComposeFile, name?: string) {
+    const values = composeToFormData(compose)
+
+    if (!name) return values
+
+    return {
+        ...values,
+        name,
+    } as ProjectFormData
+}
+
 const Page: FC = () => {
     const router = useRouter()
     const searchParams = useSearchParams()
@@ -170,7 +181,7 @@ const Page: FC = () => {
         try {
             const compose = parseComposeYaml(content)
             setComposeData(compose)
-            form.setFieldsValue({ ...composeToFormData(compose), name: formName })
+            form.setFieldsValue(getComposeFormData(compose, formName))
         } catch {
             setComposeData(undefined)
             form.setFieldsValue({ name: formName })
@@ -196,7 +207,7 @@ const Page: FC = () => {
         try {
             const compose = parseComposeYaml(yamlValue)
             setComposeData(compose)
-            form.setFieldsValue({ ...composeToFormData(compose), name: form.getFieldValue("name") })
+            form.setFieldsValue(getComposeFormData(compose, isUpdate ? (searchName ?? undefined) : undefined))
             message.open({ type: "success", content: "YAML 已同步到表单" })
         } catch {
             message.open({ type: "error", content: "YAML 解析失败，请检查内容" })
@@ -238,15 +249,19 @@ const Page: FC = () => {
 
         try {
             const compose = parseComposeYaml(yamlValue)
-            setComposeData(compose)
-            form.setFieldsValue({ ...composeToFormData(compose), name: projectName })
+            const nextValues = getComposeFormData(compose, projectName)
+            const content = formDataToYaml(nextValues, compose)
+            const nextCompose = formDataToCompose(nextValues, compose)
+
+            setComposeData(nextCompose)
+            setYamlValue(content)
+            form.setFieldsValue(nextValues)
+
+            if (isUpdate) await updateProject({ name: projectName, content })
+            else await addProject({ name: projectName, content })
         } catch {
             message.open({ type: "error", content: "YAML 解析失败，请检查内容" })
-            return
         }
-
-        if (isUpdate) await updateProject({ name: projectName, content: yamlValue })
-        else await addProject({ name: projectName, content: yamlValue })
     }
 
     function onYamlChange(value?: string) {
@@ -296,6 +311,9 @@ const Page: FC = () => {
                             <Form<ProjectFormData> name="project-editor" form={form} layout="vertical" disabled={isRequesting}>
                                 <FormItem<ProjectFormData> name="name" label="项目名称" rules={[schemaToRule(projectNameSchema)]}>
                                     <Input disabled={isUpdate} placeholder="仅支持字母、数字、下划线和短横线" />
+                                </FormItem>
+                                <FormItem<ProjectFormData> name="description" label="项目描述">
+                                    <Input.TextArea autoSize={{ minRows: 1, maxRows: 4 }} />
                                 </FormItem>
                                 <div className="grid grid-cols-1 gap-4 rounded border border-solid border-neutral-200 p-4">
                                     <FormItem<ProjectFormData> name="networks" label="网络">
