@@ -17,4 +17,3 @@
 所有与 docker 相关的操作，都使用 `soda-nodejs` 的 `execAsync` 和 `spawnAsync` 进行执行
 
 `execAsync` 主要是能够获取到执行结果，`spawnAsync` 主要是能够获取到执行的输出流
-

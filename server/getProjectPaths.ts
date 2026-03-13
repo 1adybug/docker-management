@@ -14,9 +14,7 @@ export function getProjectDir(name: string) {
     const rootLower = `${root.toLowerCase()}${sep}`
     const dirLower = `${dir.toLowerCase()}${sep}`
 
-    if (!dirLower.startsWith(rootLower)) {
-        throw new ClientError("项目名称无效")
-    }
+    if (!dirLower.startsWith(rootLower)) throw new ClientError("项目名称无效")
 
     return dir
 }
