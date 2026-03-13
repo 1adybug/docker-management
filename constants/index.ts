@@ -28,8 +28,6 @@ export const BetterAuthSecret = process.env.BETTER_AUTH_SECRET
 
 export const BetterAuthUrl = process.env.BETTER_AUTH_URL
 
-export const AuthBaseUrl = process.env.AUTH_BASE_URL
-
 export const NextPublicBetterAuthUrl = process.env.NEXT_PUBLIC_BETTER_AUTH_URL
 
 export const JwtSecrect = process.env.JWT_SECRECT || BetterAuthSecret || ""

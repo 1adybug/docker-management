@@ -4,7 +4,7 @@ import { nextCookies } from "better-auth/next-js"
 import { admin } from "better-auth/plugins"
 import { phoneNumber } from "better-auth/plugins/phone-number"
 
-import { AuthBaseUrl, BetterAuthSecret, BetterAuthUrl, CookiePrefix, IsDevelopment } from "@/constants"
+import { BetterAuthSecret, BetterAuthUrl, CookiePrefix, IsDevelopment } from "@/constants"
 
 import { prisma } from "@/prisma"
 
@@ -18,7 +18,7 @@ import { sendOtp } from "./sendOtp"
 const DevPhoneOtp = "1234"
 
 function getAuthBaseUrl() {
-    const baseUrl = BetterAuthUrl?.trim() || AuthBaseUrl?.trim()
+    const baseUrl = BetterAuthUrl?.trim()
     if (baseUrl) return baseUrl
     if (IsDevelopment) return "http://localhost:3000"
     return undefined

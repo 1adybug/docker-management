@@ -29,8 +29,7 @@ git remote set-url --push template no_push://template
 | `COOKIE_PREFIX`               | 是         | 登录相关 Cookie 前缀                       | `geshu`                       |
 | `DEFAULT_EMAIL_DOMAIN`        | 是         | 临时邮箱域名（用于手机号生成邮箱）         | `example.com`                 |
 | `BETTER_AUTH_SECRET`          | 是         | Better Auth 签名密钥                       | `your_better_auth_secret`     |
-| `BETTER_AUTH_URL`             | 按需       | 服务端 Better Auth 基础地址（优先）        | `https://example.com`         |
-| `AUTH_BASE_URL`               | 按需       | 服务端 Better Auth 基础地址（兜底）        | `https://example.com`         |
+| `BETTER_AUTH_URL`             | 按需       | 服务端 Better Auth 基础地址                | `https://example.com`         |
 | `NEXT_PUBLIC_BETTER_AUTH_URL` | 按需       | 客户端 Better Auth 基础地址                | `https://example.com`         |
 | `IS_INTRANET`                 | 否         | 是否走内网短信通道                         | `0`（默认关闭）               |
 | `ALIYUN_ACCESS_KEY_ID`        | 按需       | 阿里云短信密钥 ID（公网短信时需要）        | `your_key_id`                 |
@@ -51,9 +50,7 @@ DEFAULT_EMAIL_DOMAIN="example.com"
 BETTER_AUTH_SECRET="your_better_auth_secret"
 
 # Better Auth URL（按需）
-# 服务端优先读取 BETTER_AUTH_URL，其次 AUTH_BASE_URL
 BETTER_AUTH_URL=""
-AUTH_BASE_URL=""
 
 # 客户端可选（未配置时使用当前域名）
 NEXT_PUBLIC_BETTER_AUTH_URL=""
@@ -81,8 +78,7 @@ REDIS_URL="redis://127.0.0.1:6379"
 服务端 `auth` 的 `baseURL` 解析顺序：
 
 1. `BETTER_AUTH_URL`
-2. `AUTH_BASE_URL`
-3. 开发环境兜底 `http://localhost:3000`
+2. 开发环境兜底 `http://localhost:3000`
 
 客户端 `authClient` 的 `baseURL` 解析顺序：
 
