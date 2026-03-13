@@ -8,6 +8,7 @@ import { dockerImageNameParser } from "@/schemas/dockerImageName"
 import { dockerStartCommandParser } from "@/schemas/dockerStartCommand"
 
 import { createSharedFn } from "@/server/createSharedFn"
+import { getReplaceDockerTemporaryName, inspectDockerImage, replaceDockerImage } from "@/server/dockerImage"
 import { createDockerTempDirectory, deleteDockerTempDirectory } from "@/server/dockerTempDirectory"
 import { isAdmin } from "@/server/isAdmin"
 import { writeTextToFile } from "@/server/writeTextToFile"
@@ -31,6 +32,7 @@ export interface PrepareJarBuildContextParams {
 export interface BuildJarDockerImageResult {
     name: string
     output: string
+    backupName?: string
 }
 
 function getDockerfileContent(javaImage: string) {
@@ -82,8 +84,19 @@ function getFormText(formData: FormData, key: string, label: string) {
     return nextValue
 }
 
+function getOptionalFormText(formData: FormData, key: string) {
+    const value = formData.get(key)
+
+    if (typeof value !== "string") return undefined
+
+    const nextValue = value.trim()
+
+    return nextValue || undefined
+}
+
 function getBuildJarDockerImageFields(formData: FormData) {
-    const imageName = dockerImageNameParser(getFormText(formData, "imageName", "镜像名"))
+    const targetName = getOptionalFormText(formData, "targetName")
+    const imageName = targetName ? getReplaceDockerTemporaryName(targetName) : dockerImageNameParser(getFormText(formData, "imageName", "镜像名"))
     const javaImage = dockerImageNameParser(getFormText(formData, "javaImage", "Java 镜像"))
     const startCommand = dockerStartCommandParser(getFormText(formData, "startCommand", "启动命令"))
 
@@ -107,6 +120,7 @@ export const buildJarDockerImage = createSharedFn<FormData>({
     filter: isAdmin,
 })(async function buildJarDockerImage(formData) {
     const file = getUploadFile(formData)
+    const targetName = getOptionalFormText(formData, "targetName")
     const { imageName, javaImage, startCommand } = getBuildJarDockerImageFields(formData)
 
     const directory = await createDockerTempDirectory({
@@ -128,8 +142,23 @@ export const buildJarDockerImage = createSharedFn<FormData>({
             cwd: contextDirectory,
         })
 
+        if (!targetName) {
+            return {
+                name: imageName,
+                output,
+            } as BuildJarDockerImageResult
+        }
+
+        const image = await inspectDockerImage(imageName)
+        const replaceResult = await replaceDockerImage({
+            newImageId: image.id,
+            targetName,
+            temporaryName: imageName,
+        })
+
         return {
-            name: imageName,
+            backupName: replaceResult.backupName,
+            name: targetName,
             output,
         } as BuildJarDockerImageResult
     } finally {

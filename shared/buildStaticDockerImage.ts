@@ -10,6 +10,7 @@ import { buildStaticDockerImageSchema } from "@/schemas/buildStaticDockerImage"
 import { dockerImageNameParser } from "@/schemas/dockerImageName"
 
 import { createSharedFn } from "@/server/createSharedFn"
+import { getReplaceDockerTemporaryName, inspectDockerImage, replaceDockerImage } from "@/server/dockerImage"
 import { createDockerTempDirectory, deleteDockerTempDirectory } from "@/server/dockerTempDirectory"
 import { isAdmin } from "@/server/isAdmin"
 import { writeTextToFile } from "@/server/writeTextToFile"
@@ -75,6 +76,7 @@ export interface PrepareBuildContextParams {
 export interface BuildStaticDockerImageResult {
     name: string
     output: string
+    backupName?: string
 }
 
 function get7zaPath() {
@@ -143,8 +145,19 @@ function getFormText(formData: FormData, key: string, label: string) {
     return nextValue
 }
 
+function getOptionalFormText(formData: FormData, key: string) {
+    const value = formData.get(key)
+
+    if (typeof value !== "string") return undefined
+
+    const nextValue = value.trim()
+
+    return nextValue || undefined
+}
+
 function getBuildStaticDockerImageFields(formData: FormData) {
-    const imageName = dockerImageNameParser(getFormText(formData, "imageName", "镜像名"))
+    const targetName = getOptionalFormText(formData, "targetName")
+    const imageName = targetName ? getReplaceDockerTemporaryName(targetName) : dockerImageNameParser(getFormText(formData, "imageName", "镜像名"))
     const nginxImage = dockerImageNameParser(getFormText(formData, "nginxImage", "nginx 镜像"))
 
     return {
@@ -203,6 +216,7 @@ export const buildStaticDockerImage = createSharedFn<FormData>({
     filter: isAdmin,
 })(async function buildStaticDockerImage(formData) {
     const { file, extension } = getUploadFile(formData)
+    const targetName = getOptionalFormText(formData, "targetName")
     const { imageName, nginxImage } = getBuildStaticDockerImageFields(formData)
 
     const directory = await createDockerTempDirectory({
@@ -228,8 +242,23 @@ export const buildStaticDockerImage = createSharedFn<FormData>({
             cwd: contextDirectory,
         })
 
+        if (!targetName) {
+            return {
+                name: imageName,
+                output,
+            } as BuildStaticDockerImageResult
+        }
+
+        const image = await inspectDockerImage(imageName)
+        const replaceResult = await replaceDockerImage({
+            newImageId: image.id,
+            targetName,
+            temporaryName: imageName,
+        })
+
         return {
-            name: imageName,
+            backupName: replaceResult.backupName,
+            name: targetName,
             output,
         } as BuildStaticDockerImageResult
     } finally {
