@@ -1,6 +1,8 @@
 # syntax=docker.io/docker/dockerfile:1
 
 FROM oven/bun:latest AS base
+FROM docker:cli AS docker_cli
+FROM docker/compose-bin:latest AS docker_compose
 
 # Install dependencies only when needed
 FROM base AS deps
@@ -39,6 +41,11 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN if ! getent group bun >/dev/null; then groupadd --system --gid 1001 bun; fi
 RUN if ! id -u nextjs >/dev/null 2>&1; then useradd --system --uid 1001 --gid bun --create-home nextjs; fi
 
+COPY --from=docker_cli /usr/local/bin/docker /usr/local/bin/docker
+RUN mkdir -p /usr/libexec/docker/cli-plugins
+COPY --from=docker_compose /docker-compose /usr/libexec/docker/cli-plugins/docker-compose
+RUN chmod +x /usr/local/bin/docker /usr/libexec/docker/cli-plugins/docker-compose
+
 COPY --from=builder /app/public ./public
 
 # Automatically leverage output traces to reduce image size
@@ -52,7 +59,7 @@ RUN mkdir -p /app/data && chown -R nextjs:bun /app/data
 RUN bun add prisma --registry=https://registry.npmmirror.com --global
 
 # 创建启动脚本，先以 root 执行 prisma db push，然后切换用户运行应用
-RUN printf '#!/bin/sh\nchown -R nextjs:bun /app/data\nprisma db push\nexec runuser -u nextjs -- bun run server.js\n' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+RUN printf '#!/bin/sh\nset -eu\nchown -R nextjs:bun /app/data\nif [ -S /var/run/docker.sock ]; then\n    docker_gid=$(stat -c "%%g" /var/run/docker.sock)\n    docker_group=$(getent group "${docker_gid}" | cut -d: -f1 || true)\n    if [ -z "${docker_group}" ]; then\n        docker_group=dockerhost\n        groupadd --system --gid "${docker_gid}" "${docker_group}"\n    fi\n    usermod -aG "${docker_group}" nextjs\nfi\nprisma db push\nexec runuser -u nextjs -- bun run server.js\n' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
 
 EXPOSE 3000
 
