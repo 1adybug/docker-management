@@ -387,7 +387,7 @@ const Page: FC = () => {
             ...managedProjects.map(item => ({ label: item, value: item })),
             ...unmanagedProjects.map(item => ({ label: item, value: item })),
             { label: "非平台项目", value: unmanagedProjectValue },
-            { label: "空", value: noProjectValue },
+            { label: "未归属项目", value: noProjectValue },
         ]
     }, [data])
 
@@ -491,7 +491,7 @@ const Page: FC = () => {
             dataIndex: "isManagedProject",
             align: "center",
             render(value: boolean | undefined, record) {
-                if (isProjectRow(record) && !record.projectName) return <Tag>无项目</Tag>
+                if (isProjectRow(record) && !record.projectName) return <Tag>未归属项目</Tag>
                 if (!isProjectRow(record) && !record.projectName) return "-"
                 if (value === true) return renderProjectTag("平台项目", "geekblue", TagVariant.实心, record.projectId)
                 if (value === false) return renderProjectTag("非平台项目", "orange", TagVariant.填充)
