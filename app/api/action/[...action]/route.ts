@@ -21,6 +21,7 @@ import { queryErrorLog } from "@/shared/queryErrorLog"
 import { queryOperationLog } from "@/shared/queryOperationLog"
 import { queryProject } from "@/shared/queryProject"
 import { queryUser } from "@/shared/queryUser"
+import { readComposeProject } from "@/shared/readComposeProject"
 import { runComposeProject } from "@/shared/runComposeProject"
 import { runDockerContainer } from "@/shared/runDockerContainer"
 import { runProject } from "@/shared/runProject"
@@ -60,6 +61,7 @@ registerRoute(queryErrorLog)
 registerRoute(queryOperationLog)
 registerRoute(queryProject)
 registerRoute(queryUser)
+registerRoute(readComposeProject)
 registerRoute(runComposeProject)
 registerRoute(runDockerContainer)
 registerRoute(runProject)

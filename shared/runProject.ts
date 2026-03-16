@@ -1,13 +1,12 @@
 import { mkdir, stat } from "node:fs/promises"
 
-import { execAsync } from "soda-nodejs"
-
 import { prisma } from "@/prisma"
 
 import { ProjectCommand } from "@/schemas/projectCommand"
 import { runProjectSchema } from "@/schemas/runProject"
 
 import { createSharedFn } from "@/server/createSharedFn"
+import { runDockerCommand } from "@/server/docker"
 import { ensureProjectRoot } from "@/server/ensureProjectRoot"
 import { getProjectComposePath, getProjectDir } from "@/server/getProjectPaths"
 import { readTextFromFile } from "@/server/readTextFromFile"
@@ -17,12 +16,6 @@ import { ClientError } from "@/utils/clientError"
 
 export interface RunProjectResult {
     output: string
-}
-
-export interface ExecAsyncError {
-    stdout?: string | Buffer
-    stderr?: string | Buffer
-    message?: string
 }
 
 /** 路径错误信息 */
@@ -40,23 +33,14 @@ export interface EnsureProjectComposeFileParams {
     content: string
 }
 
-function wrapShellValue(value: string) {
-    return `"${value.replace(/"/g, '\\"')}"`
-}
+function getDockerComposeArgs(command: ProjectCommand, composePath: string) {
+    const args = ["compose", "-f", composePath]
 
-function normalizeExecOutput(value?: string | Buffer) {
-    if (typeof value === "string") return value
-    return value?.toString() ?? ""
-}
-
-function getDockerComposeCommand(command: ProjectCommand, composePath: string) {
-    const composeArg = wrapShellValue(composePath)
-
-    if (command === ProjectCommand.启动) return `docker compose -f ${composeArg} up -d`
-    if (command === ProjectCommand.停止) return `docker compose -f ${composeArg} down`
-    if (command === ProjectCommand.重启) return `docker compose -f ${composeArg} restart`
-    if (command === ProjectCommand.拉取) return `docker compose -f ${composeArg} pull`
-    return `docker compose -f ${composeArg} logs --tail 200`
+    if (command === ProjectCommand.启动) return [...args, "up", "-d"]
+    if (command === ProjectCommand.停止) return [...args, "down"]
+    if (command === ProjectCommand.重启) return [...args, "restart"]
+    if (command === ProjectCommand.拉取) return [...args, "pull"]
+    return [...args, "logs", "--tail", "200"]
 }
 
 function isNoEntryError(error: unknown) {
@@ -107,21 +91,13 @@ export const runProject = createSharedFn({
 
     await ensureProjectComposeFile({ projectDir, composePath, content: project.content })
 
-    const commandText = getDockerComposeCommand(command, composePath)
+    const result = await runDockerCommand({
+        args: getDockerComposeArgs(command, composePath),
+        cwd: projectDir,
+        errorMessage: "项目执行失败",
+    })
 
-    try {
-        const output = await execAsync(commandText, { cwd: projectDir })
-
-        return {
-            output: output.trim(),
-        } as RunProjectResult
-    } catch (error) {
-        const execError = error as ExecAsyncError
-        const stdoutText = normalizeExecOutput(execError.stdout)
-        const stderrText = normalizeExecOutput(execError.stderr)
-        const messageText = execError.message ?? ""
-        const output = `${stdoutText}${stderrText}${messageText}`.trim()
-
-        throw new ClientError(output || "项目执行失败")
-    }
+    return {
+        output: result.stdout.trim(),
+    } as RunProjectResult
 })

@@ -1,6 +1,6 @@
-import { execAsync } from "soda-nodejs"
-
 import { dockerImageNameParser } from "@/schemas/dockerImageName"
+
+import { runDockerCommand } from "@/server/docker"
 
 import { ClientError } from "@/utils/clientError"
 
@@ -95,8 +95,12 @@ function parseDockerImageInspectOutput(output: string) {
 
 export async function inspectDockerImage(reference: string) {
     try {
-        const output = await execAsync(`docker image inspect ${reference} --format "{{json .}}"`)
-        const image = parseDockerImageInspectOutput(output)
+        const result = await runDockerCommand({
+            args: ["image", "inspect", reference, "--format", "{{json .}}"],
+            errorMessage: `镜像 ${reference} 不存在`,
+        })
+
+        const image = parseDockerImageInspectOutput(result.stdout)
 
         if (!image.id) throw new ClientError(`镜像 ${reference} 不存在`)
 
@@ -118,11 +122,17 @@ export async function inspectDockerImageOptional(reference: string) {
 }
 
 export async function tagDockerImage({ source, target }: TagDockerImageParams) {
-    await execAsync(`docker image tag ${source} ${target}`)
+    await runDockerCommand({
+        args: ["image", "tag", source, target],
+        errorMessage: "镜像打标签失败",
+    })
 }
 
 export async function removeDockerImageTag({ name }: RemoveDockerImageTagParams) {
-    await execAsync(`docker image rm ${name}`)
+    await runDockerCommand({
+        args: ["image", "rm", name],
+        errorMessage: "删除镜像标签失败",
+    })
 }
 
 async function resolveAvailableDockerImageName({ currentImageId, excludedNames = [], preferredName }: ResolveAvailableDockerImageNameParams) {

@@ -1,6 +1,5 @@
-import { execAsync } from "soda-nodejs"
-
 import { createSharedFn } from "@/server/createSharedFn"
+import { runDockerCommand } from "@/server/docker"
 
 export interface DockerImageItem {
     name: string
@@ -9,7 +8,12 @@ export interface DockerImageItem {
 export const queryDockerImage = createSharedFn<never>({
     name: "queryDockerImage",
 })(async function queryDockerImage() {
-    const output = await execAsync(`docker images --format "{{.Repository}}:{{.Tag}}"`)
+    const result = await runDockerCommand({
+        args: ["images", "--format", "{{.Repository}}:{{.Tag}}"],
+        errorMessage: "查询镜像失败",
+    })
+
+    const output = result.stdout
 
     const lines = output
         .split(/\r?\n/u)

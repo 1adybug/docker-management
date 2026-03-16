@@ -6,13 +6,15 @@ import { clsx, StrictOmit } from "deepsea-tools"
 export interface ProjectLogDrawerProps extends StrictOmit<ComponentProps<typeof Drawer>, "children" | "title" | "onClose"> {
     name?: string
     content?: string
+    titleSuffix?: string
+    emptyDescription?: string
     onClose?: () => void
 }
 
-const ProjectLogDrawer: FC<ProjectLogDrawerProps> = ({ name, content, open, className, onClose, ...rest }) => (
+const ProjectLogDrawer: FC<ProjectLogDrawerProps> = ({ name, content, open, className, titleSuffix = "日志", emptyDescription = "暂无日志", onClose, ...rest }) => (
     <Drawer
         className={clsx("project-log-drawer", className)}
-        title={name ? `${name} 日志` : "日志"}
+        title={name ? `${name} ${titleSuffix}` : titleSuffix}
         open={open}
         size={720}
         onClose={() => onClose?.()}
@@ -21,7 +23,7 @@ const ProjectLogDrawer: FC<ProjectLogDrawerProps> = ({ name, content, open, clas
         {content ? (
             <pre className="whitespace-pre-wrap break-words rounded bg-neutral-950 px-4 py-3 text-xs text-white">{content}</pre>
         ) : (
-            <Empty description="暂无日志" />
+            <Empty description={emptyDescription} />
         )}
     </Drawer>
 )

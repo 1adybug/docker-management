@@ -2,7 +2,7 @@
 
 import { FC, useMemo, useRef, useState } from "react"
 
-import { IconDownload, IconFileText, IconPlayerPause, IconPlayerPlay, IconPlayerStop, IconRefresh, IconTrash } from "@tabler/icons-react"
+import { IconCode, IconDownload, IconFileText, IconPlayerPause, IconPlayerPlay, IconPlayerStop, IconRefresh, IconTrash } from "@tabler/icons-react"
 import { Button, Form, Input, Popconfirm, Select, Table, TableProps, Tag } from "antd"
 import FormItem from "antd/es/form/FormItem"
 import { formatTime, showTotal } from "deepsea-tools"
@@ -16,6 +16,7 @@ import ProjectLogDrawer from "@/components/ProjectLogDrawer"
 import { DockerContainerStatus } from "@/constants"
 
 import { useQueryDockerContainer } from "@/hooks/useQueryDockerContainer"
+import { useReadComposeProject } from "@/hooks/useReadComposeProject"
 import { useRunComposeProject } from "@/hooks/useRunComposeProject"
 import { useRunDockerContainer } from "@/hooks/useRunDockerContainer"
 
@@ -28,7 +29,8 @@ import { pageNumParser } from "@/schemas/pageNum"
 import { pageSizeParser } from "@/schemas/pageSize"
 import { SortOrderParams, sortOrderSchema } from "@/schemas/sortOrder"
 
-import { DockerContainerItem } from "@/shared/queryDockerContainer"
+import type { DockerContainerItem } from "@/shared/queryDockerContainer"
+import type { ComposeProjectFile } from "@/shared/readComposeProject"
 
 import { getSortOrder } from "@/utils/getSortOrder"
 
@@ -206,12 +208,15 @@ const Page: FC = () => {
     const [logOpen, setLogOpen] = useState(false)
     const [logName, setLogName] = useState<string | undefined>(undefined)
     const [logContent, setLogContent] = useState<string | undefined>(undefined)
+    const [logTitleSuffix, setLogTitleSuffix] = useState("日志")
+    const [logEmptyDescription, setLogEmptyDescription] = useState("暂无日志")
 
     const { data, isLoading, refetch } = useQueryDockerContainer()
+    const { mutateAsync: readComposeProject, isPending: isReadComposeProjectPending } = useReadComposeProject()
     const { mutateAsync: runDockerContainer, isPending: isRunPending } = useRunDockerContainer()
     const { mutateAsync: runComposeProject, isPending: isRunComposeProjectPending } = useRunComposeProject()
 
-    const isRequesting = isLoading || isRunPending || isRunComposeProjectPending
+    const isRequesting = isLoading || isReadComposeProjectPending || isRunPending || isRunComposeProjectPending
 
     const [query, setQuery] = useQueryState({
         keys: ["name", "image", "status", "project"],
@@ -240,10 +245,42 @@ const Page: FC = () => {
         setLogOpen(false)
         setLogName(undefined)
         setLogContent(undefined)
+        setLogTitleSuffix("日志")
+        setLogEmptyDescription("暂无日志")
     }
 
     async function onCommand(id: string, command: DockerContainerCommand) {
         await runDockerContainer({ id, command })
+    }
+
+    function hasCurrentContainer(record: DockerContainerTableRow) {
+        return record.containers?.some(item => item.isCurrentContainer) ?? false
+    }
+
+    function getComposeContent(files: ComposeProjectFile[]) {
+        if (files.length === 0) return ""
+
+        return files
+            .map(item => {
+                const resolvedText = item.resolvedPath === item.sourcePath ? item.sourcePath : `${item.sourcePath}\n# 映射路径: ${item.resolvedPath}`
+                return `# 文件: ${resolvedText}\n\n${item.content}`
+            })
+            .join("\n\n\n")
+    }
+
+    async function onReadComposeProject(record: DockerContainerTableRow) {
+        if (!record.projectName) return
+        if (!record.composeConfigFiles.length) return
+
+        const result = await readComposeProject({
+            composeFiles: record.composeConfigFiles,
+        })
+
+        setLogName(record.name)
+        setLogContent(getComposeContent(result.files))
+        setLogTitleSuffix("配置")
+        setLogEmptyDescription("暂无配置")
+        setLogOpen(true)
     }
 
     async function onProjectCommand(record: DockerContainerTableRow, command: ComposeProjectCommand) {
@@ -255,6 +292,8 @@ const Page: FC = () => {
         if (command === ComposeProjectCommand.日志) {
             setLogName(record.name)
             setLogContent(result.output)
+            setLogTitleSuffix("日志")
+            setLogEmptyDescription("暂无日志")
             setLogOpen(true)
             return
         }
@@ -311,7 +350,9 @@ const Page: FC = () => {
         ))
     }
 
-    function renderContainerOperations(id: string) {
+    function renderContainerOperations(id: string, isCurrentContainer?: boolean) {
+        const disabledTitle = isCurrentContainer ? "当前为管理系统运行容器，不可操作" : undefined
+
         return (
             <div className="inline-flex flex-wrap gap-1">
                 <Button
@@ -319,8 +360,8 @@ const Page: FC = () => {
                     shape="circle"
                     color="orange"
                     variant="text"
-                    title="停止"
-                    disabled={isRequesting}
+                    title={disabledTitle ?? "停止"}
+                    disabled={isRequesting || isCurrentContainer}
                     icon={<IconPlayerStop className="size-4" />}
                     onClick={() => onCommand(id, DockerContainerCommand.停止)}
                 />
@@ -329,8 +370,8 @@ const Page: FC = () => {
                     shape="circle"
                     color="yellow"
                     variant="text"
-                    title="暂停"
-                    disabled={isRequesting}
+                    title={disabledTitle ?? "暂停"}
+                    disabled={isRequesting || isCurrentContainer}
                     icon={<IconPlayerPause className="size-4" />}
                     onClick={() => onCommand(id, DockerContainerCommand.暂停)}
                 />
@@ -339,19 +380,24 @@ const Page: FC = () => {
                     shape="circle"
                     color="cyan"
                     variant="text"
-                    title="重启"
-                    disabled={isRequesting}
+                    title={disabledTitle ?? "重启"}
+                    disabled={isRequesting || isCurrentContainer}
                     icon={<IconRefresh className="size-4" />}
                     onClick={() => onCommand(id, DockerContainerCommand.重启)}
                 />
-                <Popconfirm title="确认删除容器" description="删除后将无法恢复" onConfirm={() => onCommand(id, DockerContainerCommand.删除)}>
+                <Popconfirm
+                    title="确认删除容器"
+                    description="删除后将无法恢复"
+                    disabled={isRequesting || isCurrentContainer}
+                    onConfirm={() => onCommand(id, DockerContainerCommand.删除)}
+                >
                     <Button
                         size="small"
                         shape="circle"
                         color="danger"
                         variant="text"
-                        title="删除"
-                        disabled={isRequesting}
+                        title={disabledTitle ?? "删除"}
+                        disabled={isRequesting || isCurrentContainer}
                         icon={<IconTrash className="size-4" />}
                     />
                 </Popconfirm>
@@ -362,7 +408,10 @@ const Page: FC = () => {
     function renderProjectOperations(record: DockerContainerTableRow) {
         if (!record.projectName) return "-"
         const canRunProject = record.composeConfigFiles.length > 0
-        const isDisabled = isRequesting || !canRunProject
+        const containsCurrentContainer = hasCurrentContainer(record)
+        const isControlDisabled = isRequesting || !canRunProject || containsCurrentContainer
+        const isViewDisabled = isRequesting || !canRunProject
+        const disabledTitle = containsCurrentContainer ? "当前项目包含管理系统运行容器，不可直接操作" : undefined
         const runningCount = getProjectRunningCount(record.containers)
         const isRunning = runningCount > 0
 
@@ -374,8 +423,8 @@ const Page: FC = () => {
                         shape="circle"
                         color="orange"
                         variant="text"
-                        title="停止"
-                        disabled={isDisabled}
+                        title={disabledTitle ?? "停止"}
+                        disabled={isControlDisabled}
                         icon={<IconPlayerStop className="size-4" />}
                         onClick={() => onProjectCommand(record, ComposeProjectCommand.停止)}
                     />
@@ -385,8 +434,8 @@ const Page: FC = () => {
                         shape="circle"
                         color="green"
                         variant="text"
-                        title="启动"
-                        disabled={isDisabled}
+                        title={disabledTitle ?? "启动"}
+                        disabled={isControlDisabled}
                         icon={<IconPlayerPlay className="size-4" />}
                         onClick={() => onProjectCommand(record, ComposeProjectCommand.启动)}
                     />
@@ -396,8 +445,8 @@ const Page: FC = () => {
                     shape="circle"
                     color="cyan"
                     variant="text"
-                    title="重启"
-                    disabled={isDisabled}
+                    title={disabledTitle ?? "重启"}
+                    disabled={isControlDisabled}
                     icon={<IconRefresh className="size-4" />}
                     onClick={() => onProjectCommand(record, ComposeProjectCommand.重启)}
                 />
@@ -406,10 +455,20 @@ const Page: FC = () => {
                     shape="circle"
                     color="blue"
                     variant="text"
-                    title="拉取"
-                    disabled={isDisabled}
+                    title={disabledTitle ?? "拉取"}
+                    disabled={isControlDisabled}
                     icon={<IconDownload className="size-4" />}
                     onClick={() => onProjectCommand(record, ComposeProjectCommand.拉取)}
+                />
+                <Button
+                    size="small"
+                    shape="circle"
+                    color="default"
+                    variant="text"
+                    title="查看配置"
+                    disabled={isViewDisabled}
+                    icon={<IconCode className="size-4" />}
+                    onClick={() => onReadComposeProject(record)}
                 />
                 <Button
                     size="small"
@@ -417,13 +476,14 @@ const Page: FC = () => {
                     color="purple"
                     variant="text"
                     title="日志"
-                    disabled={isDisabled}
+                    disabled={isViewDisabled}
                     icon={<IconFileText className="size-4" />}
                     onClick={() => onProjectCommand(record, ComposeProjectCommand.日志)}
                 />
                 <Popconfirm
                     title="确认删除项目"
                     description="将执行 docker compose down"
+                    disabled={isControlDisabled}
                     onConfirm={() => onProjectCommand(record, ComposeProjectCommand.删除)}
                 >
                     <Button
@@ -431,8 +491,8 @@ const Page: FC = () => {
                         shape="circle"
                         color="danger"
                         variant="text"
-                        title="删除"
-                        disabled={isDisabled}
+                        title={disabledTitle ?? "删除"}
+                        disabled={isControlDisabled}
                         icon={<IconTrash className="size-4" />}
                     />
                 </Popconfirm>
@@ -596,6 +656,7 @@ const Page: FC = () => {
                 return (
                     <div className="flex flex-wrap items-center gap-2">
                         <span className="font-medium">{value}</span>
+                        {hasCurrentContainer(record) ? <Tag color="green">当前运行环境</Tag> : null}
                     </div>
                 )
             },
@@ -643,6 +704,14 @@ const Page: FC = () => {
             align: "left",
             sorter: true,
             sortOrder: getSortOrder({ sortBy: query.childSortBy, sortOrder: query.childSortOrder }, "name"),
+            render(value: string, record) {
+                return (
+                    <div className="flex flex-wrap items-center gap-2">
+                        <span>{value}</span>
+                        {record.isCurrentContainer ? <Tag color="green">当前容器</Tag> : null}
+                    </div>
+                )
+            },
         },
         {
             title: "容器 ID",
@@ -698,7 +767,7 @@ const Page: FC = () => {
             key: "operation",
             align: "center",
             render(value, record) {
-                return renderContainerOperations(record.id)
+                return renderContainerOperations(record.id, record.isCurrentContainer)
             },
         },
     ]
@@ -736,7 +805,14 @@ const Page: FC = () => {
                 </Form>
             </div>
             <div ref={container} className="px-4 fill-y">
-                <ProjectLogDrawer name={logName} open={logOpen} content={logContent} onClose={onCloseLog} />
+                <ProjectLogDrawer
+                    name={logName}
+                    open={logOpen}
+                    content={logContent}
+                    titleSuffix={logTitleSuffix}
+                    emptyDescription={logEmptyDescription}
+                    onClose={onCloseLog}
+                />
                 <Table<DockerContainerTableRow>
                     rowKey="id"
                     scroll={{ y }}

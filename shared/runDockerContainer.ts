@@ -1,9 +1,8 @@
-import { execAsync } from "soda-nodejs"
-
 import { DockerContainerCommand } from "@/schemas/dockerContainerCommand"
 import { runDockerContainerSchema } from "@/schemas/runDockerContainer"
 
 import { createSharedFn } from "@/server/createSharedFn"
+import { ensureNotCurrentDockerContainer, runDockerCommand } from "@/server/docker"
 
 export interface RunDockerContainerResult {
     id: string
@@ -21,11 +20,16 @@ export const runDockerContainer = createSharedFn({
     name: "runDockerContainer",
     schema: runDockerContainerSchema,
 })(async function runDockerContainer({ id, command }) {
+    ensureNotCurrentDockerContainer(id)
+
     const args = getContainerArgs(command, id)
-    const output = await execAsync(`docker ${args.join(" ")}`)
+    const result = await runDockerCommand({
+        args,
+        errorMessage: "容器执行失败",
+    })
 
     return {
         id,
-        output,
+        output: result.stdout.trim(),
     } as RunDockerContainerResult
 })

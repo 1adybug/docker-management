@@ -1,9 +1,9 @@
-import { execAsync } from "soda-nodejs"
 import { parse } from "yaml"
 
 import { prisma } from "@/prisma"
 
 import { createSharedFn } from "@/server/createSharedFn"
+import { runDockerCommand } from "@/server/docker"
 
 export interface ComposeService {
     image?: string
@@ -77,7 +77,12 @@ function normalizeImageName(repository: string, tag: string) {
 export const queryDockerImageDetail = createSharedFn<never>({
     name: "queryDockerImageDetail",
 })(async function queryDockerImageDetail() {
-    const output = await execAsync(`docker images --format "{{json .}}"`)
+    const result = await runDockerCommand({
+        args: ["images", "--format", "{{json .}}"],
+        errorMessage: "查询镜像详情失败",
+    })
+
+    const output = result.stdout
     const usageMap = await getProjectImageUsageMap()
 
     const images = output

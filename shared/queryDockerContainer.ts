@@ -1,10 +1,14 @@
 import { normalize, sep } from "node:path"
 
-import { execAsync } from "soda-nodejs"
-
 import { prisma } from "@/prisma"
 
 import { createSharedFn } from "@/server/createSharedFn"
+import {
+    getComposeConfigFilesByLabels,
+    getComposeProjectNameByLabels,
+    isCurrentDockerContainerId,
+    runDockerCommand,
+} from "@/server/docker"
 import { ensureProjectRoot } from "@/server/ensureProjectRoot"
 
 export interface DockerContainerRaw {
@@ -29,14 +33,8 @@ export interface DockerContainerItem {
     composeConfigFiles: string[]
     projectName?: string
     isManagedProject?: boolean
+    isCurrentContainer?: boolean
 }
-
-export interface DockerLabelMap {
-    [key: string]: string
-}
-
-/** 项目配置文件路径标签 */
-const composeConfigLabel = "com.docker.compose.project.config_files"
 
 async function getManagedProjectMap() {
     const projects = await prisma.project.findMany({
@@ -52,40 +50,6 @@ function normalizePath(value: string) {
     return normalize(value).toLowerCase()
 }
 
-function parseLabels(labels?: string) {
-    const result: DockerLabelMap = {}
-
-    if (!labels) return result
-
-    labels
-        .split(",")
-        .map(item => item.trim())
-        .filter(Boolean)
-        .forEach(item => {
-            const [key, ...rest] = item.split("=")
-            const value = rest.join("=")
-            if (!key) return
-            result[key] = value
-        })
-
-    return result
-}
-
-function getProjectNameByLabels(labels?: string) {
-    const map = parseLabels(labels)
-    return map["com.docker.compose.project"]
-}
-
-function getComposeConfigFilesByLabels(labels?: string) {
-    const map = parseLabels(labels)
-    const raw = map[composeConfigLabel]
-    if (!raw) return []
-    return raw
-        .split(",")
-        .map(item => item.trim())
-        .filter(Boolean)
-}
-
 function isComposeFileManaged(files: string[], projectRoot: string) {
     if (files.length === 0) return false
     const normalizedRoot = normalizePath(projectRoot)
@@ -96,7 +60,12 @@ function isComposeFileManaged(files: string[], projectRoot: string) {
 export const queryDockerContainer = createSharedFn<never>({
     name: "queryDockerContainer",
 })(async function queryDockerContainer() {
-    const output = await execAsync(`docker ps -a --format "{{json .}}"`)
+    const result = await runDockerCommand({
+        args: ["ps", "-a", "--format", "{{json .}}"],
+        errorMessage: "查询容器失败",
+    })
+
+    const output = result.stdout
     const projectRoot = await ensureProjectRoot()
     const managedProjectMap = await getManagedProjectMap()
 
@@ -113,7 +82,7 @@ export const queryDockerContainer = createSharedFn<never>({
         })
         .filter((item): item is DockerContainerRaw => !!item)
         .map(item => {
-            const projectName = getProjectNameByLabels(item.Labels)
+            const projectName = getComposeProjectNameByLabels(item.Labels)
             const composeFiles = getComposeConfigFilesByLabels(item.Labels)
             const projectId = projectName ? managedProjectMap.get(projectName) : undefined
             const isManagedProject =
@@ -130,6 +99,7 @@ export const queryDockerContainer = createSharedFn<never>({
                 composeConfigFiles: composeFiles,
                 projectName,
                 isManagedProject,
+                isCurrentContainer: isCurrentDockerContainerId(item.ID),
             } as DockerContainerItem
         })
 

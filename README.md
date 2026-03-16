@@ -36,6 +36,7 @@ git remote set-url --push template no_push://template
 | `ALIYUN_ACCESS_KEY_SECRET`    | 按需       | 阿里云短信密钥 Secret（公网短信时需要）    | `your_key_secret`             |
 | `QJP_SMS_URL`                 | 按需       | 内网短信服务地址（内网短信时需要）         | `http://sms.example.com/send` |
 | `RATE_LIMIT_ENABLED`          | 否         | 全局限流开关                               | `1`（默认开启）               |
+| `DOCKER_PATH_MAPPINGS`        | 否         | 宿主机路径到容器路径的映射，用于读取外部 compose 文件 | `/srv/app=>/host-app`         |
 | `NEXT_OUTPUT`                 | 否         | Next 构建输出模式                          | `standalone` / `export`       |
 | `DATABASE_URL`                | 按部署方式 | 数据库连接字符串（如改用外部数据库时使用） | `postgresql://...`            |
 | `JWT_SECRET`                  | 按认证配置 | 兼容旧认证方案时使用（当前默认不依赖）     | `your_jwt_secret`             |
@@ -72,6 +73,40 @@ NEXT_TELEMETRY_DISABLED="1"
 # 可选：仅在你启用 Redis 限流存储时使用
 REDIS_URL="redis://127.0.0.1:6379"
 ```
+
+### 容器内管理宿主机 Docker
+
+如果本项目运行在 Docker 容器内，并且你希望它管理宿主机上的“非平台项目” `docker-compose.yml`，除了挂载 `/var/run/docker.sock` 以外，还需要把宿主机上的 compose 目录额外挂载进当前容器。
+
+同时通过 `DOCKER_PATH_MAPPINGS` 告诉系统“宿主机路径”与“容器内挂载路径”的对应关系，格式支持两种：
+
+```env
+DOCKER_PATH_MAPPINGS="/srv/projects=>/host-projects"
+```
+
+```env
+DOCKER_PATH_MAPPINGS="/srv/projects=>/host-projects||/data/compose=>/host-compose"
+```
+
+也支持 JSON 数组：
+
+```env
+DOCKER_PATH_MAPPINGS='[{"from":"/srv/projects","to":"/host-projects"}]'
+```
+
+例如宿主机的外部项目位于 `/srv/projects/demo/docker-compose.yml`，你可以这样挂载：
+
+```yaml
+services:
+    app:
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+            - /srv/projects:/host-projects:ro
+        environment:
+            DOCKER_PATH_MAPPINGS: /srv/projects=>/host-projects
+```
+
+这样容器管理中的“非平台项目”就可以读取宿主机上的 compose 文件，并执行 `docker compose` 相关命令。
 
 ### Better Auth URL 解析规则
 
