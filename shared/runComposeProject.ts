@@ -10,6 +10,7 @@ export interface RunComposeProjectResult {
 
 function getDockerComposeArgs(command: ComposeProjectCommand, composeFiles: string[]) {
     const composeArgs = composeFiles.flatMap(item => ["-f", item])
+
     const baseArgs = ["compose", ...composeArgs]
 
     if (command === ComposeProjectCommand.启动) return [...baseArgs, "up", "-d"]
@@ -24,9 +25,8 @@ export const runComposeProject = createSharedFn({
     name: "runComposeProject",
     schema: runComposeProjectSchema,
 })(async function runComposeProject({ composeFiles, command }) {
-    if (command === ComposeProjectCommand.停止 || command === ComposeProjectCommand.重启 || command === ComposeProjectCommand.删除) {
+    if (command === ComposeProjectCommand.停止 || command === ComposeProjectCommand.重启 || command === ComposeProjectCommand.删除)
         await ensureNotCurrentDockerComposeProject(composeFiles)
-    }
 
     const resolvedComposeFiles = await resolveComposeFiles(composeFiles)
     const result = await runDockerCommand({

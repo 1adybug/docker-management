@@ -11,7 +11,16 @@ export interface ProjectLogDrawerProps extends StrictOmit<ComponentProps<typeof 
     onClose?: () => void
 }
 
-const ProjectLogDrawer: FC<ProjectLogDrawerProps> = ({ name, content, open, className, titleSuffix = "日志", emptyDescription = "暂无日志", onClose, ...rest }) => (
+const ProjectLogDrawer: FC<ProjectLogDrawerProps> = ({
+    name,
+    content,
+    open,
+    className,
+    titleSuffix = "日志",
+    emptyDescription = "暂无日志",
+    onClose,
+    ...rest
+}) => (
     <Drawer
         className={clsx("project-log-drawer", className)}
         title={name ? `${name} ${titleSuffix}` : titleSuffix}

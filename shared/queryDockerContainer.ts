@@ -3,12 +3,7 @@ import { normalize, sep } from "node:path"
 import { prisma } from "@/prisma"
 
 import { createSharedFn } from "@/server/createSharedFn"
-import {
-    getComposeConfigFilesByLabels,
-    getComposeProjectNameByLabels,
-    isCurrentDockerContainerId,
-    runDockerCommand,
-} from "@/server/docker"
+import { getComposeConfigFilesByLabels, getComposeProjectNameByLabels, isCurrentDockerContainerId, runDockerCommand } from "@/server/docker"
 import { ensureProjectRoot } from "@/server/ensureProjectRoot"
 
 export interface DockerContainerRaw {
