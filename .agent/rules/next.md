@@ -177,7 +177,7 @@ export type AddUserParams = z.infer<typeof addUserSchema>
 export const addUserParser = getParser(addUserSchema)
 ```
 
-你应该将 `usernameSchema` 和 `phoneSchema` 独立出来成为两个独立的文件，便于服用，而不是直接在 `schema` 中定义，例如：
+你应该将 `usernameSchema` 和 `phoneSchema` 独立出来成为两个独立的文件，便于复用，而不是直接在 `schema` 中定义，例如：
 
 ```typescript
 import { z } from "zod"
