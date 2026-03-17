@@ -1,6 +1,14 @@
 # syntax=docker.io/docker/dockerfile:1
 
-FROM oven/bun:latest AS base
+FROM node:lts-slim AS base
+
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends -o Acquire::Retries=3 openssl \
+    && rm -rf /var/lib/apt/lists/*
+RUN corepack enable
 
 # Install dependencies only when needed
 FROM base AS deps
@@ -8,8 +16,8 @@ FROM base AS deps
 WORKDIR /app
 
 # Install dependencies based on the preferred package manager
-COPY package.json .npmrc* ./
-RUN bun install --ignore-scripts --registry=https://registry.npmmirror.com
+COPY package.json pnpm-workspace.yaml ./
+RUN pnpm install --registry=https://registry.npmmirror.com
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -26,33 +34,39 @@ ENV BETTER_AUTH_SECRET=7a4d08aa943c38b646d15d6398f013bcab9147f009474be9750026214
 ENV BETTER_AUTH_URL=http://example.com
 ENV DEFAULT_EMAIL_DOMAIN=example.com
 
-RUN bunx prisma generate
-RUN bun run build
+RUN pnpm prisma generate
+RUN pnpm build
 
 # Production image, copy all the files and run next
 FROM base AS runner
 WORKDIR /app
 
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends -o Acquire::Retries=3 gosu \
+    && rm -rf /var/lib/apt/lists/*
+
 ENV NODE_ENV=production
 # Uncomment the following line in case you want to disable telemetry during runtime.
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN if ! getent group bun >/dev/null; then groupadd --system --gid 1001 bun; fi
-RUN if ! id -u nextjs >/dev/null 2>&1; then useradd --system --uid 1001 --gid bun --create-home nextjs; fi
+RUN groupadd --gid 1001 nodejs
+RUN useradd --uid 1001 --gid nodejs --create-home nextjs
 
 COPY --from=builder /app/public ./public
 
 # Automatically leverage output traces to reduce image size
 # https://nextjs.org/docs/advanced-features/output-file-tracing
-COPY --from=builder --chown=nextjs:bun /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:bun /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
-RUN mkdir -p /app/data && chown -R nextjs:bun /app/data
+COPY --from=deps /app/node_modules/prisma/package.json ./prisma-package.json
+RUN mkdir -p /app/data && chown -R nextjs:nodejs /app/data
 
-RUN bun add prisma --registry=https://registry.npmmirror.com --global
+RUN pnpm add -g "prisma@$(node -p "require('./prisma-package.json').version")" --registry=https://registry.npmmirror.com \
+    && rm ./prisma-package.json
 
 # 创建启动脚本，先以 root 执行 prisma db push，然后切换用户运行应用
-RUN printf '#!/bin/sh\nset -e\nmkdir -p /app/data\nchown -R nextjs:bun /app/data\nchmod -R u+rwX,g+rwX /app/data\nprisma db push\nchown -R nextjs:bun /app/data\nchmod -R u+rwX,g+rwX /app/data\nexec runuser -u nextjs -- bun run server.js\n' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+RUN printf '#!/bin/sh\nset -e\nmkdir -p /app/data\nchown -R nextjs:nodejs /app/data\nchmod -R u+rwX,g+rwX /app/data\nprisma db push\nchown -R nextjs:nodejs /app/data\nchmod -R u+rwX,g+rwX /app/data\nexec gosu nextjs node server.js\n' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
 
 EXPOSE 3000
 

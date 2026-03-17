@@ -4,10 +4,6 @@
 generator client {
     provider               = "prisma-client"
     output                 = "generated"
-    runtime                = "nodejs"
-    moduleFormat           = "esm"
-    generatedFileExtension = "ts"
-    importFileExtension    = ""
 }
 
 datasource db {
