@@ -20,8 +20,6 @@ export const AliyunAccessKeySecret = process.env.ALIYUN_ACCESS_KEY_SECRET
 
 export const QjpSmsUrl = process.env.QJP_SMS_URL
 
-export const IsBun = typeof Bun !== "undefined"
-
 export const defaultEmailDomain = process.env.DEFAULT_EMAIL_DOMAIN
 
 export const BetterAuthSecret = process.env.BETTER_AUTH_SECRET
