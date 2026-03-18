@@ -15,8 +15,7 @@
         "db:dev": "cross-env NODE_ENV=development prisma db push",
         "db:prod": "cross-env NODE_ENV=production prisma db push",
         "studio:dev": "cross-env NODE_ENV=development prisma studio",
-        "studio:prod": "cross-env NODE_ENV=production prisma studio",
-        "postinstall": "prisma generate"
+        "studio:prod": "cross-env NODE_ENV=production prisma studio"
     },
     "dependencies": {
         "7zip-bin": "^5.2.0",
