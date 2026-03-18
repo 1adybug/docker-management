@@ -93,7 +93,7 @@ const Page: FC = () => {
 
     const [query, setQuery] = transformState(
         useQueryState({
-            keys: ["name", "contentKeyword"],
+            keys: ["name", "xName", "contentKeyword"],
             parse: {
                 createdBefore: naturalParser,
                 createdAfter: naturalParser,
@@ -223,10 +223,27 @@ const Page: FC = () => {
     const columns: Columns<ProjectSummary> = [
         {
             title: "项目名称",
-            dataIndex: "name",
+            dataIndex: "displayName",
+            key: "xName",
             align: "center",
             sorter: true,
+            sortOrder: getSortOrder(query, "xName"),
+            render(value, record) {
+                return value || record.name
+            },
+        },
+        {
+            title: "英文名称",
+            dataIndex: "name",
+            key: "name",
+            align: "center",
+            width: 220,
+            ellipsis: true,
+            sorter: true,
             sortOrder: getSortOrder(query, "name"),
+            render(value) {
+                return value || "-"
+            },
         },
         {
             title: "项目描述",
@@ -372,7 +389,10 @@ const Page: FC = () => {
             <title>项目管理</title>
             <div className="flex-none px-4">
                 <Form<FormParams> name="query-project-form" className="gap-y-4" layout="inline" onFinish={setQuery}>
-                    <FormItem<FormParams> name="name" label="项目名称">
+                    <FormItem<FormParams> name="name" label="英文名称">
+                        <Input allowClear />
+                    </FormItem>
+                    <FormItem<FormParams> name="xName" label="项目名称">
                         <Input allowClear />
                     </FormItem>
                     <FormItem<FormParams> name="contentKeyword" label="内容关键字">

@@ -47,8 +47,8 @@ export interface ComposeVolumeMap {
 }
 
 export interface ComposeFile {
-    name?: string
-    description?: string
+    "x-name"?: string
+    "x-description"?: string
     services?: ComposeServiceMap
     networks?: ComposeNetworkMap
     volumes?: ComposeVolumeMap
@@ -75,10 +75,15 @@ export interface ProjectFormService {
 
 export interface ProjectFormData {
     name?: string
+    xName?: string
     description?: string
     services?: ProjectFormService[]
     networks?: string[]
     volumes?: string[]
+}
+
+export interface NormalizeComposeProjectContentParams {
+    content: string
 }
 
 export const defaultComposeContent = `services:
@@ -87,6 +92,10 @@ export const defaultComposeContent = `services:
         ports:
             - "80:80"
 `
+
+export const composeNameKey = "x-name"
+
+export const composeDescriptionKey = "x-description"
 
 function normalizeStringArray(value: unknown) {
     if (!value) return undefined
@@ -220,7 +229,8 @@ function getComposeRest(original?: ComposeFile) {
     const rest = { ...original }
 
     delete rest.name
-    delete rest.description
+    delete rest[composeNameKey]
+    delete rest[composeDescriptionKey]
     delete rest.services
     delete rest.networks
     delete rest.volumes
@@ -250,7 +260,8 @@ export function composeToFormData(compose: ComposeFile) {
 
     return {
         name: normalizeComposeField(compose.name),
-        description: normalizeComposeField(compose.description),
+        xName: normalizeComposeField(compose[composeNameKey]),
+        description: normalizeComposeField(compose[composeDescriptionKey]),
         services,
         networks: normalizeKeyList(compose.networks),
         volumes: normalizeKeyList(compose.volumes),
@@ -258,7 +269,8 @@ export function composeToFormData(compose: ComposeFile) {
 }
 
 export function formDataToCompose(form: ProjectFormData, original?: ComposeFile) {
-    const composeName = cleanString(form.name)
+    const nativeComposeName = cleanString(form.name)
+    const composeName = cleanString(form.xName)
     const composeDescription = cleanString(form.description)
 
     const services = (form.services ?? [])
@@ -281,8 +293,9 @@ export function formDataToCompose(form: ProjectFormData, original?: ComposeFile)
 
     const next: ComposeFile = {}
 
-    if (composeName) next.name = composeName
-    if (composeDescription) next.description = composeDescription
+    if (nativeComposeName) next.name = nativeComposeName
+    if (composeName) next[composeNameKey] = composeName
+    if (composeDescription) next[composeDescriptionKey] = composeDescription
     if (Object.keys(services).length > 0) next.services = services
     if (networks) next.networks = networks
     if (volumes) next.volumes = volumes
@@ -296,4 +309,44 @@ export function formDataToYaml(form: ProjectFormData, original?: ComposeFile) {
     const compose = formDataToCompose(form, original)
     const content = stringify(compose, { indent: 4, lineWidth: 0 })
     return content.endsWith("\n") ? content : `${content}\n`
+}
+
+export function normalizeComposeProjectContent({ content }: NormalizeComposeProjectContentParams) {
+    try {
+        const compose = parseComposeYaml(content)
+        const composeName = normalizeComposeField(compose[composeNameKey])
+        const nativeComposeName = normalizeComposeField(compose.name)
+        const composeDescription = normalizeComposeField(compose[composeDescriptionKey])
+        const next = { ...compose } as ComposeFile
+
+        if (nativeComposeName) next.name = nativeComposeName
+        else delete next.name
+
+        if (composeName) next[composeNameKey] = composeName
+        else delete next[composeNameKey]
+
+        if (composeDescription) next[composeDescriptionKey] = composeDescription
+        else delete next[composeDescriptionKey]
+
+        const nextContent = stringify(next, { indent: 4, lineWidth: 0 })
+        return nextContent.endsWith("\n") ? nextContent : `${nextContent}\n`
+    } catch {
+        return content
+    }
+}
+
+export function getComposeXName(content: string) {
+    try {
+        return normalizeComposeField(parseComposeYaml(content)[composeNameKey])
+    } catch {
+        return undefined
+    }
+}
+
+export function getComposeDescription(content: string) {
+    try {
+        return normalizeComposeField(parseComposeYaml(content)[composeDescriptionKey])
+    } catch {
+        return undefined
+    }
 }

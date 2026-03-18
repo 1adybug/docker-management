@@ -2,18 +2,21 @@ import { getPagination } from "deepsea-tools"
 
 import { prisma } from "@/prisma"
 
-import { ProjectOrderByWithRelationInput } from "@/prisma/generated/internal/prismaNamespace"
+import { ProjectOrderByWithRelationInput, ProjectWhereInput } from "@/prisma/generated/internal/prismaNamespace"
 
 import { defaultPageNum } from "@/schemas/pageNum"
 import { defaultPageSize } from "@/schemas/pageSize"
+import { ProjectSortByParams } from "@/schemas/projectSortBy"
 import { queryProjectSchema } from "@/schemas/queryProject"
+import { SortOrderParams } from "@/schemas/sortOrder"
 
 import { createSharedFn } from "@/server/createSharedFn"
 
-import { parseComposeYaml } from "@/utils/compose"
+import { getComposeDescription } from "@/utils/compose"
 
 export interface ProjectSummary {
     name: string
+    displayName?: string
     description?: string
     createdAt: number
     updatedAt: number
@@ -44,11 +47,7 @@ export interface GetOperationUserNameParams {
 }
 
 function getProjectDescription(content: string) {
-    try {
-        return parseComposeYaml(content).description?.trim() || undefined
-    } catch {
-        return undefined
-    }
+    return getComposeDescription(content)
 }
 
 function getProjectNameFromParams(params?: string) {
@@ -123,12 +122,50 @@ async function getProjectUserMap({ names }: GetProjectUserMapParams) {
     return map
 }
 
+function getProjectOrderBy(sortBy: ProjectSortByParams, sortOrder: SortOrderParams) {
+    const orderBy: ProjectOrderByWithRelationInput[] = [
+        {
+            updatedAt: sortBy === "updatedAt" ? sortOrder : "desc",
+        },
+    ]
+
+    if (sortBy === "xName") {
+        orderBy.unshift(
+            {
+                xName: sortOrder,
+            },
+            {
+                name: sortOrder,
+            },
+        )
+
+        return orderBy
+    }
+
+    if (sortBy === "name") {
+        orderBy.unshift({
+            name: sortOrder,
+        })
+
+        return orderBy
+    }
+
+    if (sortBy === "createdAt") {
+        orderBy.unshift({
+            createdAt: sortOrder,
+        })
+    }
+
+    return orderBy
+}
+
 export const queryProject = createSharedFn({
     name: "queryProject",
     schema: queryProjectSchema,
 })(async function queryProject({
     id,
     name = "",
+    xName = "",
     contentKeyword = "",
     createdAfter,
     createdBefore,
@@ -141,11 +178,17 @@ export const queryProject = createSharedFn({
 } = {}) {
     const projectId = id?.trim() || undefined
     const nameItems = name.split(/\s+/).filter(Boolean)
+    const xNameItems = xName.split(/\s+/).filter(Boolean)
     const contentItems = contentKeyword.split(/\s+/).filter(Boolean)
 
     const andFilters = [
         ...nameItems.map(item => ({
             name: {
+                contains: item,
+            },
+        })),
+        ...xNameItems.map(item => ({
+            xName: {
                 contains: item,
             },
         })),
@@ -156,7 +199,7 @@ export const queryProject = createSharedFn({
         })),
     ]
 
-    const where = {
+    const where: ProjectWhereInput = {
         id: projectId,
         updatedAt: {
             gte: updatedAfter,
@@ -169,19 +212,7 @@ export const queryProject = createSharedFn({
         AND: andFilters,
     }
 
-    const orderBy: ProjectOrderByWithRelationInput[] = [
-        {
-            updatedAt: sortBy === "updatedAt" ? sortOrder : "desc",
-        },
-    ]
-
-    if (sortBy !== "updatedAt") {
-        if (sortBy === "name" || sortBy === "createdAt") {
-            orderBy.unshift({
-                [sortBy]: sortOrder,
-            })
-        }
-    }
+    const orderBy = getProjectOrderBy(sortBy, sortOrder)
 
     const data = await prisma.project.findMany({
         where,
@@ -190,6 +221,7 @@ export const queryProject = createSharedFn({
         orderBy,
         select: {
             name: true,
+            xName: true,
             content: true,
             createdAt: true,
             updatedAt: true,
@@ -202,6 +234,7 @@ export const queryProject = createSharedFn({
     return getPagination({
         data: data.map(item => ({
             name: item.name,
+            displayName: item.xName || item.name,
             description: getProjectDescription(item.content),
             createdAt: item.createdAt.valueOf(),
             updatedAt: item.updatedAt.valueOf(),

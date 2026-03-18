@@ -28,7 +28,7 @@ import { pageSizeParser } from "@/schemas/pageSize"
 import { ProjectCommand } from "@/schemas/projectCommand"
 import { SortOrderParams, sortOrderSchema } from "@/schemas/sortOrder"
 
-import { DockerImageItem } from "@/shared/queryDockerImageDetail"
+import { DockerImageItem, DockerImageProjectItem } from "@/shared/queryDockerImageDetail"
 
 import { getSortOrder } from "@/utils/getSortOrder"
 
@@ -62,7 +62,7 @@ export interface UploadDockerImageParams {
 
 export interface RestartProjectsState {
     imageName?: string
-    projectNames: string[]
+    projectItems: DockerImageProjectItem[]
 }
 
 const DEFAULT_JAR_START_COMMAND = "java -jar app.jar"
@@ -151,6 +151,10 @@ function getProjectSortText(projects: string[]) {
     return projects.slice().sort(compareName).join(" | ")
 }
 
+function getProjectDisplayName(projectItems: DockerImageProjectItem[], name: string) {
+    return projectItems.find(item => item.name === name)?.displayName ?? name
+}
+
 function compareProjects(first: string[], second: string[]) {
     const textDiff = compareName(getProjectSortText(first), getProjectSortText(second))
     if (textDiff !== 0) return textDiff
@@ -229,7 +233,7 @@ const Page: FC = () => {
     const [buildJarTarget, setBuildJarTarget] = useState<DockerImageItem | undefined>(undefined)
 
     const [restartProjectsState, setRestartProjectsState] = useState<RestartProjectsState>({
-        projectNames: [],
+        projectItems: [],
     })
 
     const [selectedRestartProjectNames, setSelectedRestartProjectNames] = useState<string[]>([])
@@ -247,13 +251,19 @@ const Page: FC = () => {
         [data],
     )
 
-    const projectOptions = useMemo(
-        () =>
-            Array.from(new Set((data ?? []).flatMap(item => item.projects).filter(Boolean)))
-                .sort(compareName)
-                .map(item => ({ label: item, value: item })),
-        [data],
-    )
+    const projectOptions = useMemo(() => {
+        const projectMap = new Map<string, string>()
+
+        ;(data ?? []).forEach(item => {
+            item.projectItems.forEach(project => {
+                projectMap.set(project.name, project.displayName)
+            })
+        })
+
+        return Array.from(projectMap.entries())
+            .sort((first, second) => compareName(first[1], second[1]))
+            .map(([value, label]) => ({ label, value }))
+    }, [data])
 
     const nginxImageNames = useMemo(() => imageNames.filter(name => name.startsWith("nginx:")), [imageNames])
     const defaultNginxImage = useMemo(() => getDefaultNginxImage(nginxImageNames), [nginxImageNames])
@@ -295,7 +305,7 @@ const Page: FC = () => {
 
         setRestartProjectsState({
             imageName: data.name,
-            projectNames: data.projects,
+            projectItems: data.projectItems,
         })
 
         setSelectedRestartProjectNames(data.projects)
@@ -304,7 +314,7 @@ const Page: FC = () => {
 
     function resetRestartProjectsModal() {
         setRestartProjectsState({
-            projectNames: [],
+            projectItems: [],
         })
 
         setSelectedRestartProjectNames([])
@@ -585,13 +595,13 @@ const Page: FC = () => {
             align: "center",
             sorter: true,
             sortOrder: getSortOrder(query, "projects"),
-            render(value: string[]) {
+            render(value: string[], record) {
                 if (!value || value.length === 0) return "-"
                 return (
                     <div className="flex flex-wrap justify-center gap-1">
                         {value.map(item => (
                             <Tag key={item} color="blue">
-                                {item}
+                                {getProjectDisplayName(record.projectItems, item)}
                             </Tag>
                         ))}
                     </div>
@@ -857,9 +867,9 @@ const Page: FC = () => {
                         <Checkbox.Group
                             className="flex flex-col gap-2"
                             value={selectedRestartProjectNames}
-                            options={restartProjectsState.projectNames.map(item => ({
-                                label: item,
-                                value: item,
+                            options={restartProjectsState.projectItems.map(item => ({
+                                label: item.displayName,
+                                value: item.name,
                             }))}
                             onChange={value => setSelectedRestartProjectNames(value as string[])}
                         />

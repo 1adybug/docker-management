@@ -1,7 +1,7 @@
 import { getParser } from "."
 import { z } from "zod/v4"
 
-export const projectSortBySchema = z.enum(["name", "createdAt", "updatedAt"], {
+export const projectSortBySchema = z.enum(["xName", "name", "createdAt", "updatedAt"], {
     message: "无效的项目排序字段",
 })
 

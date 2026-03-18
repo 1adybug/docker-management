@@ -10,6 +10,7 @@ import { getProjectComposePath, getProjectDir } from "@/server/getProjectPaths"
 import { writeTextToFile } from "@/server/writeTextToFile"
 
 import { ClientError } from "@/utils/clientError"
+import { getComposeXName, normalizeComposeProjectContent } from "@/utils/compose"
 
 const defaultComposeContent = `services:
     app:
@@ -36,11 +37,21 @@ export const addProject = createSharedFn({
 
     await mkdir(projectDir, { recursive: true })
 
-    const nextContent = content ?? defaultComposeContent
+    const nextContent = normalizeComposeProjectContent({
+        content: content ?? defaultComposeContent,
+    })
+
+    const xName = getComposeXName(nextContent)
+
+    if (!xName) throw new ClientError("项目名称不能为空")
+
+    const xNameProject = await prisma.project.findUnique({ where: { xName } })
+    if (xNameProject) throw new ClientError("项目名称已存在")
 
     await prisma.project.create({
         data: {
             name,
+            xName,
             content: nextContent,
         },
     })

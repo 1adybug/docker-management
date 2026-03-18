@@ -27,8 +27,14 @@ export interface DockerContainerItem {
     projectId?: string
     composeConfigFiles: string[]
     projectName?: string
+    projectDisplayName?: string
     isManagedProject?: boolean
     isCurrentContainer?: boolean
+}
+
+export interface ManagedProjectInfo {
+    id: string
+    displayName: string
 }
 
 async function getManagedProjectMap() {
@@ -36,9 +42,18 @@ async function getManagedProjectMap() {
         select: {
             id: true,
             name: true,
+            xName: true,
         },
     })
-    return new Map(projects.map(project => [project.name, project.id]))
+    return new Map(
+        projects.map(project => [
+            project.name,
+            {
+                id: project.id,
+                displayName: project.xName || project.name,
+            } as ManagedProjectInfo,
+        ]),
+    )
 }
 
 function normalizePath(value: string) {
@@ -79,7 +94,8 @@ export const queryDockerContainer = createSharedFn<never>({
         .map(item => {
             const projectName = getComposeProjectNameByLabels(item.Labels)
             const composeFiles = getComposeConfigFilesByLabels(item.Labels)
-            const projectId = projectName ? managedProjectMap.get(projectName) : undefined
+            const projectInfo = projectName ? managedProjectMap.get(projectName) : undefined
+            const projectId = projectInfo?.id
             const isManagedProject =
                 composeFiles.length > 0 ? isComposeFileManaged(composeFiles, projectRoot) : projectName ? managedProjectMap.has(projectName) : false
 
@@ -93,6 +109,7 @@ export const queryDockerContainer = createSharedFn<never>({
                 projectId,
                 composeConfigFiles: composeFiles,
                 projectName,
+                projectDisplayName: projectName ? (projectInfo?.displayName ?? projectName) : undefined,
                 isManagedProject,
                 isCurrentContainer: isCurrentDockerContainerId(item.ID),
             } as DockerContainerItem

@@ -10,6 +10,7 @@ import { getProjectComposePath, getProjectDir } from "@/server/getProjectPaths"
 import { writeTextToFile } from "@/server/writeTextToFile"
 
 import { ClientError } from "@/utils/clientError"
+import { getComposeXName, normalizeComposeProjectContent } from "@/utils/compose"
 
 export const updateProject = createSharedFn({
     name: "updateProject",
@@ -22,14 +23,35 @@ export const updateProject = createSharedFn({
     const project = await prisma.project.findUnique({ where: { name } })
     if (!project) throw new ClientError("项目不存在")
 
+    const nextContent = normalizeComposeProjectContent({
+        content,
+    })
+
+    const xName = getComposeXName(nextContent)
+
+    if (!xName) throw new ClientError("项目名称不能为空")
+
+    const xNameProject = await prisma.project.findFirst({
+        where: {
+            xName,
+            name: {
+                not: name,
+            },
+        },
+    })
+    if (xNameProject) throw new ClientError("项目名称已存在")
+
     await prisma.project.update({
         where: { name },
-        data: { content },
+        data: {
+            xName,
+            content: nextContent,
+        },
     })
 
     await mkdir(projectDir, { recursive: true })
 
-    await writeTextToFile(composePath, content)
+    await writeTextToFile(composePath, nextContent)
 
     return {
         name,

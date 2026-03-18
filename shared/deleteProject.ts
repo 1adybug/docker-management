@@ -11,6 +11,7 @@ import { getProjectComposePath, getProjectDir } from "@/server/getProjectPaths"
 import { ensureProjectComposeFile } from "@/shared/runProject"
 
 import { ClientError } from "@/utils/clientError"
+import { normalizeComposeProjectContent } from "@/utils/compose"
 
 function getDockerComposeDownArgs(composePath: string) {
     return ["compose", "-f", composePath, "down"]
@@ -28,7 +29,13 @@ export const deleteProject = createSharedFn({
     if (!project) throw new ClientError("项目不存在")
 
     if (cleanup) {
-        await ensureProjectComposeFile({ projectDir, composePath, content: project.content })
+        await ensureProjectComposeFile({
+            projectDir,
+            composePath,
+            content: normalizeComposeProjectContent({
+                content: project.content,
+            }),
+        })
         await runDockerCommand({
             args: getDockerComposeDownArgs(composePath),
             cwd: projectDir,

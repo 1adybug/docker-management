@@ -33,6 +33,12 @@ export interface DockerImageItem {
     createdAt: string
     size: string
     projects: string[]
+    projectItems: DockerImageProjectItem[]
+}
+
+export interface DockerImageProjectItem {
+    name: string
+    displayName: string
 }
 
 async function getProjectImageUsageMap() {
@@ -40,6 +46,7 @@ async function getProjectImageUsageMap() {
     const projects = await prisma.project.findMany({
         select: {
             name: true,
+            xName: true,
             content: true,
         },
     })
@@ -65,7 +72,12 @@ async function getProjectImageUsageMap() {
         }),
     )
 
-    return usage
+    const projectNameMap = new Map(projects.map(project => [project.name, project.xName || project.name]))
+
+    return {
+        usage,
+        projectNameMap,
+    }
 }
 
 function normalizeImageName(repository: string, tag: string) {
@@ -83,7 +95,7 @@ export const queryDockerImageDetail = createSharedFn<never>({
     })
 
     const output = result.stdout
-    const usageMap = await getProjectImageUsageMap()
+    const { usage, projectNameMap } = await getProjectImageUsageMap()
 
     const images = output
         .split(/\r?\n/u)
@@ -103,7 +115,12 @@ export const queryDockerImageDetail = createSharedFn<never>({
             const name = normalizeImageName(repository, tag)
             if (!name) return null
 
-            const projects = Array.from(usageMap.get(name) ?? new Set<string>())
+            const projects = Array.from(usage.get(name) ?? new Set<string>())
+
+            const projectItems = projects.map(projectName => ({
+                name: projectName,
+                displayName: projectNameMap.get(projectName) ?? projectName,
+            }))
 
             return {
                 id: item.ID ?? "",
@@ -113,6 +130,7 @@ export const queryDockerImageDetail = createSharedFn<never>({
                 createdAt: item.CreatedAt ?? "",
                 size: item.Size ?? "",
                 projects,
+                projectItems,
             } as DockerImageItem
         })
         .filter((item): item is DockerImageItem => !!item)

@@ -81,6 +81,7 @@ export interface DockerContainerTableRow {
     composeConfigFiles: string[]
     projectId?: string
     projectName?: string
+    projectDisplayName?: string
     isManagedProject?: boolean
     containers?: DockerContainerItem[]
 }
@@ -137,6 +138,10 @@ function getProjectSortWeight(record: DockerContainerTableRow) {
     return 1
 }
 
+function getProjectLabel(record: DockerContainerTableRow) {
+    return record.projectDisplayName ?? record.projectName ?? noProjectGroupName
+}
+
 function getCreatedAtTimestamp(value?: string) {
     const timestamp = Date.parse(value ?? "")
     return Number.isNaN(timestamp) ? undefined : timestamp
@@ -164,7 +169,7 @@ function compareContainerStatus(first?: string, second?: string) {
 function compareProject(record: DockerContainerTableRow, nextRecord: DockerContainerTableRow) {
     const projectDiff = getProjectSortWeight(record) - getProjectSortWeight(nextRecord)
     if (projectDiff !== 0) return projectDiff
-    return compareName(record.projectName ?? noProjectGroupName, nextRecord.projectName ?? noProjectGroupName)
+    return compareName(getProjectLabel(record), getProjectLabel(nextRecord))
 }
 
 function getSortResult(result: number, sortOrder?: SortOrderParams) {
@@ -532,9 +537,17 @@ const Page: FC = () => {
         managedProjects.sort(compareName)
         unmanagedProjects.sort(compareName)
 
+        const projectLabelMap = new Map<string, string>()
+
+        ;(data ?? []).forEach(item => {
+            const name = item.projectName?.trim()
+            if (!name) return
+            projectLabelMap.set(name, item.projectDisplayName?.trim() || name)
+        })
+
         return [
-            ...managedProjects.map(item => ({ label: item, value: item })),
-            ...unmanagedProjects.map(item => ({ label: item, value: item })),
+            ...managedProjects.map(item => ({ label: projectLabelMap.get(item) ?? item, value: item })),
+            ...unmanagedProjects.map(item => ({ label: projectLabelMap.get(item) ?? item, value: item })),
             { label: "非平台项目", value: unmanagedProjectValue },
             { label: "未归属项目", value: noProjectValue },
         ]
@@ -574,13 +587,14 @@ const Page: FC = () => {
         // 按项目分组，未归属项目的容器归为同一组
         filteredData.forEach(item => {
             const groupKey = item.projectName ?? noProjectGroupKey
-            const groupName = item.projectName ?? noProjectGroupName
+            const groupName = item.projectDisplayName ?? item.projectName ?? noProjectGroupName
             const cached = projectMap.get(groupKey)
 
             if (cached) {
                 cached.containers?.push(item)
                 cached.composeConfigFiles = mergeComposeFiles(cached.composeConfigFiles, item.composeConfigFiles)
                 if (!cached.projectId && item.projectId) cached.projectId = item.projectId
+                if (!cached.projectDisplayName && item.projectDisplayName) cached.projectDisplayName = item.projectDisplayName
                 return
             }
 
@@ -591,6 +605,7 @@ const Page: FC = () => {
                 composeConfigFiles: normalizeComposeFiles(item.composeConfigFiles),
                 projectId: item.projectId,
                 projectName: item.projectName,
+                projectDisplayName: item.projectDisplayName,
                 isManagedProject: item.projectName ? item.isManagedProject : false,
                 containers: [item],
             }

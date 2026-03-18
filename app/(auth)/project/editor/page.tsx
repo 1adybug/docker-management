@@ -275,15 +275,27 @@ const Page: FC = () => {
     }
 
     async function onSaveYaml() {
-        const projectName = isUpdate ? searchName : form.getFieldValue("name")
-
-        if (!projectName) {
-            form.validateFields(["name"])
-            return
-        }
-
         try {
             const compose = parseComposeYaml(yamlValue)
+            const composeValues = composeToFormData(compose)
+            const projectName = isUpdate ? searchName : (form.getFieldValue("name") ?? composeValues.name)
+
+            if (!projectName) {
+                form.validateFields(["name"])
+                return
+            }
+
+            if (!composeValues.xName) {
+                form.setFields([
+                    {
+                        name: "xName",
+                        errors: ["请输入显示名称"],
+                    },
+                ])
+
+                return
+            }
+
             const nextValues = getComposeFormData(compose, projectName)
             const content = formDataToYaml(nextValues, compose)
             const nextCompose = formDataToCompose(nextValues, compose)
@@ -344,8 +356,16 @@ const Page: FC = () => {
                     <div className="min-h-0 flex-1 overflow-auto">
                         <div className="pl-4 pr-[calc(16px-((100vw-32px)-100%))] lg:pr-[calc(16px-((100vw-48px)/2-100%))]">
                             <Form<ProjectFormData> name="project-editor" form={form} layout="vertical" disabled={isRequesting}>
-                                <FormItem<ProjectFormData> name="name" label="项目名称" rules={[schemaToRule(projectNameSchema)]}>
+                                <FormItem<ProjectFormData> name="name" label="英文名称" rules={[schemaToRule(projectNameSchema)]}>
                                     <Input disabled={isUpdate} placeholder="仅支持字母、数字、下划线和短横线" />
+                                </FormItem>
+                                <FormItem<ProjectFormData>
+                                    name="xName"
+                                    label="项目名称"
+                                    required={false}
+                                    rules={[{ required: true, message: "请输入项目名称" }]}
+                                >
+                                    <Input placeholder="对应 YAML 中的 x-name 字段" />
                                 </FormItem>
                                 <FormItem<ProjectFormData> name="description" label="项目描述">
                                     <Input.TextArea autoSize={{ minRows: 1, maxRows: 4 }} />

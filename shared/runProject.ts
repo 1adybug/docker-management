@@ -13,6 +13,7 @@ import { readTextFromFile } from "@/server/readTextFromFile"
 import { writeTextToFile } from "@/server/writeTextToFile"
 
 import { ClientError } from "@/utils/clientError"
+import { normalizeComposeProjectContent } from "@/utils/compose"
 
 export interface RunProjectResult {
     output: string
@@ -89,7 +90,13 @@ export const runProject = createSharedFn({
     const project = await prisma.project.findUnique({ where: { name } })
     if (!project) throw new ClientError("项目不存在")
 
-    await ensureProjectComposeFile({ projectDir, composePath, content: project.content })
+    await ensureProjectComposeFile({
+        projectDir,
+        composePath,
+        content: normalizeComposeProjectContent({
+            content: project.content,
+        }),
+    })
 
     const result = await runDockerCommand({
         args: getDockerComposeArgs(command, composePath),

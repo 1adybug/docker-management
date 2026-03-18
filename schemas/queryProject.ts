@@ -13,7 +13,8 @@ import { updatedBeforeSchema } from "./updatedBefore"
 export const queryProjectSchema = z.object(
     {
         id: z.string({ message: "无效的项目 ID" }).trim().optional(),
-        name: z.string({ message: "无效的项目名称" }).trim().optional(),
+        name: z.string({ message: "无效的英文名称" }).trim().optional(),
+        xName: z.string({ message: "无效的项目名称" }).trim().optional(),
         contentKeyword: z.string({ message: "无效的内容关键字" }).trim().optional(),
         createdAfter: createdAfterSchema.optional(),
         createdBefore: createdBeforeSchema.optional(),
