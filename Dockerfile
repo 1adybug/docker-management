@@ -1,12 +1,12 @@
 # syntax=docker.io/docker/dockerfile:1
 
 FROM node:lts-slim AS base
-FROM docker:cli AS docker_cli
-FROM docker/compose-bin:latest AS docker_compose
-
 RUN apt-get update \
     && apt-get install -y --no-install-recommends -o Acquire::Retries=3 openssl \
     && rm -rf /var/lib/apt/lists/*
+
+FROM docker:cli AS docker_cli
+FROM docker/compose-bin:latest AS docker_compose
 
 # Install dependencies only when needed
 FROM base AS deps
