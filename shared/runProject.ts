@@ -7,6 +7,7 @@ import { runProjectSchema } from "@/schemas/runProject"
 
 import { createSharedFn } from "@/server/createSharedFn"
 import { runDockerCommand } from "@/server/docker"
+import { ensureComposeMountDirectories } from "@/server/ensureComposeMountDirectories"
 import { ensureProjectRoot } from "@/server/ensureProjectRoot"
 import { getProjectComposePath, getProjectDir } from "@/server/getProjectPaths"
 import { readTextFromFile } from "@/server/readTextFromFile"
@@ -90,13 +91,22 @@ export const runProject = createSharedFn({
     const project = await prisma.project.findUnique({ where: { name } })
     if (!project) throw new ClientError("项目不存在")
 
+    const content = normalizeComposeProjectContent({
+        content: project.content,
+    })
+
     await ensureProjectComposeFile({
         projectDir,
         composePath,
-        content: normalizeComposeProjectContent({
-            content: project.content,
-        }),
+        content,
     })
+
+    if (command === ProjectCommand.启动) {
+        await ensureComposeMountDirectories({
+            projectDir,
+            content,
+        })
+    }
 
     const result = await runDockerCommand({
         args: getDockerComposeArgs(command, composePath),

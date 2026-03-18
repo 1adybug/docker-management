@@ -15,12 +15,14 @@ import ProjectLogDrawer from "@/components/ProjectLogDrawer"
 
 import { DockerContainerStatus } from "@/constants"
 
+import { useCheckProjectStart } from "@/hooks/useCheckProjectStart"
 import { useDeleteProject } from "@/hooks/useDeleteProject"
 import { useQueryDockerContainer } from "@/hooks/useQueryDockerContainer"
 import { useQueryProject } from "@/hooks/useQueryProject"
 import { useRunProject } from "@/hooks/useRunProject"
 
 import { getParser } from "@/schemas"
+import { CheckProjectStartResult, ProjectStartMountItem, ProjectStartMountStatus } from "@/schemas/checkProjectStart"
 import { pageNumParser } from "@/schemas/pageNum"
 import { pageSizeParser } from "@/schemas/pageSize"
 import { ProjectCommand } from "@/schemas/projectCommand"
@@ -49,6 +51,12 @@ export interface ProjectContainerStatusSummary {
 /** 项目容器状态映射 */
 export interface ProjectContainerStatusMap {
     [key: string]: ProjectContainerStatusSummary
+}
+
+/** 项目启动预检查状态 */
+export interface ProjectStartCheckState {
+    name?: string
+    data?: CheckProjectStartResult
 }
 
 /** 解析容器状态 */
@@ -81,6 +89,37 @@ function getProjectContainerStatusMap(containers?: DockerContainerItem[]) {
     return map
 }
 
+function getStartCheckStatusText(status: ProjectStartMountStatus) {
+    if (status === ProjectStartMountStatus.已存在) return "已存在"
+    if (status === ProjectStartMountStatus.将创建) return "将自动创建"
+    return "不可创建"
+}
+
+function getStartCheckStatusClassName(status: ProjectStartMountStatus) {
+    if (status === ProjectStartMountStatus.已存在) return "border-emerald-200 bg-emerald-50 text-emerald-700"
+    if (status === ProjectStartMountStatus.将创建) return "border-sky-200 bg-sky-50 text-sky-700"
+    return "border-red-200 bg-red-50 text-red-700"
+}
+
+function onRenderMountItem(item: ProjectStartMountItem) {
+    const isSamePath = item.sourcePath === item.resolvedPath
+
+    return (
+        <div key={item.resolvedPath} className="rounded-xl border border-slate-200 bg-white p-3">
+            <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-medium text-slate-900">{item.sourcePath}</div>
+                    {!isSamePath ? <div className="mt-1 break-all text-xs text-slate-500">实际路径：{item.resolvedPath}</div> : null}
+                    <div className="mt-1 text-xs text-slate-500">{item.message || "-"}</div>
+                </div>
+                <div className={clsx("flex-none rounded-full border px-2 py-1 text-xs font-medium", getStartCheckStatusClassName(item.status))}>
+                    {getStartCheckStatusText(item.status)}
+                </div>
+            </div>
+        </div>
+    )
+}
+
 const Page: FC = () => {
     const [logOpen, setLogOpen] = useState(false)
     const [logName, setLogName] = useState<string | undefined>(undefined)
@@ -88,6 +127,8 @@ const Page: FC = () => {
     const [deleteOpen, setDeleteOpen] = useState(false)
     const [deleteName, setDeleteName] = useState<string | undefined>(undefined)
     const [deleteMode, setDeleteMode] = useState<ProjectDeleteMode>(ProjectDeleteMode.仅删除项目)
+    const [startCheckOpen, setStartCheckOpen] = useState(false)
+    const [startCheck, setStartCheck] = useState<ProjectStartCheckState>({})
 
     const router = useRouter()
 
@@ -145,10 +186,11 @@ const Page: FC = () => {
 
     const { data: containerData } = useQueryDockerContainer()
 
+    const { mutateAsync: checkProjectStart, isPending: isCheckProjectStartPending } = useCheckProjectStart()
     const { mutateAsync: deleteProject, isPending: isDeletePending } = useDeleteProject()
     const { mutateAsync: runProject, isPending: isRunPending } = useRunProject()
 
-    const isRequesting = isLoading || isDeletePending || isRunPending
+    const isRequesting = isLoading || isCheckProjectStartPending || isDeletePending || isRunPending
 
     function onAdd() {
         router.push("/project/editor")
@@ -179,6 +221,12 @@ const Page: FC = () => {
         setDeleteName(undefined)
     }
 
+    function onCloseStartCheck() {
+        if (isRunPending) return
+        setStartCheckOpen(false)
+        setStartCheck({})
+    }
+
     async function onDeleteConfirm() {
         if (!deleteName) return
         await deleteProject({
@@ -193,11 +241,46 @@ const Page: FC = () => {
     }
 
     async function onCommand(name: string, command: ProjectCommand) {
+        if (command === ProjectCommand.启动) {
+            setStartCheckOpen(true)
+
+            setStartCheck({
+                name,
+            })
+
+            try {
+                const data = await checkProjectStart({ name })
+
+                setStartCheck({
+                    name,
+                    data,
+                })
+            } catch (error) {
+                setStartCheckOpen(false)
+                setStartCheck({})
+                throw error
+            }
+
+            return
+        }
+
         const result = await runProject({ name, command })
         if (command !== ProjectCommand.日志) return
         setLogName(name)
         setLogContent(result.output)
         setLogOpen(true)
+    }
+
+    async function onConfirmStart() {
+        const name = startCheck.name?.trim()
+        if (!name) return
+
+        await runProject({
+            name,
+            command: ProjectCommand.启动,
+        })
+
+        onCloseStartCheck()
     }
 
     function onDeleteLabel(mode: ProjectDeleteMode, label: string) {
@@ -448,6 +531,48 @@ const Page: FC = () => {
                         ]}
                         onChange={onDeleteModeChange}
                     />
+                </Modal>
+                <Modal
+                    title={startCheck.name ? `启动预检查：${startCheck.name}` : "启动预检查"}
+                    open={startCheckOpen}
+                    okText="确认启动"
+                    cancelText="取消"
+                    mask={{ closable: !isRunPending && !isCheckProjectStartPending }}
+                    okButtonProps={{
+                        disabled: !startCheck.name || !startCheck.data?.canStart || isCheckProjectStartPending,
+                        loading: isRunPending,
+                    }}
+                    cancelButtonProps={{
+                        disabled: isRunPending || isCheckProjectStartPending,
+                    }}
+                    onOk={onConfirmStart}
+                    onCancel={onCloseStartCheck}
+                >
+                    {isCheckProjectStartPending ? (
+                        <div className="py-6 text-sm text-slate-600">正在检查挂载目录...</div>
+                    ) : (
+                        <div className="space-y-3">
+                            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+                                <div>已存在目录：{startCheck.data?.existsCount ?? 0}</div>
+                                <div>将自动创建：{startCheck.data?.createCount ?? 0}</div>
+                                <div className={clsx((startCheck.data?.blockedCount ?? 0) > 0 ? "text-red-600" : "text-slate-700")}>
+                                    不可创建：{startCheck.data?.blockedCount ?? 0}
+                                </div>
+                            </div>
+                            {(startCheck.data?.items.length ?? 0) > 0 ? (
+                                <div className="max-h-80 space-y-2 overflow-auto pr-1">{startCheck.data?.items.map(onRenderMountItem)}</div>
+                            ) : (
+                                <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500">
+                                    未检测到需要自动处理的挂载目录
+                                </div>
+                            )}
+                            {startCheck.data && !startCheck.data.canStart ? (
+                                <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+                                    存在不可创建的挂载目录，请先修复后再启动项目
+                                </div>
+                            ) : null}
+                        </div>
+                    )}
                 </Modal>
                 <Table<ProjectSummary>
                     columns={columns}

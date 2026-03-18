@@ -7,6 +7,7 @@ import { addUser } from "@/shared/addUser"
 import { banUser } from "@/shared/banUser"
 import { buildJarDockerImage } from "@/shared/buildJarDockerImage"
 import { buildStaticDockerImage } from "@/shared/buildStaticDockerImage"
+import { checkProjectStart } from "@/shared/checkProjectStart"
 import { createFirstUser } from "@/shared/createFirstUser"
 import { deleteDockerImage } from "@/shared/deleteDockerImage"
 import { deleteProject } from "@/shared/deleteProject"
@@ -47,6 +48,7 @@ registerRoute(addUser)
 registerRoute(banUser)
 registerRoute(buildJarDockerImage)
 registerRoute(buildStaticDockerImage)
+registerRoute(checkProjectStart)
 registerRoute(createFirstUser)
 registerRoute(deleteDockerImage)
 registerRoute(deleteProject)
