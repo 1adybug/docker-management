@@ -229,6 +229,13 @@ const Page: FC = () => {
             sortOrder: getSortOrder(query, "name"),
         },
         {
+            title: "项目描述",
+            dataIndex: "description",
+            align: "center",
+            width: 280,
+            ellipsis: true,
+        },
+        {
             title: "创建用户",
             dataIndex: "createdUser",
             align: "center",

@@ -10,8 +10,11 @@ import { queryProjectSchema } from "@/schemas/queryProject"
 
 import { createSharedFn } from "@/server/createSharedFn"
 
+import { parseComposeYaml } from "@/utils/compose"
+
 export interface ProjectSummary {
     name: string
+    description?: string
     createdAt: number
     updatedAt: number
     createdUser?: string
@@ -38,6 +41,14 @@ export interface GetProjectUserMapParams {
 export interface GetOperationUserNameParams {
     name?: string
     phoneNumber?: string
+}
+
+function getProjectDescription(content: string) {
+    try {
+        return parseComposeYaml(content).description?.trim() || undefined
+    } catch {
+        return undefined
+    }
 }
 
 function getProjectNameFromParams(params?: string) {
@@ -179,6 +190,7 @@ export const queryProject = createSharedFn({
         orderBy,
         select: {
             name: true,
+            content: true,
             createdAt: true,
             updatedAt: true,
         },
@@ -190,6 +202,7 @@ export const queryProject = createSharedFn({
     return getPagination({
         data: data.map(item => ({
             name: item.name,
+            description: getProjectDescription(item.content),
             createdAt: item.createdAt.valueOf(),
             updatedAt: item.updatedAt.valueOf(),
             createdUser: userMap[item.name]?.createdUser,
