@@ -66,8 +66,8 @@ importers:
         specifier: ^5.17.33
         version: 5.17.33(@types/node@24.12.0)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(zod@4.3.6)
       deepsea-tools:
-        specifier: ^5.47.8
-        version: 5.47.8(zod@4.3.6)
+        specifier: ^5.47.9
+        version: 5.47.9(zod@4.3.6)
       lucide-react:
         specifier: ^0.577.0
         version: 0.577.0(react@19.2.4)
@@ -84,14 +84,14 @@ importers:
         specifier: ^19.2.4
         version: 19.2.4(react@19.2.4)
       soda-antd:
-        specifier: ^1.0.24
-        version: 1.0.24(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(antd@6.3.3(moment@2.30.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+        specifier: ^1.0.25
+        version: 1.0.25(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(antd@6.3.3(moment@2.30.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       soda-hooks:
-        specifier: ^6.16.21
-        version: 6.16.21(@types/react@19.2.14)(react@19.2.4)(zod@4.3.6)
+        specifier: ^6.16.22
+        version: 6.16.22(@types/react@19.2.14)(react@19.2.4)(zod@4.3.6)
       soda-next:
-        specifier: ^0.7.26
-        version: 0.7.26(@types/react@19.2.14)(next@16.1.7(@babel/core@7.29.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(zod@4.3.6)
+        specifier: ^0.7.27
+        version: 0.7.27(@types/react@19.2.14)(next@16.1.7(@babel/core@7.29.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(zod@4.3.6)
       soda-nodejs:
         specifier: ^0.8.9
         version: 0.8.9
@@ -157,8 +157,8 @@ importers:
         specifier: ^7.5.0
         version: 7.5.0(@types/react@19.2.14)(better-sqlite3@12.8.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.9.3)
       sdnext:
-        specifier: ^0.0.28
-        version: 0.0.28(@types/node@24.12.0)(zod@4.3.6)
+        specifier: ^0.0.29
+        version: 0.0.29(@types/node@24.12.0)(zod@4.3.6)
       tailwindcss:
         specifier: ^3.4.19
         version: 3.4.19(yaml@2.8.2)
@@ -2067,6 +2067,11 @@ packages:
     peerDependencies:
       zod: ^4.1.13
 
+  deepsea-tools@5.47.9:
+    resolution: {integrity: sha512-kyMV3Rd2dH3sofeK7KcwxKOHuBw8TmdDB5vO2apmGd151MGsqwVoIgd0ic7oV0MFy57dp1oDDVoYy0l95KOtOw==, tarball: https://registry.npmjs.org/deepsea-tools/-/deepsea-tools-5.47.9.tgz}
+    peerDependencies:
+      zod: ^4.1.13
+
   define-data-property@1.1.4:
     resolution: {integrity: sha512-rBMvIzlpA8v6E+SJZoo++HAYqsLrkg7MSfIinMPFhmkorw7X+dOXVJQs+QT69zGkzMyfDnIMN2Wid1+NbL3T+A==, tarball: https://registry.npmjs.org/define-data-property/-/define-data-property-1.1.4.tgz}
     engines: {node: '>= 0.4'}
@@ -3594,8 +3599,8 @@ packages:
   scroll-into-view-if-needed@3.1.0:
     resolution: {integrity: sha512-49oNpRjWRvnU8NyGVmUaYG4jtTkNonFZI86MmGRDqBphEK2EXT9gdEUoQPZhuBM8yWHxCWbobltqYO5M4XrUvQ==, tarball: https://registry.npmjs.org/scroll-into-view-if-needed/-/scroll-into-view-if-needed-3.1.0.tgz}
 
-  sdnext@0.0.28:
-    resolution: {integrity: sha512-72XHeDEiK9+nuEa6AXNLLshHnfH0BxqZoGABTtEbquwWgh1ct/y6/bwbBGUQa2IFCO7ADktlAfFG/uUB0w/ZBw==, tarball: https://registry.npmjs.org/sdnext/-/sdnext-0.0.28.tgz}
+  sdnext@0.0.29:
+    resolution: {integrity: sha512-efHx4MwE2nCZiEfdmqPLfBcbvZuHAaBTtX7EoR0EkUUxfuNY29cIKVcvE8jy/euZ8JQV6+pK85rDMbdU0sN7Sg==, tarball: https://registry.npmjs.org/sdnext/-/sdnext-0.0.29.tgz}
     hasBin: true
 
   select@1.1.2:
@@ -3683,8 +3688,8 @@ packages:
   smooth-scrollbar@8.8.4:
     resolution: {integrity: sha512-Wn2Q/iE+PE1ef4EfhFMhgaIMfSrjJl2LalRu0hBWSrw5nZKGsUIjWFWHnLB/Lpx7N+a1pJH6+wkQzBr+5nWPUg==, tarball: https://registry.npmjs.org/smooth-scrollbar/-/smooth-scrollbar-8.8.4.tgz}
 
-  soda-antd@1.0.24:
-    resolution: {integrity: sha512-oievTNr+gyFYEXfC93f2aVO14OXCwigVVeO10Fbm+cPg3DLiAIjlUCXZE39HV4TEwPmFL6oHvsrIb13SROULaw==, tarball: https://registry.npmjs.org/soda-antd/-/soda-antd-1.0.24.tgz}
+  soda-antd@1.0.25:
+    resolution: {integrity: sha512-rEoD/JadBlhjmAz/ZX+pN9B4GRKWroMqVpznQrc0biT0juYh8oOb2Fs9G4lQOtLMt0BawrZYz3poQwypZOhtuA==, tarball: https://registry.npmjs.org/soda-antd/-/soda-antd-1.0.25.tgz}
     peerDependencies:
       '@types/react': '>=19.2.7'
       '@types/react-dom': '>=19.2.3'
@@ -3698,8 +3703,14 @@ packages:
       '@types/react': '>=19.2.7'
       react: '>=19.2.3'
 
-  soda-next@0.7.26:
-    resolution: {integrity: sha512-ekZ6dj3dbKw/L2zcAnpIBXiv8s/RYMiAcKQEwzdr4wC/JIXhI4uPpR+eHMXGU1K+foggR0xyOGRYjHNFPZBh+g==, tarball: https://registry.npmjs.org/soda-next/-/soda-next-0.7.26.tgz}
+  soda-hooks@6.16.22:
+    resolution: {integrity: sha512-HsIv+ZYx/XviqtRM0VACiwJwr9nTnSrzVEGR5eNLqI/3cQkJzyjI8a/npdZ1GR2lR6Y04RVXX7UAyxM5XjPQVg==, tarball: https://registry.npmjs.org/soda-hooks/-/soda-hooks-6.16.22.tgz}
+    peerDependencies:
+      '@types/react': '>=19.2.7'
+      react: '>=19.2.3'
+
+  soda-next@0.7.27:
+    resolution: {integrity: sha512-G3okcPPUztJ28IMvylfv7Y+6UAd9AyZXcbVLI3ysAjh9zGrCwO2wIQRMKFHOxMfrLdcHM1r8SqvvYsSBO2OHcQ==, tarball: https://registry.npmjs.org/soda-next/-/soda-next-0.7.27.tgz}
     peerDependencies:
       '@types/react': '>=19.2.7'
       next: '>=16.0.10'
@@ -3708,8 +3719,8 @@ packages:
   soda-nodejs@0.8.9:
     resolution: {integrity: sha512-apWVirXqzmLW0AUaoVtag9t7YNUmbWO0k8F+3KYSRqENb7hzuzKOCW0nqJmUT2zVZ/Hib9pWdsDbW5xe6koqPA==, tarball: https://registry.npmjs.org/soda-nodejs/-/soda-nodejs-0.8.9.tgz}
 
-  soda-react@0.1.25:
-    resolution: {integrity: sha512-/ussWi1VUNTXpWM4bHgxpWzaAnZ5zT2HfiLKI+nlQxxT4GzjWBZe7NgqwaaRPgX71MU6liPW51WMtrlCDD1NNQ==, tarball: https://registry.npmjs.org/soda-react/-/soda-react-0.1.25.tgz}
+  soda-react@0.1.26:
+    resolution: {integrity: sha512-n7uFlrlD+c5EfI3CMncsc8NIs4tRFrjajjexkXXsY+BpHlSWFLS385D7rqI99/m7OpfiH0pMolIMSxPTYVZ+lA==, tarball: https://registry.npmjs.org/soda-react/-/soda-react-0.1.26.tgz}
     peerDependencies:
       '@types/react': '>=19.2.7'
       '@types/react-dom': '>=19.2.3'
@@ -6304,6 +6315,20 @@ snapshots:
       xlsx: https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz
       zod: 4.3.6
 
+  deepsea-tools@5.47.9(zod@4.3.6):
+    dependencies:
+      clsx: 2.1.1
+      dayjs: 1.11.20
+      fast-deep-equal: 3.1.3
+      identifier-regex: 1.0.1
+      js-cookie: 3.0.5
+      robust-segment-intersect: 1.0.1
+      soda-type: 6.7.6
+      tailwind-merge: 3.5.0
+      uuid: 13.0.0
+      xlsx: https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz
+      zod: 4.3.6
+
   define-data-property@1.1.4:
     dependencies:
       es-define-property: 1.0.1
@@ -7830,12 +7855,12 @@ snapshots:
     dependencies:
       compute-scroll-into-view: 3.1.1
 
-  sdnext@0.0.28(@types/node@24.12.0)(zod@4.3.6):
+  sdnext@0.0.29(@types/node@24.12.0)(zod@4.3.6):
     dependencies:
       '@inquirer/prompts': 8.3.0(@types/node@24.12.0)
       chokidar: 5.0.0
       commander: 14.0.3
-      deepsea-tools: 5.47.8(zod@4.3.6)
+      deepsea-tools: 5.47.9(zod@4.3.6)
     transitivePeerDependencies:
       - '@types/node'
       - zod
@@ -7967,17 +7992,17 @@ snapshots:
       core-js: 3.48.0
       tslib: 1.14.1
 
-  soda-antd@1.0.24(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(antd@6.3.3(moment@2.30.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4):
+  soda-antd@1.0.25(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(antd@6.3.3(moment@2.30.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4):
     dependencies:
       '@types/react': 19.2.14
       '@types/react-dom': 19.2.3(@types/react@19.2.14)
       antd: 6.3.3(moment@2.30.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       dayjs: 1.11.20
-      deepsea-tools: 5.47.8(zod@4.3.6)
+      deepsea-tools: 5.47.9(zod@4.3.6)
       react: 19.2.4
       react-dom: 19.2.4(react@19.2.4)
-      soda-hooks: 6.16.21(@types/react@19.2.14)(react@19.2.4)(zod@4.3.6)
-      soda-react: 0.1.25(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(zod@4.3.6)
+      soda-hooks: 6.16.22(@types/react@19.2.14)(react@19.2.4)(zod@4.3.6)
+      soda-react: 0.1.26(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(zod@4.3.6)
       zod: 4.3.6
 
   soda-hooks@6.16.21(@types/react@19.2.14)(react@19.2.4)(zod@4.3.6):
@@ -7989,13 +8014,22 @@ snapshots:
     transitivePeerDependencies:
       - zod
 
-  soda-next@0.7.26(@types/react@19.2.14)(next@16.1.7(@babel/core@7.29.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(zod@4.3.6):
+  soda-hooks@6.16.22(@types/react@19.2.14)(react@19.2.4)(zod@4.3.6):
     dependencies:
       '@types/react': 19.2.14
-      deepsea-tools: 5.47.8(zod@4.3.6)
+      deepsea-tools: 5.47.9(zod@4.3.6)
+      react: 19.2.4
+      soda-type: 6.7.6
+    transitivePeerDependencies:
+      - zod
+
+  soda-next@0.7.27(@types/react@19.2.14)(next@16.1.7(@babel/core@7.29.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(zod@4.3.6):
+    dependencies:
+      '@types/react': 19.2.14
+      deepsea-tools: 5.47.9(zod@4.3.6)
       next: 16.1.7(@babel/core@7.29.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       react: 19.2.4
-      soda-hooks: 6.16.21(@types/react@19.2.14)(react@19.2.4)(zod@4.3.6)
+      soda-hooks: 6.16.22(@types/react@19.2.14)(react@19.2.4)(zod@4.3.6)
     transitivePeerDependencies:
       - zod
 
@@ -8005,11 +8039,11 @@ snapshots:
       tar: 7.5.11
       which: 5.0.0
 
-  soda-react@0.1.25(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(zod@4.3.6):
+  soda-react@0.1.26(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(zod@4.3.6):
     dependencies:
       '@types/react': 19.2.14
       '@types/react-dom': 19.2.3(@types/react@19.2.14)
-      deepsea-tools: 5.47.8(zod@4.3.6)
+      deepsea-tools: 5.47.9(zod@4.3.6)
       react: 19.2.4
       react-dom: 19.2.4(react@19.2.4)
     transitivePeerDependencies:
