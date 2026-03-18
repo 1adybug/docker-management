@@ -2,7 +2,7 @@
 
 import { FC, useEffect, useMemo, useState } from "react"
 
-import Editor from "@monaco-editor/react"
+import Editor, { loader } from "@monaco-editor/react"
 import { AutoComplete, Button, Form, Input, Select, Tag } from "antd"
 import { useForm } from "antd/es/form/Form"
 import FormItem from "antd/es/form/FormItem"
@@ -42,30 +42,48 @@ import {
 } from "@/utils/compose"
 
 let isMonacoConfigured = false
+let monacoConfigurePromise: Promise<void> | undefined
+
+export interface MonacoEnvironment {
+    getWorker: (moduleId: string, label: string) => Worker
+}
+
+export interface MonacoGlobal {
+    MonacoEnvironment?: MonacoEnvironment
+}
 
 async function ensureMonacoConfigured() {
     if (typeof window === "undefined") return
     if (isMonacoConfigured) return
+    if (monacoConfigurePromise) return monacoConfigurePromise
 
-    // @ts-expect-error: monaco-editor ESM internals don't have type declarations
-    await import("monaco-editor/esm/vs/basic-languages/yaml/yaml.contribution")
+    monacoConfigurePromise = (async function configureMonaco() {
+        const monaco = await import("monaco-editor")
 
-    const globalAny = globalThis as unknown as {
-        MonacoEnvironment?: {
-            getWorker: (moduleId: string, label: string) => Worker
+        // @ts-expect-error: monaco-editor ESM internals don't have type declarations
+        await import("monaco-editor/esm/vs/basic-languages/yaml/yaml.contribution")
+
+        const globalAny = globalThis as MonacoGlobal
+
+        // 配置 Monaco Worker，并且强制使用本地 monaco 资源，避免走 CDN
+        globalAny.MonacoEnvironment = {
+            getWorker(_moduleId, _label) {
+                return new Worker(new URL("monaco-editor/esm/vs/editor/editor.worker.js", import.meta.url), { type: "module" })
+            },
         }
+
+        loader.config({ monaco })
+        await loader.init()
+
+        isMonacoConfigured = true
+    })()
+
+    try {
+        await monacoConfigurePromise
+    } catch (error) {
+        monacoConfigurePromise = undefined
+        throw error
     }
-
-    // 配置 Monaco Worker，避免 CDN 依赖
-    globalAny.MonacoEnvironment = {
-        getWorker(moduleId, label) {
-            if (label === "editorWorkerService") return new Worker(new URL("monaco-editor/esm/vs/editor/editor.worker.js", import.meta.url), { type: "module" })
-
-            return new Worker(new URL("monaco-editor/esm/vs/editor/editor.worker.js", import.meta.url), { type: "module" })
-        },
-    }
-
-    isMonacoConfigured = true
 }
 
 export interface MonacoThemeOption {
@@ -146,6 +164,7 @@ const Page: FC = () => {
     const [composeData, setComposeData] = useState<ComposeFile | undefined>(undefined)
     const [editorTheme, setEditorTheme] = useState(monacoThemeOptions[0]?.value ?? "night-owl")
     const [editorFontSize, setEditorFontSize] = useState(16)
+    const [isEditorReady, setIsEditorReady] = useState(false)
     const [monacoInstance, setMonacoInstance] = useState<unknown>(undefined)
 
     const getProjectParams = isUpdate ? { name: searchName! } : isCopy ? { name: searchCopyFrom! } : undefined
@@ -170,7 +189,23 @@ const Page: FC = () => {
     const imageOptions = useMemo(() => (imageData ?? []).map(item => ({ value: item.name })), [imageData])
     const restartOptions = useMemo(() => getRestartOptions(), [])
 
-    useEffect(() => void ensureMonacoConfigured(), [])
+    useEffect(() => {
+        let isMounted = true
+
+        void ensureMonacoConfigured()
+            .then(() => {
+                if (!isMounted) return
+                setIsEditorReady(true)
+            })
+            .catch(() => {
+                if (!isMounted) return
+                message.open({ type: "error", content: "YAML 编辑器初始化失败" })
+            })
+
+        return () => {
+            isMounted = false
+        }
+    }, [])
 
     useEffect(() => {
         const content = projectData?.content ?? defaultComposeContent
@@ -470,23 +505,27 @@ const Page: FC = () => {
                         </div>
                     </div>
                     <div className="min-h-0 flex-1 overflow-auto">
-                        <Editor
-                            height="100%"
-                            language="yaml"
-                            value={yamlValue}
-                            theme={editorTheme}
-                            options={{
-                                minimap: { enabled: false },
-                                fontSize: editorFontSize,
-                                lineNumbers: "on",
-                                wordWrap: "on",
-                                scrollBeyondLastLine: false,
-                                automaticLayout: true,
-                                tabSize: 2,
-                            }}
-                            onChange={onYamlChange}
-                            onMount={onEditorMount}
-                        />
+                        {isEditorReady ? (
+                            <Editor
+                                height="100%"
+                                language="yaml"
+                                value={yamlValue}
+                                theme={editorTheme}
+                                options={{
+                                    minimap: { enabled: false },
+                                    fontSize: editorFontSize,
+                                    lineNumbers: "on",
+                                    wordWrap: "on",
+                                    scrollBeyondLastLine: false,
+                                    automaticLayout: true,
+                                    tabSize: 2,
+                                }}
+                                onChange={onYamlChange}
+                                onMount={onEditorMount}
+                            />
+                        ) : (
+                            <div className="flex h-full items-center justify-center text-sm text-neutral-500">正在初始化 YAML 编辑器...</div>
+                        )}
                     </div>
                 </div>
             </div>
