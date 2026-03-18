@@ -2,13 +2,9 @@
 
 FROM node:lts-slim AS base
 
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
-
 RUN apt-get update \
     && apt-get install -y --no-install-recommends -o Acquire::Retries=3 openssl \
     && rm -rf /var/lib/apt/lists/*
-RUN corepack enable
 
 # Install dependencies only when needed
 FROM base AS deps
@@ -16,8 +12,8 @@ FROM base AS deps
 WORKDIR /app
 
 # Install dependencies based on the preferred package manager
-COPY package.json pnpm-workspace.yaml ./
-RUN pnpm install --registry=https://registry.npmmirror.com
+COPY package.json ./
+RUN npm install --registry=https://registry.npmmirror.com
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -34,8 +30,8 @@ ENV BETTER_AUTH_SECRET=7a4d08aa943c38b646d15d6398f013bcab9147f009474be9750026214
 ENV BETTER_AUTH_URL=http://example.com
 ENV DEFAULT_EMAIL_DOMAIN=example.com
 
-RUN pnpm prisma generate
-RUN pnpm build
+RUN npx prisma generate
+RUN npm run build
 
 # Production image, copy all the files and run next
 FROM base AS runner
@@ -62,7 +58,7 @@ COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 COPY --from=deps /app/node_modules/prisma/package.json ./prisma-package.json
 RUN mkdir -p /app/data && chown -R nextjs:nodejs /app/data
 
-RUN pnpm add -g "prisma@$(node -p "require('./prisma-package.json').version")" --registry=https://registry.npmmirror.com \
+RUN npm install -g "prisma@$(node -p "require('./prisma-package.json').version")" --registry=https://registry.npmmirror.com \
     && rm ./prisma-package.json
 
 # 创建启动脚本，先以 root 执行 prisma db push，然后切换用户运行应用
