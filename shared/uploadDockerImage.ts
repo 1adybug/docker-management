@@ -5,7 +5,13 @@ import { execAsync } from "soda-nodejs"
 import { uploadDockerImageSchema } from "@/schemas/uploadDockerImage"
 
 import { createSharedFn } from "@/server/createSharedFn"
-import { getReplaceDockerTemporaryName, inspectDockerImage, replaceDockerImage } from "@/server/dockerImage"
+import {
+    DockerImageReferenceItem,
+    getReplaceDockerTemporaryName,
+    inspectDockerImage,
+    queryDockerImageReferenceItems,
+    replaceDockerImage,
+} from "@/server/dockerImage"
 import { createDockerTempDirectory, deleteDockerTempDirectory } from "@/server/dockerTempDirectory"
 import { writeWebFileToPath } from "@/server/writeWebFileToPath"
 
@@ -16,6 +22,8 @@ export interface UploadDockerImageResult {
     output: string
     backupName?: string
     name?: string
+    skipFollowUp?: boolean
+    skipMessage?: string
 }
 
 function getUploadFile(formData: FormData) {
@@ -95,6 +103,33 @@ async function resolveLoadedDockerImage({ output, targetName }: ResolveLoadedDoc
     throw new ClientError("未识别到上传后的镜像")
 }
 
+export interface ResolveExistingLoadedDockerImageParams {
+    existingImages: DockerImageReferenceItem[]
+    output: string
+}
+
+async function resolveExistingLoadedDockerImage({ existingImages, output }: ResolveExistingLoadedDockerImageParams) {
+    const loadedRefs = getLoadedDockerImageRefs(output)
+    const existingImageMap = new Map(existingImages.map(item => [item.name, item.id]))
+
+    for (const name of loadedRefs.names) {
+        const existingImageId = existingImageMap.get(name)
+
+        if (!existingImageId) continue
+
+        const image = await inspectDockerImage(name)
+
+        if (image.id === existingImageId) {
+            return {
+                id: image.id,
+                name,
+            } as DockerImageReferenceItem
+        }
+    }
+
+    return undefined
+}
+
 export const uploadDockerImage = createSharedFn<FormData>({
     name: "uploadDockerImage",
     schema: uploadDockerImageSchema,
@@ -102,6 +137,7 @@ export const uploadDockerImage = createSharedFn<FormData>({
     const file = getUploadFile(formData)
     const targetName = getOptionalFormText(formData, "targetName")
     const currentImage = targetName ? await inspectDockerImage(targetName) : undefined
+    const existingImages = targetName ? [] : await queryDockerImageReferenceItems()
     const directory = await createDockerTempDirectory({
         prefix: "docker-management-image-",
     })
@@ -113,8 +149,15 @@ export const uploadDockerImage = createSharedFn<FormData>({
         const output = await execAsync(`docker load -i "${path}"`)
 
         if (!targetName) {
+            const existingLoadedImage = await resolveExistingLoadedDockerImage({
+                existingImages,
+                output,
+            })
+
             return {
                 output,
+                skipFollowUp: !!existingLoadedImage,
+                skipMessage: existingLoadedImage ? `已存在 tag 和 hash 完全一致的镜像 ${existingLoadedImage.name}` : undefined,
             } as UploadDockerImageResult
         }
 
@@ -134,6 +177,8 @@ export const uploadDockerImage = createSharedFn<FormData>({
             backupName: replaceResult.backupName,
             name: targetName,
             output,
+            skipFollowUp: replaceResult.skipFollowUp,
+            skipMessage: replaceResult.skipMessage,
         } as UploadDockerImageResult
     } finally {
         await deleteDockerTempDirectory(directory)

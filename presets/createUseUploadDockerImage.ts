@@ -17,13 +17,15 @@ export const createUseUploadDockerImage = withUseMutationDefaults<typeof uploadD
             })
         },
         onSuccess(data, variables, onMutateResult, context) {
-            context.client.invalidateQueries({ queryKey: ["query-docker-image"] })
-            context.client.invalidateQueries({ queryKey: ["query-docker-image-detail"] })
+            if (!data.skipFollowUp) {
+                context.client.invalidateQueries({ queryKey: ["query-docker-image"] })
+                context.client.invalidateQueries({ queryKey: ["query-docker-image-detail"] })
+            }
 
             message.open({
                 key,
-                type: "success",
-                content: "上传镜像成功",
+                type: data.skipMessage ? "warning" : "success",
+                content: data.skipMessage ?? "上传镜像成功",
             })
         },
         onError(error, variables, onMutateResult, context) {

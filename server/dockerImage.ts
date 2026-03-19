@@ -38,8 +38,21 @@ export interface ReplaceDockerImageParams {
 }
 
 export interface ReplaceDockerImageResult {
-    backupName: string
+    backupName?: string
+    skipFollowUp?: boolean
+    skipMessage?: string
     targetName: string
+}
+
+export interface DockerImageReferenceRaw {
+    Repository?: string
+    Tag?: string
+    ID?: string
+}
+
+export interface DockerImageReferenceItem {
+    id: string
+    name: string
 }
 
 export interface ResolveAvailableDockerImageNameParams {
@@ -93,6 +106,39 @@ function parseDockerImageInspectOutput(output: string) {
     } as DockerImageInspectInfo
 }
 
+function isNoneDockerImageValue(value: string) {
+    return value.trim() === "<none>"
+}
+
+function parseDockerImageReferenceOutput(output: string) {
+    return output
+        .split(/\r?\n/u)
+        .map(line => line.trim())
+        .filter(Boolean)
+        .map(line => {
+            try {
+                return JSON.parse(line) as DockerImageReferenceRaw
+            } catch {
+                return null
+            }
+        })
+        .filter((item): item is DockerImageReferenceRaw => !!item)
+        .map(item => {
+            const repository = item.Repository ?? ""
+            const tag = item.Tag ?? ""
+            const id = item.ID ?? ""
+
+            if (!repository || !tag || !id) return null
+            if (isNoneDockerImageValue(repository) || isNoneDockerImageValue(tag)) return null
+
+            return {
+                id,
+                name: `${repository}:${tag}`,
+            } as DockerImageReferenceItem
+        })
+        .filter((item): item is DockerImageReferenceItem => !!item)
+}
+
 export async function inspectDockerImage(reference: string) {
     try {
         const result = await runDockerCommand({
@@ -111,6 +157,15 @@ export async function inspectDockerImage(reference: string) {
             origin: error,
         })
     }
+}
+
+export async function queryDockerImageReferenceItems() {
+    const result = await runDockerCommand({
+        args: ["image", "ls", "--no-trunc", "--format", "{{json .}}"],
+        errorMessage: "查询镜像失败",
+    })
+
+    return parseDockerImageReferenceOutput(result.stdout)
 }
 
 export async function inspectDockerImageOptional(reference: string) {
@@ -135,6 +190,14 @@ export async function removeDockerImageTag({ name }: RemoveDockerImageTagParams)
     })
 }
 
+export async function clearTemporaryDockerImageTag({ newImageId, targetName, temporaryName }: ReplaceDockerImageParams) {
+    if (!temporaryName || temporaryName === targetName) return
+
+    const currentTemporaryImage = await inspectDockerImageOptional(temporaryName)
+
+    if (currentTemporaryImage?.id === newImageId) await removeDockerImageTag({ name: temporaryName })
+}
+
 async function resolveAvailableDockerImageName({ currentImageId, excludedNames = [], preferredName }: ResolveAvailableDockerImageNameParams) {
     let name = preferredName
     let index = 1
@@ -156,6 +219,22 @@ async function resolveAvailableDockerImageName({ currentImageId, excludedNames =
 
 export async function replaceDockerImage({ currentImage, newImageId, targetName, temporaryName }: ReplaceDockerImageParams) {
     const oldImage = currentImage ?? (await inspectDockerImage(targetName))
+
+    if (oldImage.id === newImageId) {
+        await clearTemporaryDockerImageTag({
+            currentImage,
+            newImageId,
+            targetName,
+            temporaryName,
+        })
+
+        return {
+            skipFollowUp: true,
+            skipMessage: "上传的镜像和当前镜像 hash 值一致，已跳过默认替换流程",
+            targetName,
+        } as ReplaceDockerImageResult
+    }
+
     const { repository } = getDockerImageNameParts(targetName)
     const createdAtTag = formatDockerImageTimeTag(new Date(oldImage.createdAt))
     const preferredBackupName = `${repository}:${createdAtTag}`
@@ -183,11 +262,12 @@ export async function replaceDockerImage({ currentImage, newImageId, targetName,
         })
     }
 
-    if (temporaryName && temporaryName !== targetName) {
-        const currentTemporaryImage = await inspectDockerImageOptional(temporaryName)
-
-        if (currentTemporaryImage?.id === newImageId) await removeDockerImageTag({ name: temporaryName })
-    }
+    await clearTemporaryDockerImageTag({
+        currentImage,
+        newImageId,
+        targetName,
+        temporaryName,
+    })
 
     return {
         backupName,

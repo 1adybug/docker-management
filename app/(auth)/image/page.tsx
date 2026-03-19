@@ -397,8 +397,8 @@ const Page: FC = () => {
         formData.set("file", file)
         if (data?.name) formData.set("targetName", data.name)
 
-        await uploadDockerImage(formData)
-        if (data) onOpenRestartProjectsModal(data)
+        const result = await uploadDockerImage(formData)
+        if (data && !result.skipFollowUp) onOpenRestartProjectsModal(data)
     }
 
     async function onDelete(name: string) {
@@ -471,8 +471,8 @@ const Page: FC = () => {
 
         const target = buildStaticTarget
 
-        await buildStaticDockerImage(formData)
-        if (target) onOpenRestartProjectsModal(target)
+        const result = await buildStaticDockerImage(formData)
+        if (target && !result.skipFollowUp) onOpenRestartProjectsModal(target)
         setBuildStaticTarget(undefined)
         setIsBuildStaticModalOpen(false)
     }
@@ -507,8 +507,8 @@ const Page: FC = () => {
 
         const target = buildJarTarget
 
-        await buildJarDockerImage(formData)
-        if (target) onOpenRestartProjectsModal(target)
+        const result = await buildJarDockerImage(formData)
+        if (target && !result.skipFollowUp) onOpenRestartProjectsModal(target)
         setBuildJarTarget(undefined)
         setIsBuildJarModalOpen(false)
     }

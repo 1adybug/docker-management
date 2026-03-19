@@ -76,6 +76,8 @@ export interface BuildStaticDockerImageResult {
     name: string
     output: string
     backupName?: string
+    skipFollowUp?: boolean
+    skipMessage?: string
 }
 
 function get7zaPath() {
@@ -258,6 +260,8 @@ export const buildStaticDockerImage = createSharedFn<FormData>({
             backupName: replaceResult.backupName,
             name: targetName,
             output,
+            skipFollowUp: replaceResult.skipFollowUp,
+            skipMessage: replaceResult.skipMessage,
         } as BuildStaticDockerImageResult
     } finally {
         await deleteDockerTempDirectory(directory)

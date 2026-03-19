@@ -32,6 +32,8 @@ export interface BuildJarDockerImageResult {
     name: string
     output: string
     backupName?: string
+    skipFollowUp?: boolean
+    skipMessage?: string
 }
 
 function getDockerfileContent(javaImage: string) {
@@ -158,6 +160,8 @@ export const buildJarDockerImage = createSharedFn<FormData>({
             backupName: replaceResult.backupName,
             name: targetName,
             output,
+            skipFollowUp: replaceResult.skipFollowUp,
+            skipMessage: replaceResult.skipMessage,
         } as BuildJarDockerImageResult
     } finally {
         await deleteDockerTempDirectory(directory)
