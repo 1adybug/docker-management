@@ -9,6 +9,7 @@ import FormItem from "antd/es/form/FormItem"
 import { InputFileButton } from "deepsea-components"
 import { formatTime, showTotal } from "deepsea-tools"
 import { RotateCw } from "lucide-react"
+import Link from "next/link"
 import { Columns, schemaToRule, useScroll } from "soda-antd"
 import { useQueryState } from "soda-next"
 
@@ -153,6 +154,10 @@ function getProjectSortText(projects: string[]) {
 
 function getProjectDisplayName(projectItems: DockerImageProjectItem[], name: string) {
     return projectItems.find(item => item.name === name)?.displayName ?? name
+}
+
+function getProjectHref(name: string) {
+    return `/project?name=${encodeURIComponent(name)}`
 }
 
 function compareProjects(first: string[], second: string[]) {
@@ -621,9 +626,9 @@ const Page: FC = () => {
                 return (
                     <div className="flex flex-wrap justify-center gap-1">
                         {value.map(item => (
-                            <Tag key={item} color="blue">
-                                {getProjectDisplayName(record.projectItems, item)}
-                            </Tag>
+                            <Link key={item} href={getProjectHref(item)}>
+                                <Tag color="blue">{getProjectDisplayName(record.projectItems, item)}</Tag>
+                            </Link>
                         ))}
                     </div>
                 )
