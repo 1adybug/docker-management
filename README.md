@@ -24,24 +24,26 @@ git remote set-url --push template no_push://template
 
 ### 变量清单
 
-| 变量名                        | 必填       | 说明                                                  | 示例 / 默认值                 |
-| ----------------------------- | ---------- | ----------------------------------------------------- | ----------------------------- |
-| `COOKIE_PREFIX`               | 是         | 登录相关 Cookie 前缀                                  | `geshu`                       |
-| `DEFAULT_EMAIL_DOMAIN`        | 是         | 临时邮箱域名（用于手机号生成邮箱）                    | `example.com`                 |
-| `BETTER_AUTH_SECRET`          | 是         | Better Auth 签名密钥                                  | `your_better_auth_secret`     |
-| `BETTER_AUTH_URL`             | 按需       | 服务端 Better Auth 基础地址                           | `https://example.com`         |
-| `NEXT_PUBLIC_BETTER_AUTH_URL` | 按需       | 客户端 Better Auth 基础地址                           | `https://example.com`         |
-| `IS_INTRANET`                 | 否         | 是否走内网短信通道                                    | `0`（默认关闭）               |
-| `ALIYUN_ACCESS_KEY_ID`        | 按需       | 阿里云短信密钥 ID（公网短信时需要）                   | `your_key_id`                 |
-| `ALIYUN_ACCESS_KEY_SECRET`    | 按需       | 阿里云短信密钥 Secret（公网短信时需要）               | `your_key_secret`             |
-| `QJP_SMS_URL`                 | 按需       | 内网短信服务地址（内网短信时需要）                    | `http://sms.example.com/send` |
-| `RATE_LIMIT_ENABLED`          | 否         | 全局限流开关                                          | `1`（默认开启）               |
-| `DOCKER_PATH_MAPPINGS`        | 否         | 宿主机路径到容器路径的映射，用于读取外部 compose 文件 | `/srv/app=>/host-app`         |
-| `NEXT_OUTPUT`                 | 否         | Next 构建输出模式                                     | `standalone` / `export`       |
-| `DATABASE_URL`                | 按部署方式 | 数据库连接字符串（如改用外部数据库时使用）            | `postgresql://...`            |
-| `JWT_SECRET`                  | 按认证配置 | 兼容旧认证方案时使用（当前默认不依赖）                | `your_jwt_secret`             |
-| `NEXT_TELEMETRY_DISABLED`     | 否         | 是否关闭 Next 遥测上报                                | `1`                           |
-| `REDIS_URL`                   | 按需       | Redis 地址（仅使用 Redis 限流存储时需要）             | `redis://127.0.0.1:6379`      |
+| 变量名                        | 必填       | 说明                                                     | 示例 / 默认值                 |
+| ----------------------------- | ---------- | -------------------------------------------------------- | ----------------------------- |
+| `COOKIE_PREFIX`               | 是         | 登录相关 Cookie 前缀                                     | `geshu`                       |
+| `DEFAULT_EMAIL_DOMAIN`        | 是         | 临时邮箱域名（用于手机号生成邮箱）                       | `example.com`                 |
+| `BETTER_AUTH_SECRET`          | 是         | Better Auth 签名密钥                                     | `your_better_auth_secret`     |
+| `BETTER_AUTH_URL`             | 按需       | 服务端 Better Auth 基础地址                              | `https://example.com`         |
+| `NEXT_PUBLIC_BETTER_AUTH_URL` | 按需       | 客户端 Better Auth 基础地址                              | `https://example.com`         |
+| `IS_INTRANET`                 | 否         | 是否走内网短信通道                                       | `0`（默认关闭）               |
+| `ALIYUN_ACCESS_KEY_ID`        | 按需       | 阿里云短信密钥 ID（公网短信时需要）                      | `your_key_id`                 |
+| `ALIYUN_ACCESS_KEY_SECRET`    | 按需       | 阿里云短信密钥 Secret（公网短信时需要）                  | `your_key_secret`             |
+| `QJP_SMS_URL`                 | 按需       | 内网短信服务地址（内网短信时需要）                       | `http://sms.example.com/send` |
+| `RATE_LIMIT_ENABLED`          | 否         | 全局限流开关                                             | `1`（默认开启）               |
+| `DOCKER_PATH_MAPPINGS`        | 否         | 宿主机路径到容器路径的映射，用于读取外部 compose 文件    | `/srv/app=>/host-app`         |
+| `PROJECTS_ROOT`               | 否         | 平台项目在当前运行环境可访问的根目录                     | `/app/projects`               |
+| `PROJECTS_HOST_ROOT`          | 否         | 平台项目在宿主机上的真实根目录，默认等于 `PROJECTS_ROOT` | `/home/projects`              |
+| `NEXT_OUTPUT`                 | 否         | Next 构建输出模式                                        | `standalone` / `export`       |
+| `DATABASE_URL`                | 按部署方式 | 数据库连接字符串（如改用外部数据库时使用）               | `postgresql://...`            |
+| `JWT_SECRET`                  | 按认证配置 | 兼容旧认证方案时使用（当前默认不依赖）                   | `your_jwt_secret`             |
+| `NEXT_TELEMETRY_DISABLED`     | 否         | 是否关闭 Next 遥测上报                                   | `1`                           |
+| `REDIS_URL`                   | 按需       | Redis 地址（仅使用 Redis 限流存储时需要）                | `redis://127.0.0.1:6379`      |
 
 ### 推荐的本地 `.env` 示例
 
@@ -107,6 +109,35 @@ services:
 ```
 
 这样容器管理中的“非平台项目”就可以读取宿主机上的 compose 文件，并执行 `docker compose` 相关命令。
+
+### 平台项目目录
+
+平台内创建的项目默认保存在当前运行目录下的 `projects` 文件夹中。你也可以通过以下环境变量覆盖：
+
+```env
+PROJECTS_ROOT="/app/projects"
+PROJECTS_HOST_ROOT="/home/projects"
+```
+
+- `PROJECTS_ROOT` 表示当前应用实际读写项目文件时使用的目录
+- `PROJECTS_HOST_ROOT` 表示 Docker 守护进程解析平台项目 `docker-compose.yml` 时应当使用的宿主机目录
+- 在物理机直接运行本项目时，通常只需要设置 `PROJECTS_ROOT`，或者两个变量都不设置
+- 当本项目运行在容器中，并且宿主机目录挂载到容器内的路径不同，例如 `/home/projects:/app/projects`，请同时设置这两个变量
+
+例如：
+
+```yaml
+services:
+    app:
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+            - /home/projects:/app/projects
+        environment:
+            PROJECTS_ROOT: /app/projects
+            PROJECTS_HOST_ROOT: /home/projects
+```
+
+这样平台项目的 `docker-compose.yml` 会继续写入容器中的 `/app/projects`，但执行 `docker compose` 时会按照宿主机的 `/home/projects` 解析相对路径。
 
 ### Better Auth URL 解析规则
 

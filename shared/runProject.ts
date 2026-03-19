@@ -9,7 +9,7 @@ import { createSharedFn } from "@/server/createSharedFn"
 import { runDockerCommand } from "@/server/docker"
 import { ensureComposeMountDirectories } from "@/server/ensureComposeMountDirectories"
 import { ensureProjectRoot } from "@/server/ensureProjectRoot"
-import { getProjectComposePath, getProjectDir } from "@/server/getProjectPaths"
+import { getProjectComposePath, getProjectDir, getProjectHostDir } from "@/server/getProjectPaths"
 import { readTextFromFile } from "@/server/readTextFromFile"
 import { writeTextToFile } from "@/server/writeTextToFile"
 
@@ -35,8 +35,8 @@ export interface EnsureProjectComposeFileParams {
     content: string
 }
 
-function getDockerComposeArgs(command: ProjectCommand, composePath: string) {
-    const args = ["compose", "-f", composePath]
+function getDockerComposeArgs(command: ProjectCommand, composePath: string, projectHostDir: string) {
+    const args = ["compose", "--project-directory", projectHostDir, "-f", composePath]
 
     if (command === ProjectCommand.启动) return [...args, "up", "-d"]
     if (command === ProjectCommand.停止) return [...args, "down"]
@@ -87,6 +87,7 @@ export const runProject = createSharedFn({
     await ensureProjectRoot()
     const composePath = getProjectComposePath(name)
     const projectDir = getProjectDir(name)
+    const projectHostDir = getProjectHostDir(name)
 
     const project = await prisma.project.findUnique({ where: { name } })
     if (!project) throw new ClientError("项目不存在")
@@ -109,7 +110,7 @@ export const runProject = createSharedFn({
     }
 
     const result = await runDockerCommand({
-        args: getDockerComposeArgs(command, composePath),
+        args: getDockerComposeArgs(command, composePath, projectHostDir),
         cwd: projectDir,
         errorMessage: "项目执行失败",
     })
