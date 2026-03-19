@@ -114,3 +114,7 @@ description:
 - 当一个文件中需要导出多个 `React` 组件时，主组件必须使用 `export default` 关键字导出，其他组件必须使用 `export` 关键字导出
 
 - 在你每次进行比较大的修改后，你必须使用 `tsc --noEmit` 和 `eslint` 检查代码，确保代码没有错误
+
+- 当你执行了一个 `mutation` 类型的操作后，你必须参考项目中更新数据的逻辑，更新所有需要更新的数据，比如如果你使用的使用 `@tanstack/react-query` 中 `useMutation` 时，你应该在 `onSuccess` 回调中更新所有需要更新的数据：`context.client.invalidateQueries({ queryKey: ["query-book"] })`
+
+- 如果你发现组件中使用 `messgae` 或者 `toast` 之类的提示方法并没有被导入，请不要自动导入，因为在我的大多数项目中，我都已经它们挂载在了全局对象上，可以直接使用，通常是在 `@/components/Registry.tsx` 中进行挂载，有且仅当 `tsc --noEmit` 检查出错误时，你才需要手动导入
