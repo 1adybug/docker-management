@@ -222,6 +222,7 @@ const Page: FC = () => {
 
     const [buildStaticForm] = useForm<StaticDockerImageFormParams>()
     const [buildJarForm] = useForm<JarDockerImageFormParams>()
+    const [queryForm] = useForm<QueryImageFormParams>()
     const container = useRef<HTMLDivElement>(null)
     const [staticFile, setStaticFile] = useState<File | undefined>(undefined)
     const [jarFile, setJarFile] = useState<File | undefined>(undefined)
@@ -268,6 +269,16 @@ const Page: FC = () => {
     const nginxImageNames = useMemo(() => imageNames.filter(name => name.startsWith("nginx:")), [imageNames])
     const defaultNginxImage = useMemo(() => getDefaultNginxImage(nginxImageNames), [nginxImageNames])
     const defaultJavaImage = useMemo(() => getDefaultJavaImage(imageNames), [imageNames])
+
+    useEffect(() => {
+        queryForm.resetFields()
+
+        queryForm.setFieldsValue({
+            repository: query.repository,
+            project: query.project,
+        })
+    }, [query, queryForm])
+
     const imageOptions = useMemo(() => imageNames.map(item => ({ label: item, value: item })), [imageNames])
     const nginxImageOptions = useMemo(() => nginxImageNames.map(item => ({ label: item, value: item })), [nginxImageNames])
 
@@ -538,6 +549,11 @@ const Page: FC = () => {
         }))
     }
 
+    function onResetQuery() {
+        queryForm.resetFields()
+        setQuery({} as QueryImageFormParams)
+    }
+
     const columns: Columns<DockerImageItem> = [
         {
             title: "镜像名称",
@@ -680,7 +696,7 @@ const Page: FC = () => {
         <div className="flex h-full flex-col gap-4 pt-4">
             <title>镜像管理</title>
             <div className="flex-none px-4">
-                <Form<QueryImageFormParams> name="query-image-form" className="gap-y-4" layout="inline" onFinish={setQuery}>
+                <Form<QueryImageFormParams> name="query-image-form" form={queryForm} className="gap-y-4" layout="inline" onFinish={setQuery}>
                     <FormItem<QueryImageFormParams> name="repository" label="镜像名称">
                         <Select className="!w-48" allowClear showSearch options={repositoryOptions} placeholder="选择镜像名称" />
                     </FormItem>
@@ -693,7 +709,7 @@ const Page: FC = () => {
                         </Button>
                     </FormItem>
                     <FormItem<QueryImageFormParams>>
-                        <Button htmlType="button" type="text" disabled={isRequesting} onClick={() => setQuery({} as QueryImageFormParams)}>
+                        <Button htmlType="button" type="text" disabled={isRequesting} onClick={onResetQuery}>
                             重置
                         </Button>
                     </FormItem>

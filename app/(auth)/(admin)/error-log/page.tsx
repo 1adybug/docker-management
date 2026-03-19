@@ -1,9 +1,10 @@
 "use client"
 
-import { FC, useRef, useState } from "react"
+import { FC, useEffect, useRef, useState } from "react"
 
 import JsonView from "@uiw/react-json-view"
 import { Button, DatePicker, Form, Input, Modal, ModalProps, Table, TableProps } from "antd"
+import { useForm } from "antd/es/form/Form"
 import FormItem from "antd/es/form/FormItem"
 import { formatTime, getEnumKey, isNonNullable, naturalParser, showTotal } from "deepsea-tools"
 import { Columns, getTimeRange, useScroll } from "soda-antd"
@@ -66,6 +67,8 @@ const Page: FC = () => {
 
     type FormParams = typeof query
 
+    const [form] = useForm<FormParams>()
+
     const [info, setInfo] = useState<Pick<ModalProps, "title" | "children">>()
     const container = useRef<HTMLDivElement>(null)
     const { y } = useScroll(container, { paginationMargin: 32 })
@@ -79,6 +82,20 @@ const Page: FC = () => {
         pageSize,
         ...rest,
     })
+
+    useEffect(() => {
+        form.resetFields()
+
+        form.setFieldsValue({
+            type: query.type,
+            message: query.message,
+            action: query.action,
+            name: query.name,
+            ip: query.ip,
+            userAgent: query.userAgent,
+            createdAt: query.createdAt,
+        })
+    }, [form, query])
 
     const columns: Columns<ErrorLog> = [
         {
@@ -232,11 +249,16 @@ const Page: FC = () => {
 
     const isRequesting = isLoading
 
+    function onReset() {
+        form.resetFields()
+        setQuery({} as FormParams)
+    }
+
     return (
         <div className="flex h-full flex-col gap-4 pt-4">
             <title>异常日志</title>
             <div className="flex-none px-4">
-                <Form<FormParams> name="query-error-log-form" className="gap-y-4" layout="inline" onFinish={setQuery}>
+                <Form<FormParams> name="query-error-log-form" form={form} className="gap-y-4" layout="inline" onFinish={setQuery}>
                     <FormItem<FormParams> name="type" label="类型">
                         <Input allowClear />
                     </FormItem>
@@ -264,7 +286,7 @@ const Page: FC = () => {
                         </Button>
                     </FormItem>
                     <FormItem<FormParams>>
-                        <Button htmlType="button" type="text" disabled={isRequesting} onClick={() => setQuery({} as FormParams)}>
+                        <Button htmlType="button" type="text" disabled={isRequesting} onClick={onReset}>
                             重置
                         </Button>
                     </FormItem>

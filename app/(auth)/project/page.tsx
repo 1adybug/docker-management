@@ -1,9 +1,10 @@
 "use client"
 
-import { FC, useMemo, useRef, useState } from "react"
+import { FC, useEffect, useMemo, useRef, useState } from "react"
 
 import { IconCopy, IconDownload, IconEdit, IconFileText, IconPlayerPlay, IconPlayerStop, IconRefresh, IconTrash } from "@tabler/icons-react"
 import { Button, DatePicker, Form, Input, Modal, Table, TableProps, Tabs } from "antd"
+import { useForm } from "antd/es/form/Form"
 import FormItem from "antd/es/form/FormItem"
 import { clsx, formatTime, naturalParser, showTotal } from "deepsea-tools"
 import { useRouter } from "next/navigation"
@@ -169,6 +170,8 @@ const Page: FC = () => {
 
     type FormParams = typeof query
 
+    const [form] = useForm<FormParams>()
+
     const container = useRef<HTMLDivElement>(null)
     const { y } = useScroll(container, { paginationMargin: 32 })
 
@@ -192,6 +195,18 @@ const Page: FC = () => {
 
     const isRequesting = isLoading || isCheckProjectStartPending || isDeletePending || isRunPending
 
+    useEffect(() => {
+        form.resetFields()
+
+        form.setFieldsValue({
+            name: query.name,
+            xName: query.xName,
+            contentKeyword: query.contentKeyword,
+            createdAt: query.createdAt,
+            updatedAt: query.updatedAt,
+        })
+    }, [form, query])
+
     function onAdd() {
         router.push("/project/editor")
     }
@@ -202,6 +217,11 @@ const Page: FC = () => {
 
     function onClickCopy(name: string) {
         router.push(`/project/editor?copyFrom=${encodeURIComponent(name)}`)
+    }
+
+    function onReset() {
+        form.resetFields()
+        setQuery({} as FormParams)
     }
 
     function onCloseLog() {
@@ -471,7 +491,7 @@ const Page: FC = () => {
         <div className="flex h-full flex-col gap-4 pt-4">
             <title>项目管理</title>
             <div className="flex-none px-4">
-                <Form<FormParams> name="query-project-form" className="gap-y-4" layout="inline" onFinish={setQuery}>
+                <Form<FormParams> name="query-project-form" form={form} className="gap-y-4" layout="inline" onFinish={setQuery}>
                     <FormItem<FormParams> name="name" label="英文名称">
                         <Input allowClear />
                     </FormItem>
@@ -493,7 +513,7 @@ const Page: FC = () => {
                         </Button>
                     </FormItem>
                     <FormItem<FormParams>>
-                        <Button htmlType="button" type="text" disabled={isRequesting} onClick={() => setQuery({} as FormParams)}>
+                        <Button htmlType="button" type="text" disabled={isRequesting} onClick={onReset}>
                             重置
                         </Button>
                     </FormItem>

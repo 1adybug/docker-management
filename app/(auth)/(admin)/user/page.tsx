@@ -1,8 +1,9 @@
 "use client"
 
-import { FC, useRef, useState } from "react"
+import { FC, useEffect, useRef, useState } from "react"
 
 import { Button, DatePicker, Form, Input, Popconfirm, Table, TableProps } from "antd"
+import { useForm } from "antd/es/form/Form"
 import FormItem from "antd/es/form/FormItem"
 import { formatTime, getEnumKey, isNonNullable, naturalParser, showTotal } from "deepsea-tools"
 import { Columns, getTimeRange, useScroll } from "soda-antd"
@@ -65,12 +66,25 @@ const Page: FC = () => {
 
     type FormParams = typeof query
 
+    const [form] = useForm<FormParams>()
+
     const [editId, setEditId] = useState<string | undefined>(undefined)
     const [banId, setBanId] = useState<string | undefined>(undefined)
     const [showEditor, setShowEditor] = useState(false)
     const container = useRef<HTMLDivElement>(null)
     const { y } = useScroll(container, { paginationMargin: 32 })
     const { createdAt, updatedAt, pageNum, pageSize, ...rest } = query
+
+    useEffect(() => {
+        form.resetFields()
+
+        form.setFieldsValue({
+            name: query.name,
+            phoneNumber: query.phoneNumber,
+            createdAt: query.createdAt,
+            updatedAt: query.updatedAt,
+        })
+    }, [form, query])
 
     const columns: Columns<User> = [
         {
@@ -213,6 +227,11 @@ const Page: FC = () => {
 
     const isRequesting = isLoading || isUnbanUserPending || isDeleteUserPending
 
+    function onReset() {
+        form.resetFields()
+        setQuery({} as FormParams)
+    }
+
     const onChange: TableProps<User>["onChange"] = function onChange(pagination, filters, sorter, extra) {
         if (Array.isArray(sorter)) return
 
@@ -227,7 +246,7 @@ const Page: FC = () => {
         <div className="flex h-full flex-col gap-4 pt-4">
             <title>用户管理</title>
             <div className="flex-none px-4">
-                <Form<FormParams> name="query-user-form" className="gap-y-4" layout="inline" onFinish={setQuery}>
+                <Form<FormParams> name="query-user-form" form={form} className="gap-y-4" layout="inline" onFinish={setQuery}>
                     <FormItem<FormParams> name="name" label="用户名">
                         <Input />
                     </FormItem>
@@ -246,7 +265,7 @@ const Page: FC = () => {
                         </Button>
                     </FormItem>
                     <FormItem<FormParams>>
-                        <Button htmlType="button" type="text" disabled={isRequesting} onClick={() => setQuery({} as FormParams)}>
+                        <Button htmlType="button" type="text" disabled={isRequesting} onClick={onReset}>
                             重置
                         </Button>
                     </FormItem>

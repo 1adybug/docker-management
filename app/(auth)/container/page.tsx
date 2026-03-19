@@ -1,9 +1,10 @@
 "use client"
 
-import { FC, useMemo, useRef, useState } from "react"
+import { FC, useEffect, useMemo, useRef, useState } from "react"
 
 import { IconCode, IconDownload, IconFileText, IconPlayerPause, IconPlayerPlay, IconPlayerStop, IconRefresh, IconTrash } from "@tabler/icons-react"
 import { Button, Form, Input, Popconfirm, Select, Table, TableProps, Tag } from "antd"
+import { useForm } from "antd/es/form/Form"
 import FormItem from "antd/es/form/FormItem"
 import { formatTime, showTotal } from "deepsea-tools"
 import Link from "next/link"
@@ -275,10 +276,23 @@ const Page: FC = () => {
 
     type FormParams = ContainerTableQuery
 
+    const [form] = useForm<FormParams>()
+
     const container = useRef<HTMLDivElement>(null)
     const { y } = useScroll(container, { paginationMargin: 32 })
     const pageNum = query.pageNum ?? 1
     const pageSize = query.pageSize ?? 10
+
+    useEffect(() => {
+        form.resetFields()
+
+        form.setFieldsValue({
+            name: query.name,
+            image: query.image,
+            status: query.status as DockerContainerStatus | undefined,
+            project: query.project,
+        })
+    }, [form, query])
 
     function onRefresh() {
         refetch()
@@ -345,6 +359,7 @@ const Page: FC = () => {
     }
 
     function onReset() {
+        form.resetFields()
         setQuery({} as FormParams)
     }
 
@@ -872,7 +887,7 @@ const Page: FC = () => {
         <div className="flex h-full flex-col gap-4 pt-4">
             <title>容器管理</title>
             <div className="flex-none px-4">
-                <Form<FormParams> name="query-container-form" className="gap-y-4" layout="inline" onFinish={setQuery}>
+                <Form<FormParams> name="query-container-form" form={form} className="gap-y-4" layout="inline" onFinish={setQuery}>
                     <FormItem<FormParams> name="name" label="容器名称">
                         <Input />
                     </FormItem>
@@ -880,7 +895,7 @@ const Page: FC = () => {
                         <Input />
                     </FormItem>
                     <FormItem<FormParams> name="status" label="状态">
-                        <DockerContainerStatusSelect allowClear placeholder="选择状态" />
+                        <DockerContainerStatusSelect className="!w-44" allowClear placeholder="选择状态" />
                     </FormItem>
                     <FormItem<FormParams> name="project" label="项目">
                         <Select className="!w-48" allowClear options={projectOptions} placeholder="选择项目" />
