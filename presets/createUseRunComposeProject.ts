@@ -2,7 +2,7 @@ import { useId } from "react"
 
 import { withUseMutationDefaults } from "soda-tanstack-query"
 
-import { ComposeProjectCommandLabel } from "@/schemas/composeProjectCommand"
+import { ComposeProjectCommand, ComposeProjectCommandLabel } from "@/schemas/composeProjectCommand"
 
 import { runComposeProject } from "@/shared/runComposeProject"
 
@@ -23,7 +23,12 @@ export const createUseRunComposeProject = withUseMutationDefaults<typeof runComp
         onSuccess(data, variables, onMutateResult, context) {
             const actionName = ComposeProjectCommandLabel[variables.command] ?? "操作"
 
-            context.client.invalidateQueries({ queryKey: ["query-docker-container"] })
+            if (variables.command !== ComposeProjectCommand.日志) context.client.invalidateQueries({ queryKey: ["query-docker-container"] })
+
+            if (variables.command === ComposeProjectCommand.拉取) {
+                context.client.invalidateQueries({ queryKey: ["query-docker-image"] })
+                context.client.invalidateQueries({ queryKey: ["query-docker-image-detail"] })
+            }
 
             message.open({
                 key,

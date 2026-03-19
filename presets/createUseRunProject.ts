@@ -2,7 +2,7 @@ import { useId } from "react"
 
 import { withUseMutationDefaults } from "soda-tanstack-query"
 
-import { ProjectCommandLabel } from "@/schemas/projectCommand"
+import { ProjectCommand, ProjectCommandLabel } from "@/schemas/projectCommand"
 
 import { runProject } from "@/shared/runProject"
 
@@ -22,6 +22,13 @@ export const createUseRunProject = withUseMutationDefaults<typeof runProject>(()
         },
         onSuccess(data, variables, onMutateResult, context) {
             const actionName = ProjectCommandLabel[variables.command] ?? "操作"
+
+            if (variables.command !== ProjectCommand.日志) context.client.invalidateQueries({ queryKey: ["query-docker-container"] })
+
+            if (variables.command === ProjectCommand.拉取) {
+                context.client.invalidateQueries({ queryKey: ["query-docker-image"] })
+                context.client.invalidateQueries({ queryKey: ["query-docker-image-detail"] })
+            }
 
             message.open({
                 key,

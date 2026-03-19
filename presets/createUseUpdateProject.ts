@@ -19,6 +19,8 @@ export const createUseUpdateProject = withUseMutationDefaults<typeof updateProje
         onSuccess(data, variables, onMutateResult, context) {
             context.client.invalidateQueries({ queryKey: ["query-project"] })
             context.client.invalidateQueries({ queryKey: ["get-project", data.name] })
+            context.client.invalidateQueries({ queryKey: ["query-docker-image-detail"] })
+            context.client.invalidateQueries({ queryKey: ["query-docker-container"] })
 
             message.open({
                 key,
