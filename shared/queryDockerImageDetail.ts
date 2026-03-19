@@ -182,7 +182,7 @@ export const queryDockerImageDetail = createSharedFn<never>({
     name: "queryDockerImageDetail",
 })(async function queryDockerImageDetail() {
     const result = await runDockerCommand({
-        args: ["images", "--format", "{{json .}}"],
+        args: ["images", "-a", "--format", "{{json .}}"],
         errorMessage: "查询镜像详情失败",
     })
 

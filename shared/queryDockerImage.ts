@@ -9,7 +9,7 @@ export const queryDockerImage = createSharedFn<never>({
     name: "queryDockerImage",
 })(async function queryDockerImage() {
     const result = await runDockerCommand({
-        args: ["images", "--format", "{{.Repository}}:{{.Tag}}"],
+        args: ["images", "-a", "--format", "{{.Repository}}:{{.Tag}}"],
         errorMessage: "查询镜像失败",
     })
 
