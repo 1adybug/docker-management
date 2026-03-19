@@ -69,6 +69,12 @@ export const TagVariant = {
 
 export type TagVariant = (typeof TagVariant)[keyof typeof TagVariant]
 
+/** 容器端口展示项 */
+export interface DockerContainerPortTag {
+    label: string
+    hostPort?: string
+}
+
 /** 容器列表表格行数据 */
 export interface DockerContainerTableRow {
     id: string
@@ -209,6 +215,38 @@ function getSorterOrder(order?: string | null) {
     return undefined
 }
 
+function getDockerContainerPortTags(value?: string) {
+    if (!value) return []
+
+    return value
+        .split(",")
+        .map(item => item.trim())
+        .filter(Boolean)
+        .map(item => ({
+            label: item,
+            hostPort: getDockerContainerAccessiblePort(item),
+        }))
+}
+
+function getDockerContainerAccessiblePort(value: string) {
+    const matched = value.match(/^(.*):(\d+)\s*->\s*(\d+(?:-\d+)?)\/([a-z0-9]+)$/iu)
+
+    if (!matched) return undefined
+
+    const [, host, hostPort, , protocol] = matched
+
+    if (protocol.toLowerCase() !== "tcp") return undefined
+    if (isDockerContainerLocalHostBinding(host)) return undefined
+
+    return hostPort
+}
+
+function isDockerContainerLocalHostBinding(value: string) {
+    const host = value.trim().toLowerCase()
+
+    return host === "127.0.0.1" || host === "localhost" || host === "::1" || host === "[::1]"
+}
+
 const Page: FC = () => {
     const [logOpen, setLogOpen] = useState(false)
     const [logName, setLogName] = useState<string | undefined>(undefined)
@@ -338,21 +376,64 @@ const Page: FC = () => {
     }
 
     function renderPorts(value?: string) {
-        if (!value) return "-"
-
-        const items = value
-            .split(",")
-            .map(item => item.trim())
-            .filter(Boolean)
+        const items = getDockerContainerPortTags(value)
 
         if (items.length === 0) return "-"
-        return items.map((item, index) => (
-            <div key={`${item}-${index}`} className="mt-1 first:mt-0">
-                <Tag variant={TagVariant.描边} color="green">
-                    {item}
+
+        return items.map((item, index) => {
+            const isAccessible = !!item.hostPort
+            const hostPort = item.hostPort
+
+            const tag = (
+                <Tag color="green" variant={isAccessible ? TagVariant.实心 : TagVariant.描边}>
+                    {item.label}
                 </Tag>
-            </div>
-        ))
+            )
+
+            if (!hostPort) {
+                return (
+                    <div key={`${item.label}-${index}`} className="mt-1 first:mt-0">
+                        {tag}
+                    </div>
+                )
+            }
+
+            return (
+                <div key={`${item.label}-${index}`} className="mt-1 first:mt-0">
+                    <button
+                        type="button"
+                        className="cursor-pointer border-0 bg-transparent p-0 text-left transition-opacity hover:opacity-80"
+                        title={`在新页面打开 ${hostPort} 端口`}
+                        onClick={() => onOpenPort(hostPort)}
+                    >
+                        {tag}
+                    </button>
+                </div>
+            )
+        })
+    }
+
+    function onOpenPort(port: string) {
+        const url = getDockerContainerPortUrl(port)
+
+        if (!url) return
+
+        window.open(url, "_blank", "noopener,noreferrer")
+    }
+
+    function getDockerContainerPortUrl(port: string) {
+        if (typeof window === "undefined") return undefined
+
+        const url = new URL(window.location.href)
+
+        url.protocol = window.location.protocol === "https:" ? "https:" : "http:"
+        url.hostname = window.location.hostname
+        url.port = port
+        url.pathname = "/"
+        url.search = ""
+        url.hash = ""
+
+        return url.toString()
     }
 
     function renderContainerOperations(id: string, isCurrentContainer?: boolean) {
