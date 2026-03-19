@@ -157,16 +157,39 @@ function compareSize(first?: string, second?: string) {
     return compareName(first, second)
 }
 
-function getProjectSortText(projects: string[]) {
-    return projects.slice().sort(compareName).join(" | ")
-}
-
 function getProjectDisplayName(projectItems: DockerImageProjectItem[], name: string) {
     return projectItems.find(item => item.name === name)?.displayName ?? name
 }
 
+function getProjectDisplaySortText(projectItems: DockerImageProjectItem[], names: string[]) {
+    return names
+        .map(item => getProjectDisplayName(projectItems, item))
+        .sort(compareName)
+        .join(" | ")
+}
+
+function getContainerSortText(containerItems: DockerImageContainerItem[]) {
+    return containerItems
+        .map(item => item.name || item.id)
+        .filter(Boolean)
+        .sort(compareName)
+        .join(" | ")
+}
+
 function getProjectHref(name: string) {
     return `/project?name=${encodeURIComponent(name)}`
+}
+
+function getContainerHref(name?: string) {
+    const containerName = name?.trim()
+    if (!containerName) return "/container"
+    return `/container?name=${encodeURIComponent(containerName)}`
+}
+
+function getContainerListHref(imageName?: string) {
+    const currentImageName = imageName?.trim()
+    if (!currentImageName) return "/container"
+    return `/container?image=${encodeURIComponent(currentImageName)}`
 }
 
 function getDockerContainerNamesText(containerItems: DockerImageContainerItem[]) {
@@ -197,8 +220,15 @@ function getImageFilterNames(value?: string) {
     return [imageName, `${imageName}:latest`]
 }
 
-function compareProjects(first: string[], second: string[]) {
-    const textDiff = compareName(getProjectSortText(first), getProjectSortText(second))
+function compareProjects(first: DockerImageItem, second: DockerImageItem) {
+    const textDiff = compareName(getProjectDisplaySortText(first.projectItems, first.projects), getProjectDisplaySortText(second.projectItems, second.projects))
+
+    if (textDiff !== 0) return textDiff
+    return first.projects.length - second.projects.length
+}
+
+function compareContainers(first: DockerImageContainerItem[], second: DockerImageContainerItem[]) {
+    const textDiff = compareName(getContainerSortText(first), getContainerSortText(second))
     if (textDiff !== 0) return textDiff
     return first.length - second.length
 }
@@ -229,7 +259,9 @@ function compareDockerImage(first: DockerImageItem, second: DockerImageItem, sor
         case "createdAt":
             return compareCreatedAt(first.createdAt, second.createdAt) || compareName(first.name, second.name)
         case "projects":
-            return compareProjects(first.projects, second.projects) || compareName(first.name, second.name)
+            return compareProjects(first, second) || compareName(first.name, second.name)
+        case "containerItems":
+            return compareContainers(first.containerItems, second.containerItems) || compareName(first.name, second.name)
         default:
             return compareName(first.name, second.name) || compareName(first.id, second.id)
     }
@@ -803,6 +835,35 @@ const Page: FC = () => {
                                 <Tag color="blue">{getProjectDisplayName(record.projectItems, item)}</Tag>
                             </Link>
                         ))}
+                    </div>
+                )
+            },
+        },
+        {
+            title: "关联容器",
+            dataIndex: "containerItems",
+            key: "containerItems",
+            align: "center",
+            sorter: true,
+            sortOrder: getSortOrder(query, "containerItems"),
+            render(value: DockerImageContainerItem[], record) {
+                if (!value || value.length === 0) return "-"
+
+                const visibleContainerItems = value.slice(0, 3)
+                const hiddenCount = value.length - visibleContainerItems.length
+
+                return (
+                    <div className="flex flex-wrap justify-center gap-1">
+                        {visibleContainerItems.map(item => (
+                            <Link key={item.id || item.name} href={getContainerHref(item.name)}>
+                                <Tag color="cyan">{item.name || item.id}</Tag>
+                            </Link>
+                        ))}
+                        {hiddenCount > 0 ? (
+                            <Link href={getContainerListHref(record.name)}>
+                                <Tag>{`等 ${value.length} 个`}</Tag>
+                            </Link>
+                        ) : null}
                     </div>
                 )
             },
