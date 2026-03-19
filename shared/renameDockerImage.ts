@@ -1,14 +1,7 @@
 import { renameDockerImageSchema } from "@/schemas/renameDockerImage"
 
 import { createSharedFn } from "@/server/createSharedFn"
-import {
-    getDockerImageNameByRepositoryAndTag,
-    getDockerImageNameParts,
-    inspectDockerImage,
-    inspectDockerImageOptional,
-    removeDockerImageTag,
-    tagDockerImage,
-} from "@/server/dockerImage"
+import { getDockerImageNameParts, inspectDockerImage, inspectDockerImageOptional, removeDockerImageTag, tagDockerImage } from "@/server/dockerImage"
 
 import { ClientError } from "@/utils/clientError"
 
@@ -20,14 +13,13 @@ export interface RenameDockerImageResult {
 export const renameDockerImage = createSharedFn({
     name: "renameDockerImage",
     schema: renameDockerImageSchema,
-})(async function renameDockerImage({ name, tag }) {
+})(async function renameDockerImage({ name, targetName }) {
     const currentImage = await inspectDockerImage(name)
     const { repository, tag: currentTag } = getDockerImageNameParts(name)
 
-    if (!currentTag) throw new ClientError("当前镜像没有可重命名的 tag")
-    if (currentTag === tag) throw new ClientError("新 tag 不能和当前 tag 相同")
+    if (name === targetName) throw new ClientError("新镜像名称不能和当前镜像相同")
+    if (currentTag && targetName === `${repository}:${currentTag}`) throw new ClientError("新镜像名称不能和当前镜像相同")
 
-    const targetName = getDockerImageNameByRepositoryAndTag(repository, tag)
     const targetImage = await inspectDockerImageOptional(targetName)
 
     if (targetImage && targetImage.id !== currentImage.id) throw new ClientError(`镜像 ${targetName} 已存在`)
@@ -39,7 +31,7 @@ export const renameDockerImage = createSharedFn({
         })
     }
 
-    await removeDockerImageTag({ name })
+    if (currentTag) await removeDockerImageTag({ name })
 
     return {
         sourceName: name,

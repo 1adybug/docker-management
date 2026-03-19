@@ -2,13 +2,13 @@
 
 import { FC, useEffect, useMemo, useRef, useState } from "react"
 
-import { IconBrandDocker, IconBrandReact, IconCoffee, IconTrash } from "@tabler/icons-react"
+import { IconBrandDocker, IconBrandReact, IconCoffee, IconCopy, IconPencil, IconTrash } from "@tabler/icons-react"
 import { Button, Checkbox, Form, Input, message, Modal, Popconfirm, Select, Table, TableProps, Tag } from "antd"
 import { useForm } from "antd/es/form/Form"
 import FormItem from "antd/es/form/FormItem"
 import { InputFileButton } from "deepsea-components"
 import { formatTime, showTotal } from "deepsea-tools"
-import { Copy, PencilLine, RotateCw } from "lucide-react"
+import { RotateCw } from "lucide-react"
 import Link from "next/link"
 import { Columns, schemaToRule, useScroll } from "soda-antd"
 import { useQueryState } from "soda-next"
@@ -61,6 +61,7 @@ export interface JarDockerImageFormParams {
 
 export interface ImageTagFormParams {
     tag?: string
+    targetName?: string
 }
 
 export interface UploadDockerImageParams {
@@ -174,6 +175,10 @@ function getDockerContainerNamesText(containerItems: DockerImageContainerItem[])
     if (names.length <= 3) return names.join("、")
 
     return `${names.slice(0, 3).join("、")} 等 ${names.length} 个容器`
+}
+
+function getDockerImageNameByRepositoryAndTag(repository: string, tag: string) {
+    return `${repository.trim()}:${tag.trim()}`
 }
 
 function compareProjects(first: string[], second: string[]) {
@@ -352,6 +357,7 @@ const Page: FC = () => {
 
         renameForm.setFieldsValue({
             tag: renameTarget?.tag,
+            targetName: renameTarget?.isDangling ? undefined : renameTarget?.name,
         })
     }, [isRenameModalOpen, renameForm, renameTarget])
 
@@ -598,18 +604,23 @@ const Page: FC = () => {
     }
 
     async function onRename(values: ImageTagFormParams) {
-        const nextTag = values.tag?.trim()
-
         if (!renameTarget) return
+        const nextTag = values.tag?.trim()
+        const nextTargetName = values.targetName?.trim()
+        const targetName = renameTarget.isDangling
+            ? nextTargetName
+            : nextTag
+              ? getDockerImageNameByRepositoryAndTag(renameTarget.repository, nextTag)
+              : undefined
 
-        if (!nextTag) {
-            message.error("请先填写新的 tag")
+        if (!targetName) {
+            message.error(renameTarget.isDangling ? "请先填写新的镜像名" : "请先填写新的 tag")
             return
         }
 
         await renameDockerImage({
             name: renameTarget.name,
-            tag: nextTag,
+            targetName,
         })
 
         resetRenameModal()
@@ -786,30 +797,6 @@ const Page: FC = () => {
                 return (
                     <div className="flex flex-wrap justify-center gap-2">
                         {record.isDangling ? null : (
-                            <Button
-                                size="small"
-                                shape="circle"
-                                color="default"
-                                variant="text"
-                                title="重命名镜像 tag"
-                                disabled={isRequesting}
-                                icon={<PencilLine className="size-4" />}
-                                onClick={() => onOpenRenameModal(record)}
-                            />
-                        )}
-                        {record.isDangling ? null : (
-                            <Button
-                                size="small"
-                                shape="circle"
-                                color="default"
-                                variant="text"
-                                title="复制镜像 tag"
-                                disabled={isRequesting}
-                                icon={<Copy className="size-4" />}
-                                onClick={() => onOpenCopyModal(record)}
-                            />
-                        )}
-                        {record.isDangling ? null : (
                             <InputFileButton
                                 as={Button}
                                 size="small"
@@ -846,6 +833,28 @@ const Page: FC = () => {
                                 disabled={isRequesting}
                                 icon={<IconCoffee className="size-4" />}
                                 onClick={() => onOpenBuildJarModal(record)}
+                            />
+                        )}
+                        <Button
+                            size="small"
+                            shape="circle"
+                            color="default"
+                            variant="text"
+                            title={record.isDangling ? "重命名悬空镜像" : "重命名镜像 tag"}
+                            disabled={isRequesting}
+                            icon={<IconPencil className="size-4" />}
+                            onClick={() => onOpenRenameModal(record)}
+                        />
+                        {record.isDangling ? null : (
+                            <Button
+                                size="small"
+                                shape="circle"
+                                color="default"
+                                variant="text"
+                                title="复制镜像 tag"
+                                disabled={isRequesting}
+                                icon={<IconCopy className="size-4" />}
+                                onClick={() => onOpenCopyModal(record)}
                             />
                         )}
                         <Popconfirm title="确认删除镜像" description="删除后可能影响相关容器" onConfirm={() => onDelete(record.reference)}>
@@ -1063,14 +1072,25 @@ const Page: FC = () => {
                 onCancel={onCloseRenameModal}
             >
                 <Form<ImageTagFormParams> form={renameForm} layout="vertical" disabled={isRenamePending} onFinish={onRenameFinish}>
-                    <FormItem<ImageTagFormParams>
-                        name="tag"
-                        label="新 tag"
-                        extra={renameTarget ? `仓库名保持为 ${renameTarget.repository}` : undefined}
-                        rules={[schemaToRule(dockerImageTagSchema)]}
-                    >
-                        <Input autoComplete="off" allowClear placeholder="请输入新的 tag" />
-                    </FormItem>
+                    {renameTarget?.isDangling ? (
+                        <FormItem<ImageTagFormParams>
+                            name="targetName"
+                            label="新镜像名"
+                            extra="悬空镜像没有可复用的仓库名，请直接输入完整镜像名，例如：nginx:latest"
+                            rules={[schemaToRule(dockerImageNameSchema)]}
+                        >
+                            <Input autoComplete="off" allowClear placeholder="例如：my-app:latest" />
+                        </FormItem>
+                    ) : (
+                        <FormItem<ImageTagFormParams>
+                            name="tag"
+                            label="新 tag"
+                            extra={renameTarget ? `仓库名保持为 ${renameTarget.repository}` : undefined}
+                            rules={[schemaToRule(dockerImageTagSchema)]}
+                        >
+                            <Input autoComplete="off" allowClear placeholder="请输入新的 tag" />
+                        </FormItem>
+                    )}
                 </Form>
             </Modal>
             <Modal
