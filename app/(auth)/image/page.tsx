@@ -8,28 +8,31 @@ import { useForm } from "antd/es/form/Form"
 import FormItem from "antd/es/form/FormItem"
 import { InputFileButton } from "deepsea-components"
 import { formatTime, showTotal } from "deepsea-tools"
-import { RotateCw } from "lucide-react"
+import { Copy, PencilLine, RotateCw } from "lucide-react"
 import Link from "next/link"
 import { Columns, schemaToRule, useScroll } from "soda-antd"
 import { useQueryState } from "soda-next"
 
 import { useBuildJarDockerImage } from "@/hooks/useBuildJarDockerImage"
 import { useBuildStaticDockerImage } from "@/hooks/useBuildStaticDockerImage"
+import { useCopyDockerImage } from "@/hooks/useCopyDockerImage"
 import { useDeleteDockerImage } from "@/hooks/useDeleteDockerImage"
 import { useQueryDockerImageDetail } from "@/hooks/useQueryDockerImageDetail"
+import { useRenameDockerImage } from "@/hooks/useRenameDockerImage"
 import { runProjectClient } from "@/hooks/useRunProject"
 import { useUploadDockerImage } from "@/hooks/useUploadDockerImage"
 
 import { getParser } from "@/schemas"
 import { dockerImageNameSchema } from "@/schemas/dockerImageName"
 import { DockerImageSortByParams, dockerImageSortBySchema } from "@/schemas/dockerImageSortBy"
+import { dockerImageTagSchema } from "@/schemas/dockerImageTag"
 import { dockerStartCommandSchema } from "@/schemas/dockerStartCommand"
 import { pageNumParser } from "@/schemas/pageNum"
 import { pageSizeParser } from "@/schemas/pageSize"
 import { ProjectCommand } from "@/schemas/projectCommand"
 import { SortOrderParams, sortOrderSchema } from "@/schemas/sortOrder"
 
-import { DockerImageItem, DockerImageProjectItem } from "@/shared/queryDockerImageDetail"
+import { DockerImageContainerItem, DockerImageItem, DockerImageProjectItem } from "@/shared/queryDockerImageDetail"
 
 import { getSortOrder } from "@/utils/getSortOrder"
 
@@ -54,6 +57,10 @@ export interface JarDockerImageFormParams {
     imageName?: string
     javaImage?: string
     startCommand?: string
+}
+
+export interface ImageTagFormParams {
+    tag?: string
 }
 
 export interface UploadDockerImageParams {
@@ -160,6 +167,15 @@ function getProjectHref(name: string) {
     return `/project?name=${encodeURIComponent(name)}`
 }
 
+function getDockerContainerNamesText(containerItems: DockerImageContainerItem[]) {
+    const names = containerItems.map(item => item.name).filter(Boolean)
+
+    if (names.length === 0) return ""
+    if (names.length <= 3) return names.join("、")
+
+    return `${names.slice(0, 3).join("、")} 等 ${names.length} 个容器`
+}
+
 function compareProjects(first: string[], second: string[]) {
     const textDiff = compareName(getProjectSortText(first), getProjectSortText(second))
     if (textDiff !== 0) return textDiff
@@ -214,6 +230,8 @@ const Page: FC = () => {
     const { mutateAsync: uploadDockerImage, isPending: isUploadPending } = useUploadDockerImage()
     const { mutateAsync: buildJarDockerImage, isPending: isBuildJarPending } = useBuildJarDockerImage()
     const { mutateAsync: buildStaticDockerImage, isPending: isBuildStaticPending } = useBuildStaticDockerImage()
+    const { mutateAsync: renameDockerImage, isPending: isRenamePending } = useRenameDockerImage()
+    const { mutateAsync: copyDockerImage, isPending: isCopyPending } = useCopyDockerImage()
 
     const [query, setQuery] = useQueryState({
         keys: ["repository", "project"],
@@ -227,16 +245,22 @@ const Page: FC = () => {
 
     const [buildStaticForm] = useForm<StaticDockerImageFormParams>()
     const [buildJarForm] = useForm<JarDockerImageFormParams>()
+    const [renameForm] = useForm<ImageTagFormParams>()
+    const [copyForm] = useForm<ImageTagFormParams>()
     const [queryForm] = useForm<QueryImageFormParams>()
     const container = useRef<HTMLDivElement>(null)
     const [staticFile, setStaticFile] = useState<File | undefined>(undefined)
     const [jarFile, setJarFile] = useState<File | undefined>(undefined)
     const [isBuildStaticModalOpen, setIsBuildStaticModalOpen] = useState(false)
     const [isBuildJarModalOpen, setIsBuildJarModalOpen] = useState(false)
+    const [isRenameModalOpen, setIsRenameModalOpen] = useState(false)
+    const [isCopyModalOpen, setIsCopyModalOpen] = useState(false)
     const [isRestartProjectsModalOpen, setIsRestartProjectsModalOpen] = useState(false)
     const [isRestartProjectsPending, setIsRestartProjectsPending] = useState(false)
     const [buildStaticTarget, setBuildStaticTarget] = useState<DockerImageItem | undefined>(undefined)
     const [buildJarTarget, setBuildJarTarget] = useState<DockerImageItem | undefined>(undefined)
+    const [renameTarget, setRenameTarget] = useState<DockerImageItem | undefined>(undefined)
+    const [copyTarget, setCopyTarget] = useState<DockerImageItem | undefined>(undefined)
 
     const [restartProjectsState, setRestartProjectsState] = useState<RestartProjectsState>({
         projectItems: [],
@@ -287,7 +311,15 @@ const Page: FC = () => {
     const imageOptions = useMemo(() => imageNames.map(item => ({ label: item, value: item })), [imageNames])
     const nginxImageOptions = useMemo(() => nginxImageNames.map(item => ({ label: item, value: item })), [nginxImageNames])
 
-    const isRequesting = isLoading || isDeletePending || isUploadPending || isBuildStaticPending || isBuildJarPending || isRestartProjectsPending
+    const isRequesting =
+        isLoading ||
+        isDeletePending ||
+        isUploadPending ||
+        isBuildStaticPending ||
+        isBuildJarPending ||
+        isRenamePending ||
+        isCopyPending ||
+        isRestartProjectsPending
 
     useEffect(() => {
         if (!isBuildStaticModalOpen) {
@@ -311,6 +343,28 @@ const Page: FC = () => {
             startCommand: DEFAULT_JAR_START_COMMAND,
         })
     }, [buildJarForm, defaultJavaImage, isBuildJarModalOpen])
+
+    useEffect(() => {
+        if (!isRenameModalOpen) {
+            renameForm.resetFields()
+            return
+        }
+
+        renameForm.setFieldsValue({
+            tag: renameTarget?.tag,
+        })
+    }, [isRenameModalOpen, renameForm, renameTarget])
+
+    useEffect(() => {
+        if (!isCopyModalOpen) {
+            copyForm.resetFields()
+            return
+        }
+
+        copyForm.setFieldsValue({
+            tag: copyTarget?.tag,
+        })
+    }, [copyForm, copyTarget, isCopyModalOpen])
 
     function onRefresh() {
         refetch()
@@ -415,6 +469,16 @@ const Page: FC = () => {
         setIsBuildJarModalOpen(true)
     }
 
+    function onOpenRenameModal(data: DockerImageItem) {
+        setRenameTarget(data)
+        setIsRenameModalOpen(true)
+    }
+
+    function onOpenCopyModal(data: DockerImageItem) {
+        setCopyTarget(data)
+        setIsCopyModalOpen(true)
+    }
+
     function onCloseBuildStaticModal() {
         if (isBuildStaticPending) return
         setBuildStaticTarget(undefined)
@@ -425,6 +489,26 @@ const Page: FC = () => {
         if (isBuildJarPending) return
         setBuildJarTarget(undefined)
         setIsBuildJarModalOpen(false)
+    }
+
+    function resetRenameModal() {
+        setRenameTarget(undefined)
+        setIsRenameModalOpen(false)
+    }
+
+    function resetCopyModal() {
+        setCopyTarget(undefined)
+        setIsCopyModalOpen(false)
+    }
+
+    function onCloseRenameModal() {
+        if (isRenamePending) return
+        resetRenameModal()
+    }
+
+    function onCloseCopyModal() {
+        if (isCopyPending) return
+        resetCopyModal()
     }
 
     function onStaticFileChange(file: File) {
@@ -511,6 +595,66 @@ const Page: FC = () => {
         if (target && !result.skipFollowUp) onOpenRestartProjectsModal(target)
         setBuildJarTarget(undefined)
         setIsBuildJarModalOpen(false)
+    }
+
+    async function onRename(values: ImageTagFormParams) {
+        const nextTag = values.tag?.trim()
+
+        if (!renameTarget) return
+
+        if (!nextTag) {
+            message.error("请先填写新的 tag")
+            return
+        }
+
+        await renameDockerImage({
+            name: renameTarget.name,
+            tag: nextTag,
+        })
+
+        resetRenameModal()
+    }
+
+    function onRenameFinish(values: ImageTagFormParams) {
+        if (!renameTarget) return
+
+        if (renameTarget.containerItems.length === 0) {
+            void onRename(values)
+            return
+        }
+
+        Modal.confirm({
+            title: "确认重命名镜像",
+            okText: "确认重命名",
+            cancelText: "取消",
+            content: (
+                <div className="space-y-2 text-sm text-slate-600">
+                    <div>当前镜像已关联容器：{getDockerContainerNamesText(renameTarget.containerItems)}</div>
+                    <div>重命名后，相关容器后续重建或重新创建时可能受到影响，是否继续？</div>
+                </div>
+            ),
+            onOk() {
+                return onRename(values)
+            },
+        })
+    }
+
+    async function onCopyFinish(values: ImageTagFormParams) {
+        const nextTag = values.tag?.trim()
+
+        if (!copyTarget) return
+
+        if (!nextTag) {
+            message.error("请先填写新的 tag")
+            return
+        }
+
+        await copyDockerImage({
+            name: copyTarget.name,
+            tag: nextTag,
+        })
+
+        resetCopyModal()
     }
 
     const filteredData = useMemo(() => {
@@ -641,6 +785,30 @@ const Page: FC = () => {
             render(value, record) {
                 return (
                     <div className="flex flex-wrap justify-center gap-2">
+                        {record.isDangling ? null : (
+                            <Button
+                                size="small"
+                                shape="circle"
+                                color="default"
+                                variant="text"
+                                title="重命名镜像 tag"
+                                disabled={isRequesting}
+                                icon={<PencilLine className="size-4" />}
+                                onClick={() => onOpenRenameModal(record)}
+                            />
+                        )}
+                        {record.isDangling ? null : (
+                            <Button
+                                size="small"
+                                shape="circle"
+                                color="default"
+                                variant="text"
+                                title="复制镜像 tag"
+                                disabled={isRequesting}
+                                icon={<Copy className="size-4" />}
+                                onClick={() => onOpenCopyModal(record)}
+                            />
+                        )}
                         {record.isDangling ? null : (
                             <InputFileButton
                                 as={Button}
@@ -881,6 +1049,48 @@ const Page: FC = () => {
                     )}
                     <FormItem<JarDockerImageFormParams> name="startCommand" label="启动命令" rules={[schemaToRule(dockerStartCommandSchema)]}>
                         <Input allowClear placeholder={DEFAULT_JAR_START_COMMAND} />
+                    </FormItem>
+                </Form>
+            </Modal>
+            <Modal
+                title={renameTarget ? `重命名 ${renameTarget.name}` : "重命名镜像"}
+                open={isRenameModalOpen}
+                onOk={() => renameForm.submit()}
+                okText="确认"
+                cancelText="取消"
+                okButtonProps={{ loading: isRenamePending }}
+                cancelButtonProps={{ disabled: isRenamePending }}
+                onCancel={onCloseRenameModal}
+            >
+                <Form<ImageTagFormParams> form={renameForm} layout="vertical" disabled={isRenamePending} onFinish={onRenameFinish}>
+                    <FormItem<ImageTagFormParams>
+                        name="tag"
+                        label="新 tag"
+                        extra={renameTarget ? `仓库名保持为 ${renameTarget.repository}` : undefined}
+                        rules={[schemaToRule(dockerImageTagSchema)]}
+                    >
+                        <Input autoComplete="off" allowClear placeholder="请输入新的 tag" />
+                    </FormItem>
+                </Form>
+            </Modal>
+            <Modal
+                title={copyTarget ? `复制 ${copyTarget.name}` : "复制镜像"}
+                open={isCopyModalOpen}
+                onOk={() => copyForm.submit()}
+                okText="确认"
+                cancelText="取消"
+                okButtonProps={{ loading: isCopyPending }}
+                cancelButtonProps={{ disabled: isCopyPending }}
+                onCancel={onCloseCopyModal}
+            >
+                <Form<ImageTagFormParams> form={copyForm} layout="vertical" disabled={isCopyPending} onFinish={onCopyFinish}>
+                    <FormItem<ImageTagFormParams>
+                        name="tag"
+                        label="新 tag"
+                        extra={copyTarget ? `仓库名保持为 ${copyTarget.repository}` : undefined}
+                        rules={[schemaToRule(dockerImageTagSchema)]}
+                    >
+                        <Input autoComplete="off" allowClear placeholder="请输入新的 tag" />
                     </FormItem>
                 </Form>
             </Modal>

@@ -61,7 +61,7 @@ export interface ResolveAvailableDockerImageNameParams {
     preferredName: string
 }
 
-function getDockerImageNameParts(name: string) {
+export function getDockerImageNameParts(name: string) {
     const nextName = dockerImageNameParser(name.trim())
     const lastSlashIndex = nextName.lastIndexOf("/")
     const lastColonIndex = nextName.lastIndexOf(":")
@@ -76,6 +76,16 @@ function getDockerImageNameParts(name: string) {
     return {
         repository: nextName,
     } as DockerImageNameParts
+}
+
+export function getDockerImageNameByRepositoryAndTag(repository: string, tag: string) {
+    const nextRepository = repository.trim()
+    const nextTag = tag.trim()
+
+    if (!nextRepository) throw new ClientError("镜像名称无效")
+    if (!nextTag) throw new ClientError("镜像 tag 不能为空")
+
+    return `${nextRepository}:${nextTag}`
 }
 
 function formatTwoDigits(value: number) {

@@ -8,6 +8,7 @@ import { banUser } from "@/shared/banUser"
 import { buildJarDockerImage } from "@/shared/buildJarDockerImage"
 import { buildStaticDockerImage } from "@/shared/buildStaticDockerImage"
 import { checkProjectStart } from "@/shared/checkProjectStart"
+import { copyDockerImage } from "@/shared/copyDockerImage"
 import { createFirstUser } from "@/shared/createFirstUser"
 import { deleteDockerImage } from "@/shared/deleteDockerImage"
 import { deleteProject } from "@/shared/deleteProject"
@@ -23,6 +24,7 @@ import { queryOperationLog } from "@/shared/queryOperationLog"
 import { queryProject } from "@/shared/queryProject"
 import { queryUser } from "@/shared/queryUser"
 import { readComposeProject } from "@/shared/readComposeProject"
+import { renameDockerImage } from "@/shared/renameDockerImage"
 import { runComposeProject } from "@/shared/runComposeProject"
 import { runDockerContainer } from "@/shared/runDockerContainer"
 import { runProject } from "@/shared/runProject"
@@ -49,6 +51,7 @@ registerRoute(banUser)
 registerRoute(buildJarDockerImage)
 registerRoute(buildStaticDockerImage)
 registerRoute(checkProjectStart)
+registerRoute(copyDockerImage)
 registerRoute(createFirstUser)
 registerRoute(deleteDockerImage)
 registerRoute(deleteProject)
@@ -64,6 +67,7 @@ registerRoute(queryOperationLog)
 registerRoute(queryProject)
 registerRoute(queryUser)
 registerRoute(readComposeProject)
+registerRoute(renameDockerImage)
 registerRoute(runComposeProject)
 registerRoute(runDockerContainer)
 registerRoute(runProject)

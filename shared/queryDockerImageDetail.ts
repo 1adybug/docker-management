@@ -25,6 +25,12 @@ export interface DockerImageRaw {
     Size?: string
 }
 
+export interface DockerContainerRaw {
+    ID?: string
+    Names?: string
+    Image?: string
+}
+
 export interface DockerImageItem {
     id: string
     name: string
@@ -36,11 +42,18 @@ export interface DockerImageItem {
     isDangling: boolean
     projects: string[]
     projectItems: DockerImageProjectItem[]
+    containerItems: DockerImageContainerItem[]
 }
 
 export interface DockerImageProjectItem {
     name: string
     displayName: string
+}
+
+export interface DockerImageContainerItem {
+    id: string
+    name: string
+    image: string
 }
 
 async function getProjectImageUsageMap() {
@@ -86,6 +99,55 @@ function isNoneImageValue(value: string) {
     return value.trim() === "<none>"
 }
 
+function hasImageTag(value: string) {
+    const lastSlashIndex = value.lastIndexOf("/")
+    const lastColonIndex = value.lastIndexOf(":")
+    return lastColonIndex > lastSlashIndex
+}
+
+function getContainerImageReferenceNames(value: string) {
+    const image = value.trim()
+    if (!image) return []
+    if (hasImageTag(image)) return [image]
+    return [image, `${image}:latest`]
+}
+
+async function getContainerUsageMap() {
+    const result = await runDockerCommand({
+        args: ["ps", "-a", "--format", "{{json .}}"],
+        errorMessage: "查询关联容器失败",
+    })
+
+    const usage = new Map<string, DockerImageContainerItem[]>()
+
+    result.stdout
+        .split(/\r?\n/u)
+        .map(line => line.trim())
+        .filter(Boolean)
+        .map(line => {
+            try {
+                return JSON.parse(line) as DockerContainerRaw
+            } catch {
+                return null
+            }
+        })
+        .filter((item): item is DockerContainerRaw => !!item)
+        .forEach(item => {
+            const container = {
+                id: item.ID ?? "",
+                name: item.Names ?? "",
+                image: item.Image ?? "",
+            } as DockerImageContainerItem
+
+            getContainerImageReferenceNames(container.image).forEach(name => {
+                if (!usage.has(name)) usage.set(name, [])
+                usage.get(name)?.push(container)
+            })
+        })
+
+    return usage
+}
+
 export interface GetDockerImageNameParams {
     id: string
     repository: string
@@ -125,7 +187,7 @@ export const queryDockerImageDetail = createSharedFn<never>({
     })
 
     const output = result.stdout
-    const { usage, projectNameMap } = await getProjectImageUsageMap()
+    const [{ usage, projectNameMap }, containerUsageMap] = await Promise.all([getProjectImageUsageMap(), getContainerUsageMap()])
 
     const images = output
         .split(/\r?\n/u)
@@ -160,7 +222,9 @@ export const queryDockerImageDetail = createSharedFn<never>({
 
             if (!name || !reference) return null
 
-            const projects = isDangling ? [] : Array.from(usage.get(normalizeImageName(repository, tag)) ?? new Set<string>())
+            const normalizedName = normalizeImageName(repository, tag)
+            const projects = isDangling ? [] : Array.from(usage.get(normalizedName) ?? new Set<string>())
+            const containerItems = isDangling ? [] : (containerUsageMap.get(normalizedName) ?? [])
 
             const projectItems = projects.map(projectName => ({
                 name: projectName,
@@ -178,6 +242,7 @@ export const queryDockerImageDetail = createSharedFn<never>({
                 isDangling,
                 projects,
                 projectItems,
+                containerItems,
             } as DockerImageItem
         })
         .filter((item): item is DockerImageItem => !!item)
