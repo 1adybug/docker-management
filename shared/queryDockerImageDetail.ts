@@ -28,10 +28,12 @@ export interface DockerImageRaw {
 export interface DockerImageItem {
     id: string
     name: string
+    reference: string
     repository: string
     tag: string
     createdAt: string
     size: string
+    isDangling: boolean
     projects: string[]
     projectItems: DockerImageProjectItem[]
 }
@@ -80,9 +82,37 @@ async function getProjectImageUsageMap() {
     }
 }
 
+function isNoneImageValue(value: string) {
+    return value.trim() === "<none>"
+}
+
+export interface GetDockerImageNameParams {
+    id: string
+    repository: string
+    tag: string
+}
+
+function getDockerImageName({ id, repository, tag }: GetDockerImageNameParams) {
+    if (repository && !isNoneImageValue(repository)) {
+        if (!tag || isNoneImageValue(tag)) return repository
+        return `${repository}:${tag}`
+    }
+
+    return id
+}
+
+function getDockerImageReference({ id, repository, tag }: GetDockerImageNameParams) {
+    const name = getDockerImageName({ id, repository, tag })
+    return name || id
+}
+
+function getDockerImageDangling(repository: string, tag: string) {
+    return isNoneImageValue(repository) || isNoneImageValue(tag)
+}
+
 function normalizeImageName(repository: string, tag: string) {
-    if (!repository || repository === "<none>") return ""
-    if (!tag || tag === "<none>") return repository
+    if (!repository || isNoneImageValue(repository)) return ""
+    if (!tag || isNoneImageValue(tag)) return repository
     return `${repository}:${tag}`
 }
 
@@ -112,10 +142,25 @@ export const queryDockerImageDetail = createSharedFn<never>({
         .map(item => {
             const repository = item.Repository ?? ""
             const tag = item.Tag ?? ""
-            const name = normalizeImageName(repository, tag)
-            if (!name) return null
+            const id = item.ID ?? ""
 
-            const projects = Array.from(usage.get(name) ?? new Set<string>())
+            const name = getDockerImageName({
+                id,
+                repository,
+                tag,
+            })
+
+            const reference = getDockerImageReference({
+                id,
+                repository,
+                tag,
+            })
+
+            const isDangling = getDockerImageDangling(repository, tag)
+
+            if (!name || !reference) return null
+
+            const projects = isDangling ? [] : Array.from(usage.get(normalizeImageName(repository, tag)) ?? new Set<string>())
 
             const projectItems = projects.map(projectName => ({
                 name: projectName,
@@ -123,12 +168,14 @@ export const queryDockerImageDetail = createSharedFn<never>({
             }))
 
             return {
-                id: item.ID ?? "",
+                id,
                 name,
+                reference,
                 repository,
                 tag,
                 createdAt: item.CreatedAt ?? "",
                 size: item.Size ?? "",
+                isDangling,
                 projects,
                 projectItems,
             } as DockerImageItem

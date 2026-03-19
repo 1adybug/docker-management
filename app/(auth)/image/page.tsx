@@ -241,7 +241,7 @@ const Page: FC = () => {
     const pageNum = query.pageNum ?? 1
     const pageSize = query.pageSize ?? 10
 
-    const imageNames = useMemo(() => Array.from(new Set((data ?? []).map(item => item.name))), [data])
+    const imageNames = useMemo(() => Array.from(new Set((data ?? []).filter(item => !item.isDangling).map(item => item.name))), [data])
 
     const repositoryOptions = useMemo(
         () =>
@@ -546,6 +546,10 @@ const Page: FC = () => {
             align: "left",
             sorter: true,
             sortOrder: getSortOrder(query, "repository"),
+            render(value: string) {
+                if (value === "<none>") return <Tag>&lt;none&gt;</Tag>
+                return value || "-"
+            },
         },
         {
             title: "Tag",
@@ -555,6 +559,7 @@ const Page: FC = () => {
             sorter: true,
             sortOrder: getSortOrder(query, "tag"),
             render(value: string) {
+                if (value === "<none>") return <Tag>&lt;none&gt;</Tag>
                 return value || "-"
             },
         },
@@ -615,40 +620,46 @@ const Page: FC = () => {
             render(value, record) {
                 return (
                     <div className="flex flex-wrap justify-center gap-2">
-                        <InputFileButton
-                            as={Button}
-                            size="small"
-                            shape="circle"
-                            color="default"
-                            variant="text"
-                            title="上传镜像"
-                            disabled={isRequesting}
-                            accept=".tar,application/x-tar"
-                            onValueChange={file => onFileChange({ data: record, file })}
-                            clearAfterChange
-                            icon={<IconBrandDocker className="size-4" />}
-                        />
-                        <Button
-                            size="small"
-                            shape="circle"
-                            color="default"
-                            variant="text"
-                            title="上传静态文件制作镜像"
-                            disabled={isRequesting}
-                            icon={<IconBrandReact className="size-4" />}
-                            onClick={() => onOpenBuildStaticModal(record)}
-                        />
-                        <Button
-                            size="small"
-                            shape="circle"
-                            color="default"
-                            variant="text"
-                            title="上传 Jar 文件制作镜像"
-                            disabled={isRequesting}
-                            icon={<IconCoffee className="size-4" />}
-                            onClick={() => onOpenBuildJarModal(record)}
-                        />
-                        <Popconfirm title="确认删除镜像" description="删除后可能影响相关容器" onConfirm={() => onDelete(record.name)}>
+                        {record.isDangling ? null : (
+                            <InputFileButton
+                                as={Button}
+                                size="small"
+                                shape="circle"
+                                color="default"
+                                variant="text"
+                                title="上传镜像"
+                                disabled={isRequesting}
+                                accept=".tar,application/x-tar"
+                                onValueChange={file => onFileChange({ data: record, file })}
+                                clearAfterChange
+                                icon={<IconBrandDocker className="size-4" />}
+                            />
+                        )}
+                        {record.isDangling ? null : (
+                            <Button
+                                size="small"
+                                shape="circle"
+                                color="default"
+                                variant="text"
+                                title="上传静态文件制作镜像"
+                                disabled={isRequesting}
+                                icon={<IconBrandReact className="size-4" />}
+                                onClick={() => onOpenBuildStaticModal(record)}
+                            />
+                        )}
+                        {record.isDangling ? null : (
+                            <Button
+                                size="small"
+                                shape="circle"
+                                color="default"
+                                variant="text"
+                                title="上传 Jar 文件制作镜像"
+                                disabled={isRequesting}
+                                icon={<IconCoffee className="size-4" />}
+                                onClick={() => onOpenBuildJarModal(record)}
+                            />
+                        )}
+                        <Popconfirm title="确认删除镜像" description="删除后可能影响相关容器" onConfirm={() => onDelete(record.reference)}>
                             <Button
                                 size="small"
                                 shape="circle"
