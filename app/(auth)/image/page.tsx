@@ -37,6 +37,7 @@ import { DockerImageContainerItem, DockerImageItem, DockerImageProjectItem } fro
 import { getSortOrder } from "@/utils/getSortOrder"
 
 export interface DockerImageFilterParams {
+    name?: string
     repository?: string
     project?: string
 }
@@ -181,6 +182,21 @@ function getDockerImageNameByRepositoryAndTag(repository: string, tag: string) {
     return `${repository.trim()}:${tag.trim()}`
 }
 
+function hasImageTag(value: string) {
+    const lastSlashIndex = value.lastIndexOf("/")
+    const lastColonIndex = value.lastIndexOf(":")
+    return lastColonIndex > lastSlashIndex
+}
+
+function getImageFilterNames(value?: string) {
+    const imageName = value?.trim()
+
+    if (!imageName) return []
+    if (hasImageTag(imageName)) return [imageName]
+
+    return [imageName, `${imageName}:latest`]
+}
+
 function compareProjects(first: string[], second: string[]) {
     const textDiff = compareName(getProjectSortText(first), getProjectSortText(second))
     if (textDiff !== 0) return textDiff
@@ -239,7 +255,7 @@ const Page: FC = () => {
     const { mutateAsync: copyDockerImage, isPending: isCopyPending } = useCopyDockerImage()
 
     const [query, setQuery] = useQueryState({
-        keys: ["repository", "project"],
+        keys: ["name", "repository", "project"],
         parse: {
             pageNum: pageNumParser,
             pageSize: pageSizeParser,
@@ -670,15 +686,17 @@ const Page: FC = () => {
 
     const filteredData = useMemo(() => {
         const list = data ?? []
+        const imageNames = getImageFilterNames(query.name)
         const repository = query.repository?.trim()
         const project = query.project?.trim()
 
         return list.filter(item => {
+            const isNameMatch = imageNames.length > 0 ? imageNames.includes(item.name) || imageNames.includes(item.reference) : true
             const isRepositoryMatch = repository ? item.repository === repository : true
             const isProjectMatch = project ? item.projects.includes(project) : true
-            return isRepositoryMatch && isProjectMatch
+            return isNameMatch && isRepositoryMatch && isProjectMatch
         })
-    }, [data, query.project, query.repository])
+    }, [data, query.name, query.project, query.repository])
 
     const sortedData = useMemo(() => {
         if (!query.sortBy) return filteredData

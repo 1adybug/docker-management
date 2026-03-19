@@ -259,6 +259,12 @@ function isDockerContainerLocalHostBinding(value: string) {
     return host === "127.0.0.1" || host === "localhost" || host === "::1" || host === "[::1]"
 }
 
+function getImageHref(name?: string) {
+    const imageName = name?.trim()
+    if (!imageName) return "/image"
+    return `/image?name=${encodeURIComponent(imageName)}`
+}
+
 const Page: FC = () => {
     const [logOpen, setLogOpen] = useState(false)
     const [logName, setLogName] = useState<string | undefined>(undefined)
@@ -866,7 +872,13 @@ const Page: FC = () => {
             sorter: true,
             sortOrder: getSortOrder({ sortBy: query.childSortBy, sortOrder: query.childSortOrder }, "image"),
             render(value: string | undefined) {
-                return value || "-"
+                if (!value) return "-"
+
+                return (
+                    <Link className="text-sky-600 transition-colors hover:text-sky-500" href={getImageHref(value)}>
+                        {value}
+                    </Link>
+                )
             },
         },
         {
