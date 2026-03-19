@@ -2,7 +2,18 @@
 
 import { FC, useEffect, useMemo, useRef, useState } from "react"
 
-import { IconCode, IconDownload, IconFileText, IconPlayerPause, IconPlayerPlay, IconPlayerStop, IconRefresh, IconTrash } from "@tabler/icons-react"
+import {
+    IconCode,
+    IconDownload,
+    IconFileText,
+    IconMinus,
+    IconPlayerPause,
+    IconPlayerPlay,
+    IconPlayerStop,
+    IconPlus,
+    IconRefresh,
+    IconTrash,
+} from "@tabler/icons-react"
 import { Button, Form, Input, Popconfirm, Select, Table, TableProps, Tag } from "antd"
 import { useForm } from "antd/es/form/Form"
 import FormItem from "antd/es/form/FormItem"
@@ -728,6 +739,21 @@ const Page: FC = () => {
         return tableRows.slice(start, end)
     }, [pageNum, pageSize, tableRows])
 
+    const expandableRowKeys = useMemo(() => tableRows.filter(item => isProjectRow(item) && !!item.containers?.length).map(item => item.id), [tableRows])
+
+    const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([])
+
+    const hasExpandableRows = expandableRowKeys.length > 0
+    const isAllExpanded = hasExpandableRows && expandableRowKeys.every(item => expandedRowKeys.includes(item))
+
+    useEffect(() => {
+        setExpandedRowKeys(prev => prev.filter(item => expandableRowKeys.includes(item)))
+    }, [expandableRowKeys])
+
+    function onToggleExpandAll() {
+        setExpandedRowKeys(isAllExpanded ? [] : expandableRowKeys)
+    }
+
     const onTableChange: TableProps<DockerContainerTableRow>["onChange"] = function onTableChange(pagination, filters, sorter) {
         if (Array.isArray(sorter)) return
 
@@ -938,6 +964,20 @@ const Page: FC = () => {
                         total: tableRows.length,
                     }}
                     expandable={{
+                        expandedRowKeys,
+                        columnTitle: (
+                            <div className="flex items-center justify-center">
+                                <Button
+                                    size="small"
+                                    shape="circle"
+                                    type="text"
+                                    disabled={!hasExpandableRows}
+                                    title={isAllExpanded ? "全部收起" : "全部展开"}
+                                    icon={isAllExpanded ? <IconMinus className="size-4" /> : <IconPlus className="size-4" />}
+                                    onClick={onToggleExpandAll}
+                                />
+                            </div>
+                        ),
                         expandedRowRender(record) {
                             const containers = record.containers ?? []
                             if (!containers.length) return null
@@ -956,6 +996,9 @@ const Page: FC = () => {
                         },
                         rowExpandable(record) {
                             return isProjectRow(record) && !!record.containers?.length
+                        },
+                        onExpandedRowsChange(keys) {
+                            setExpandedRowKeys(keys.map(item => String(item)))
                         },
                     }}
                 />
