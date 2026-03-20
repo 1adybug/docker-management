@@ -63,6 +63,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 COPY --from=deps /app/node_modules/prisma/package.json ./prisma-package.json
+RUN find /app/node_modules/7zip-bin -type f -name 7za -exec chmod +x {} \;
 RUN mkdir -p /app/data /app/projects && chown -R nextjs:nodejs /app/data /app/projects
 
 RUN npm install -g "prisma@$(node -p "require('./prisma-package.json').version")" --registry=https://registry.npmmirror.com \

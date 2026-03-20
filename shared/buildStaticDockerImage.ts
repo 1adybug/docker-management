@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process"
-import { cp, mkdir, readdir, stat } from "node:fs/promises"
+import { chmod, cp, mkdir, readdir, stat } from "node:fs/promises"
 import { createRequire } from "node:module"
 import { dirname, join } from "node:path"
 import { promisify } from "node:util"
@@ -89,6 +89,18 @@ function get7zaPath() {
     if (process.platform === "win32") return join(packageDirectory, "win", process.arch, "7za.exe")
     if (process.platform === "darwin") return join(packageDirectory, "mac", process.arch, "7za")
     return join(packageDirectory, "linux", process.arch, "7za")
+}
+
+async function getExecutable7zaPath() {
+    const path = get7zaPath()
+
+    if (path === "7za" || process.platform === "win32") return path
+
+    try {
+        await chmod(path, 0o755)
+    } catch {}
+
+    return path
 }
 
 function getDockerfileContent(nginxImage: string) {
@@ -192,7 +204,9 @@ async function resolveDistDirectory({ extractDirectory }: ResolveDistDirectoryPa
 
 async function extractArchive({ archivePath, outputDirectory }: ExtractArchiveParams) {
     try {
-        await execFileAsync(get7zaPath(), ["x", archivePath, `-o${outputDirectory}`, "-y", "-bd", "-bb0"], {
+        const sevenZipPath = await getExecutable7zaPath()
+
+        await execFileAsync(sevenZipPath, ["x", archivePath, `-o${outputDirectory}`, "-y", "-bd", "-bb0"], {
             maxBuffer: 10 * 1024 * 1024,
             windowsHide: true,
         })
