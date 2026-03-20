@@ -112,8 +112,8 @@ importers:
         version: 4.3.6
     devDependencies:
       '@1adybug/eslint':
-        specifier: ^0.0.8
-        version: 0.0.8(@typescript-eslint/parser@8.57.0(eslint@9.39.4(jiti@1.21.7))(typescript@5.9.3))(eslint@9.39.4(jiti@1.21.7))(typescript@5.9.3)
+        specifier: ^0.0.9
+        version: 0.0.9(@typescript-eslint/parser@8.57.0(eslint@9.39.4(jiti@1.21.7))(typescript@5.9.3))(eslint@9.39.4(jiti@1.21.7))(typescript@5.9.3)
       '@1adybug/prettier':
         specifier: ^0.0.27
         version: 0.0.27(prettier@3.8.1)
@@ -171,8 +171,8 @@ packages:
   7zip-bin@5.2.0:
     resolution: {integrity: sha512-ukTPVhqG4jNzMro2qA9HSCSSVJN3aN7tlb+hfqYCt3ER0yWroeA2VR38MNrOHLQ/cVj+DaIMad0kFCtWWowh/A==, tarball: https://registry.npmjs.org/7zip-bin/-/7zip-bin-5.2.0.tgz}
 
-  '@1adybug/eslint@0.0.8':
-    resolution: {integrity: sha512-04S9aW+bf+L9vt34tTvcj1fMICtbvsBuacMyyBMHC+hqGo8T0J2ePO0tt4hr+W2lX/Za5HeRg8MB+06pLKEYEQ==}
+  '@1adybug/eslint@0.0.9':
+    resolution: {integrity: sha512-074hTMao64oiOtc5iYb5NSNRTVgUdIPHoIDVocrC5kfZg1ak+WCQer1gyEssIKU+hJzYhZSu0poGrTozocdJ0w==}
     peerDependencies:
       eslint: ^9.39.4
 
@@ -4153,7 +4153,7 @@ snapshots:
 
   7zip-bin@5.2.0: {}
 
-  '@1adybug/eslint@0.0.8(@typescript-eslint/parser@8.57.0(eslint@9.39.4(jiti@1.21.7))(typescript@5.9.3))(eslint@9.39.4(jiti@1.21.7))(typescript@5.9.3)':
+  '@1adybug/eslint@0.0.9(@typescript-eslint/parser@8.57.0(eslint@9.39.4(jiti@1.21.7))(typescript@5.9.3))(eslint@9.39.4(jiti@1.21.7))(typescript@5.9.3)':
     dependencies:
       '@eslint/js': 9.39.4
       eslint: 9.39.4(jiti@1.21.7)

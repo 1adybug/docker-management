@@ -54,7 +54,7 @@
         "zod": "^4.3.6"
     },
     "devDependencies": {
-        "@1adybug/eslint": "^0.0.8",
+        "@1adybug/eslint": "^0.0.9",
         "@1adybug/prettier": "^0.0.27",
         "@types/better-sqlite3": "^7.6.13",
         "@types/node": "^24.12.0",
