@@ -30,7 +30,7 @@
         "@prisma/adapter-better-sqlite3": "^7.5.0",
         "@prisma/client": "^7.5.0",
         "@tabler/icons-react": "^3.40.0",
-        "@tanstack/react-query": "^5.90.21",
+        "@tanstack/react-query": "^5.91.2",
         "@uiw/react-json-view": "^2.0.0-alpha.41",
         "antd": "^6.3.3",
         "better-auth": "^1.5.5",
@@ -40,7 +40,7 @@
         "deepsea-tools": "^5.47.9",
         "lucide-react": "^0.577.0",
         "monaco-editor": "^0.55.1",
-        "next": "^16.1.7",
+        "next": "^16.2.0",
         "react": "^19.2.4",
         "react-dom": "^19.2.4",
         "soda-antd": "^1.0.25",
@@ -54,7 +54,7 @@
         "zod": "^4.3.6"
     },
     "devDependencies": {
-        "@1adybug/eslint": "^0.0.7",
+        "@1adybug/eslint": "^0.0.8",
         "@1adybug/prettier": "^0.0.27",
         "@types/better-sqlite3": "^7.6.13",
         "@types/node": "^24.12.0",
