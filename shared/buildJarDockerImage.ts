@@ -1,13 +1,12 @@
 import { copyFile, mkdir } from "node:fs/promises"
 import { join } from "node:path"
 
-import { execAsync } from "soda-nodejs"
-
 import { buildJarDockerImageSchema } from "@/schemas/buildJarDockerImage"
 import { dockerImageNameParser } from "@/schemas/dockerImageName"
 import { dockerStartCommandParser } from "@/schemas/dockerStartCommand"
 
 import { createSharedFn } from "@/server/createSharedFn"
+import { buildDockerImage } from "@/server/docker"
 import { getReplaceDockerTemporaryName, inspectDockerImage, replaceDockerImage } from "@/server/dockerImage"
 import { createDockerTempDirectory, deleteDockerTempDirectory } from "@/server/dockerTempDirectory"
 import { writeTextToFile } from "@/server/writeTextToFile"
@@ -138,8 +137,9 @@ export const buildJarDockerImage = createSharedFn<FormData>({
             startCommand,
         })
 
-        const output = await execAsync(`docker build -t ${imageName} .`, {
+        const output = await buildDockerImage({
             cwd: contextDirectory,
+            name: imageName,
         })
 
         if (!targetName) {

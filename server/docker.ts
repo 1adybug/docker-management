@@ -30,7 +30,26 @@ export interface DockerCommandResult {
 export interface RunDockerCommandParams {
     args: string[]
     cwd?: string
+    env?: Record<string, string | undefined>
     errorMessage?: string
+}
+
+export interface BuildDockerImageParams {
+    cwd: string
+    name: string
+}
+
+function isBuildKitUnavailableError(error: unknown) {
+    const message = error instanceof Error ? error.message : String(error)
+    const lowerMessage = message.toLowerCase()
+
+    return (
+        lowerMessage.includes("buildkit") &&
+        (lowerMessage.includes("not supported") ||
+            lowerMessage.includes("unknown flag") ||
+            lowerMessage.includes("failed to solve") ||
+            lowerMessage.includes("component is missing"))
+    )
 }
 
 /** Compose 文件解析结果 */
@@ -198,10 +217,14 @@ export async function resolveComposeFiles(files: string[]) {
 }
 
 /** 执行 Docker 命令 */
-export async function runDockerCommand({ args, cwd, errorMessage = "Docker 命令执行失败" }: RunDockerCommandParams) {
+export async function runDockerCommand({ args, cwd, env, errorMessage = "Docker 命令执行失败" }: RunDockerCommandParams) {
     try {
         const result = await execFileAsync("docker", args, {
             cwd,
+            env: {
+                ...process.env,
+                ...env,
+            },
             maxBuffer: 20 * 1024 * 1024,
         })
 
@@ -217,6 +240,33 @@ export async function runDockerCommand({ args, cwd, errorMessage = "Docker 命�
         const output = `${stdoutText}${stderrText}${messageText}`.trim()
 
         throw new ClientError(output || errorMessage)
+    }
+}
+
+/** 构建 Docker 镜像 */
+export async function buildDockerImage({ cwd, name }: BuildDockerImageParams) {
+    try {
+        const result = await runDockerCommand({
+            args: ["build", "-t", name, "."],
+            cwd,
+            env: {
+                DOCKER_BUILDKIT: "1",
+                BUILDKIT_PROGRESS: "plain",
+            },
+            errorMessage: "构建镜像失败",
+        })
+
+        return `${result.stdout}${result.stderr}`.trim()
+    } catch (error) {
+        if (!isBuildKitUnavailableError(error)) throw error
+
+        const result = await runDockerCommand({
+            args: ["build", "-t", name, "."],
+            cwd,
+            errorMessage: "构建镜像失败",
+        })
+
+        return `${result.stdout}${result.stderr}`.trim()
     }
 }
 

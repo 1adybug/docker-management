@@ -4,12 +4,11 @@ import { createRequire } from "node:module"
 import { dirname, join } from "node:path"
 import { promisify } from "node:util"
 
-import { execAsync } from "soda-nodejs"
-
 import { buildStaticDockerImageSchema } from "@/schemas/buildStaticDockerImage"
 import { dockerImageNameParser } from "@/schemas/dockerImageName"
 
 import { createSharedFn } from "@/server/createSharedFn"
+import { buildDockerImage } from "@/server/docker"
 import { getReplaceDockerTemporaryName, inspectDockerImage, replaceDockerImage } from "@/server/dockerImage"
 import { createDockerTempDirectory, deleteDockerTempDirectory } from "@/server/dockerTempDirectory"
 import { writeTextToFile } from "@/server/writeTextToFile"
@@ -252,8 +251,9 @@ export const buildStaticDockerImage = createSharedFn<FormData>({
             sourceDirectory,
         })
 
-        const output = await execAsync(`docker build -t ${imageName} .`, {
+        const output = await buildDockerImage({
             cwd: contextDirectory,
+            name: imageName,
         })
 
         if (!targetName) {
