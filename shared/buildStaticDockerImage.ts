@@ -1,8 +1,14 @@
 import { execFile } from "node:child_process"
+import { createWriteStream } from "node:fs"
 import { chmod, cp, mkdir, readdir, stat } from "node:fs/promises"
 import { createRequire } from "node:module"
-import { dirname, join } from "node:path"
+import { dirname, join, relative, resolve } from "node:path"
+import { pipeline } from "node:stream/promises"
 import { promisify } from "node:util"
+import { crc32 } from "node:zlib"
+
+import { decode } from "iconv-lite"
+import yauzl, { Entry, ZipFile } from "yauzl"
 
 import { buildStaticDockerImageSchema } from "@/schemas/buildStaticDockerImage"
 import { dockerImageNameParser } from "@/schemas/dockerImageName"
@@ -58,11 +64,36 @@ export interface StaticArchiveFileInfo {
 
 export interface ExtractArchiveParams {
     archivePath: string
+    extension: string
     outputDirectory: string
 }
 
 export interface ResolveDistDirectoryParams {
     extractDirectory: string
+}
+
+export interface OpenZipFileParams {
+    path: string
+}
+
+export interface OpenZipReadStreamParams {
+    entry: Entry
+    zipFile: ZipFile
+}
+
+export interface ExtractZipEntryParams {
+    entry: Entry
+    outputDirectory: string
+    zipFile: ZipFile
+}
+
+export interface ParseZipUnicodePathExtraFieldParams {
+    entry: Entry
+    rawFileName: Buffer
+}
+
+export interface ResolveZipEntryFileNameParams {
+    entry: Entry
 }
 
 export interface PrepareBuildContextParams {
@@ -77,6 +108,11 @@ export interface BuildStaticDockerImageResult {
     backupName?: string
     skipFollowUp?: boolean
     skipMessage?: string
+}
+
+export interface ZipUnicodePathExtraField {
+    crc32: number
+    path: string
 }
 
 function get7zaPath() {
@@ -120,6 +156,219 @@ EXPOSE 80
 
 CMD ["nginx", "-g", "daemon off;"]
 `
+}
+
+function normalizeArchiveEntryPath(path: string) {
+    return path.replace(/\\/gu, "/")
+}
+
+function getRawZipEntryFileName(entry: Entry) {
+    const fileName = entry.fileName as unknown
+
+    if (Buffer.isBuffer(fileName)) return fileName
+
+    return Buffer.from(String(fileName))
+}
+
+function parseZipUnicodePathExtraField({ entry, rawFileName }: ParseZipUnicodePathExtraFieldParams) {
+    const extraField = entry.extraFields.find(item => item.id === 0x7075)
+
+    if (!extraField) return undefined
+    if (extraField.data.length <= 5) return undefined
+
+    const currentCrc32 = Number(crc32(rawFileName)) >>> 0
+    const zipCrc32 = extraField.data.readUInt32LE(1) >>> 0
+
+    if (currentCrc32 !== zipCrc32) return undefined
+
+    return {
+        crc32: zipCrc32,
+        path: extraField.data.subarray(5).toString("utf8"),
+    } as ZipUnicodePathExtraField
+}
+
+function isZipUtf8FileName(entry: Entry) {
+    return (entry.generalPurposeBitFlag & 0x800) !== 0
+}
+
+function tryDecodeUtf8(buffer: Buffer) {
+    try {
+        return new TextDecoder("utf-8", { fatal: true }).decode(buffer)
+    } catch {
+        return undefined
+    }
+}
+
+function getDecodedFileNameScore(value: string) {
+    const cjkCount = Array.from(value.matchAll(/[\u3400-\u9fff]/gu)).length
+    const safeCount = Array.from(value.matchAll(/[a-zA-Z0-9/_\-.]/gu)).length
+    const mojibakeCount = Array.from(value.matchAll(/[\u00c0-\u024f\u2500-\u259f\ufffd]/gu)).length
+    const questionMarkCount = Array.from(value.matchAll(/\?/gu)).length
+
+    return cjkCount * 4 + safeCount - mojibakeCount * 3 - questionMarkCount * 6
+}
+
+function decodeZipEntryFileName(rawFileName: Buffer) {
+    const utf8Name = tryDecodeUtf8(rawFileName)
+    const gb18030Name = decode(rawFileName, "gb18030")
+    const cp437Name = decode(rawFileName, "cp437")
+    const candidates = [utf8Name, gb18030Name, cp437Name].filter((item): item is string => !!item)
+
+    if (candidates.length === 0) throw new ClientError("zip 文件名解码失败")
+
+    return candidates.sort((first, second) => getDecodedFileNameScore(second) - getDecodedFileNameScore(first))[0]!
+}
+
+function resolveZipEntryFileName({ entry }: ResolveZipEntryFileNameParams) {
+    const rawFileName = getRawZipEntryFileName(entry)
+    const unicodePath = parseZipUnicodePathExtraField({
+        entry,
+        rawFileName,
+    })?.path
+
+    if (unicodePath) return normalizeArchiveEntryPath(unicodePath)
+    if (isZipUtf8FileName(entry)) return normalizeArchiveEntryPath(rawFileName.toString("utf8"))
+
+    return normalizeArchiveEntryPath(decodeZipEntryFileName(rawFileName))
+}
+
+function resolveArchiveEntryPath(outputDirectory: string, entryPath: string) {
+    const normalizedEntryPath = normalizeArchiveEntryPath(entryPath).replace(/^\/+/u, "")
+    const targetPath = resolve(outputDirectory, normalizedEntryPath)
+    const relativePath = relative(outputDirectory, targetPath)
+
+    if (!normalizedEntryPath) throw new ClientError("压缩包中存在空路径")
+    if (relativePath.startsWith("..") || (resolve(outputDirectory) === targetPath && normalizedEntryPath !== ""))
+        throw new ClientError(`压缩包中存在非法路径：${entryPath}`)
+
+    return targetPath
+}
+
+function isDirectoryZipEntry(path: string) {
+    return path.endsWith("/")
+}
+
+async function openZipFile({ path }: OpenZipFileParams) {
+    return await new Promise<ZipFile>((resolve, reject) => {
+        yauzl.open(
+            path,
+            {
+                decodeStrings: false,
+                lazyEntries: true,
+                validateEntrySizes: true,
+            },
+            (error, zipFile) => {
+                if (error || !zipFile) {
+                    reject(error ?? new Error("打开 zip 文件失败"))
+                    return
+                }
+
+                resolve(zipFile)
+            },
+        )
+    })
+}
+
+async function openZipReadStream({ entry, zipFile }: OpenZipReadStreamParams) {
+    return await new Promise<NodeJS.ReadableStream>((resolve, reject) => {
+        zipFile.openReadStream(entry, (error, stream) => {
+            if (error || !stream) {
+                reject(error ?? new Error("读取 zip 文件内容失败"))
+                return
+            }
+
+            resolve(stream)
+        })
+    })
+}
+
+async function extractZipEntry({ entry, outputDirectory, zipFile }: ExtractZipEntryParams) {
+    const fileName = resolveZipEntryFileName({ entry })
+    const targetPath = resolveArchiveEntryPath(outputDirectory, fileName)
+
+    if (isDirectoryZipEntry(fileName)) {
+        await mkdir(targetPath, { recursive: true })
+        return
+    }
+
+    await mkdir(dirname(targetPath), { recursive: true })
+
+    const readable = await openZipReadStream({ entry, zipFile })
+    const writable = createWriteStream(targetPath)
+
+    await pipeline(readable, writable)
+}
+
+async function extractZipArchive({ archivePath, outputDirectory }: ExtractArchiveParams) {
+    const zipFile = await openZipFile({ path: archivePath })
+
+    try {
+        await mkdir(outputDirectory, { recursive: true })
+
+        await new Promise<void>((resolve, reject) => {
+            let settled = false
+
+            function cleanup() {
+                zipFile.removeListener("entry", onEntry)
+                zipFile.removeListener("end", onEnd)
+                zipFile.removeListener("error", onError)
+            }
+
+            function finish(error?: unknown) {
+                if (settled) return
+
+                settled = true
+                cleanup()
+
+                if (error) {
+                    reject(error)
+                    return
+                }
+
+                resolve()
+            }
+
+            function onEnd() {
+                finish()
+            }
+
+            function onError(error: Error) {
+                finish(error)
+            }
+
+            function onEntry(entry: Entry) {
+                void (async function onReadEntry() {
+                    try {
+                        await extractZipEntry({
+                            entry,
+                            outputDirectory,
+                            zipFile,
+                        })
+
+                        zipFile.readEntry()
+                    } catch (error) {
+                        finish(error)
+                    }
+                })()
+            }
+
+            zipFile.on("entry", onEntry)
+            zipFile.on("end", onEnd)
+            zipFile.on("error", onError)
+            zipFile.readEntry()
+        })
+    } finally {
+        zipFile.close()
+    }
+}
+
+async function extract7zArchive({ archivePath, outputDirectory }: ExtractArchiveParams) {
+    const sevenZipPath = await getExecutable7zaPath()
+
+    await execFileAsync(sevenZipPath, ["x", archivePath, `-o${outputDirectory}`, "-y", "-bd", "-bb0"], {
+        maxBuffer: 10 * 1024 * 1024,
+        windowsHide: true,
+    })
 }
 
 function getUploadFile(formData: FormData) {
@@ -204,13 +453,22 @@ async function resolveDistDirectory({ extractDirectory }: ResolveDistDirectoryPa
     return extractDirectory
 }
 
-async function extractArchive({ archivePath, outputDirectory }: ExtractArchiveParams) {
+async function extractArchive({ archivePath, extension, outputDirectory }: ExtractArchiveParams) {
     try {
-        const sevenZipPath = await getExecutable7zaPath()
+        if (extension === "zip") {
+            await extractZipArchive({
+                archivePath,
+                extension,
+                outputDirectory,
+            })
 
-        await execFileAsync(sevenZipPath, ["x", archivePath, `-o${outputDirectory}`, "-y", "-bd", "-bb0"], {
-            maxBuffer: 10 * 1024 * 1024,
-            windowsHide: true,
+            return
+        }
+
+        await extract7zArchive({
+            archivePath,
+            extension,
+            outputDirectory,
         })
     } catch (error) {
         throw new ClientError({
@@ -244,7 +502,11 @@ export const buildStaticDockerImage = createSharedFn<FormData>({
 
     try {
         await writeWebFileToPath({ file, path: archivePath })
-        await extractArchive({ archivePath, outputDirectory: extractDirectory })
+        await extractArchive({
+            archivePath,
+            extension,
+            outputDirectory: extractDirectory,
+        })
 
         const sourceDirectory = await resolveDistDirectory({ extractDirectory })
 

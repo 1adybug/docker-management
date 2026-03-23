@@ -38,6 +38,7 @@
         "dayjs": "^1.11.20",
         "deepsea-components": "^5.17.33",
         "deepsea-tools": "^5.47.9",
+        "iconv-lite": "^0.7.2",
         "lucide-react": "^0.577.0",
         "monaco-editor": "^0.55.1",
         "next": "^16.2.0",
@@ -51,6 +52,7 @@
         "soda-tanstack-query": "^0.0.13",
         "source-han-sans-sc-vf": "^0.0.1",
         "yaml": "^2.8.2",
+        "yauzl": "^3.2.1",
         "zod": "^4.3.6"
     },
     "devDependencies": {
@@ -60,6 +62,7 @@
         "@types/node": "^24.12.0",
         "@types/react": "^19.2.14",
         "@types/react-dom": "^19.2.3",
+        "@types/yauzl": "^2.10.3",
         "autoprefixer": "^10.4.27",
         "cross-env": "^10.1.0",
         "eslint": "^9.39.4",
