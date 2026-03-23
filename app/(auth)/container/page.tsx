@@ -468,7 +468,7 @@ const Page: FC = () => {
         return url.toString()
     }
 
-    function renderContainerOperations(id: string, isCurrentContainer?: boolean) {
+    function renderContainerOperations(id: string, name: string, isCurrentContainer?: boolean) {
         const disabledTitle = isCurrentContainer ? "当前为管理系统运行容器，不可操作" : undefined
 
         return (
@@ -504,7 +504,7 @@ const Page: FC = () => {
                     onClick={() => onCommand(id, DockerContainerCommand.重启)}
                 />
                 <Popconfirm
-                    title="确认删除容器"
+                    title={`确认删除容器：${name}`}
                     description="删除后将无法恢复"
                     disabled={isRequesting || isCurrentContainer}
                     onConfirm={() => onCommand(id, DockerContainerCommand.删除)}
@@ -599,7 +599,7 @@ const Page: FC = () => {
                     onClick={() => onProjectCommand(record, ComposeProjectCommand.日志)}
                 />
                 <Popconfirm
-                    title="确认删除项目"
+                    title={`确认删除项目：${getProjectLabel(record)}`}
                     description="将执行 docker compose down"
                     disabled={isControlDisabled}
                     onConfirm={() => onProjectCommand(record, ComposeProjectCommand.删除)}
@@ -834,7 +834,7 @@ const Page: FC = () => {
             align: "center",
             render(value, record) {
                 if (isProjectRow(record)) return renderProjectOperations(record)
-                return renderContainerOperations(record.id)
+                return renderContainerOperations(record.id, record.name)
             },
         },
     ]
@@ -916,7 +916,7 @@ const Page: FC = () => {
             key: "operation",
             align: "center",
             render(value, record) {
-                return renderContainerOperations(record.id, record.isCurrentContainer)
+                return renderContainerOperations(record.id, record.name, record.isCurrentContainer)
             },
         },
     ]

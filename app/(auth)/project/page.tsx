@@ -60,6 +60,12 @@ export interface ProjectStartCheckState {
     data?: CheckProjectStartResult
 }
 
+/** 项目删除目标 */
+export interface ProjectDeleteTarget {
+    name: string
+    displayName?: string
+}
+
 /** 解析容器状态 */
 function getStatusValue(status?: string) {
     const value = status?.toLowerCase() ?? ""
@@ -102,6 +108,16 @@ function getStartCheckStatusClassName(status: ProjectStartMountStatus) {
     return "border-red-200 bg-red-50 text-red-700"
 }
 
+function getProjectDeleteTitle(target?: ProjectDeleteTarget) {
+    if (!target) return "删除项目"
+
+    const name = target.name.trim()
+    const displayName = target.displayName?.trim()
+
+    if (displayName && displayName !== name) return `删除项目：${displayName}（${name}）`
+    return `删除项目：${displayName || name}`
+}
+
 function onRenderMountItem(item: ProjectStartMountItem) {
     const isSamePath = item.sourcePath === item.resolvedPath
 
@@ -126,7 +142,7 @@ const Page: FC = () => {
     const [logName, setLogName] = useState<string | undefined>(undefined)
     const [logContent, setLogContent] = useState<string | undefined>(undefined)
     const [deleteOpen, setDeleteOpen] = useState(false)
-    const [deleteName, setDeleteName] = useState<string | undefined>(undefined)
+    const [deleteTarget, setDeleteTarget] = useState<ProjectDeleteTarget | undefined>(undefined)
     const [deleteMode, setDeleteMode] = useState<ProjectDeleteMode>(ProjectDeleteMode.仅删除项目)
     const [startCheckOpen, setStartCheckOpen] = useState(false)
     const [startCheck, setStartCheck] = useState<ProjectStartCheckState>({})
@@ -230,15 +246,15 @@ const Page: FC = () => {
         setLogContent(undefined)
     }
 
-    function onOpenDelete(name: string) {
-        setDeleteName(name)
+    function onOpenDelete(project: ProjectDeleteTarget) {
+        setDeleteTarget(project)
         setDeleteMode(ProjectDeleteMode.仅删除项目)
         setDeleteOpen(true)
     }
 
     function onCloseDelete() {
         setDeleteOpen(false)
-        setDeleteName(undefined)
+        setDeleteTarget(undefined)
     }
 
     function onCloseStartCheck() {
@@ -248,9 +264,9 @@ const Page: FC = () => {
     }
 
     async function onDeleteConfirm() {
-        if (!deleteName) return
+        if (!deleteTarget?.name) return
         await deleteProject({
-            name: deleteName,
+            name: deleteTarget.name,
             cleanup: deleteMode === ProjectDeleteMode.删除并清理容器,
         })
         onCloseDelete()
@@ -479,7 +495,12 @@ const Page: FC = () => {
                             title="删除"
                             disabled={isRequesting}
                             icon={<IconTrash className="size-4" />}
-                            onClick={() => onOpenDelete(record.name)}
+                            onClick={() =>
+                                onOpenDelete({
+                                    name: record.name,
+                                    displayName: record.displayName,
+                                })
+                            }
                         />
                     </div>
                 )
@@ -525,12 +546,12 @@ const Page: FC = () => {
             <div ref={container} className="px-4 fill-y">
                 <ProjectLogDrawer name={logName} open={logOpen} content={logContent} onClose={onCloseLog} />
                 <Modal
-                    title={deleteName ? `删除项目：${deleteName}` : "删除项目"}
+                    title={getProjectDeleteTitle(deleteTarget)}
                     open={deleteOpen}
                     okText={deleteMode === ProjectDeleteMode.删除并清理容器 ? "删除并清理" : "删除"}
                     cancelText="取消"
                     mask={{ closable: !isDeletePending }}
-                    okButtonProps={{ danger: true, disabled: !deleteName, loading: isDeletePending }}
+                    okButtonProps={{ danger: true, disabled: !deleteTarget?.name, loading: isDeletePending }}
                     cancelButtonProps={{ disabled: isDeletePending }}
                     onOk={onDeleteConfirm}
                     onCancel={onCloseDelete}

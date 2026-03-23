@@ -936,7 +936,11 @@ const Page: FC = () => {
                                 onClick={() => onOpenCopyModal(record)}
                             />
                         )}
-                        <Popconfirm title="确认删除镜像" description="删除后可能影响相关容器" onConfirm={() => onDelete(record.reference)}>
+                        <Popconfirm
+                            title={`确认删除镜像：${record.reference}`}
+                            description="删除后可能影响相关容器"
+                            onConfirm={() => onDelete(record.reference)}
+                        >
                             <Button
                                 size="small"
                                 shape="circle"
