@@ -1,3 +1,5 @@
+import dayjs from "dayjs"
+
 import { dockerImageNameParser } from "@/schemas/dockerImageName"
 
 import { runDockerCommand } from "@/server/docker"
@@ -88,22 +90,9 @@ export function getDockerImageNameByRepositoryAndTag(repository: string, tag: st
     return `${nextRepository}:${nextTag}`
 }
 
-function formatTwoDigits(value: number) {
-    return String(value).padStart(2, "0")
-}
-
 export function formatDockerImageTimeTag(date: Date) {
     if (Number.isNaN(date.getTime())) throw new ClientError("镜像时间无效")
-
-    const year = formatTwoDigits(date.getFullYear() % 100)
-    const month = formatTwoDigits(date.getMonth() + 1)
-    const day = formatTwoDigits(date.getDate())
-    const hour = formatTwoDigits(date.getHours())
-    const minute = formatTwoDigits(date.getMinutes())
-    const second = formatTwoDigits(date.getSeconds())
-    const weekDay = String(date.getDay())
-
-    return `${year}${month}${day}${hour}${minute}${second}${weekDay}`
+    return dayjs(date).format("YYMMDDHHmmssd")
 }
 
 function parseDockerImageInspectOutput(output: string) {
