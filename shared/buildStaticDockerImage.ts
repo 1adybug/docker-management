@@ -19,7 +19,7 @@ import { ClientError } from "@/utils/clientError"
 const execFileAsync = promisify(execFile)
 const nodeRequire = createRequire(join(process.cwd(), "package.json"))
 
-const nginxConfigContent = `worker_processes auto;
+const nginxConfigContent = `worker_processes 1;
 
 events {
     worker_connections 1024;
@@ -110,6 +110,9 @@ WORKDIR /usr/share/nginx/html
 RUN rm -rf ./*
 
 COPY dist .
+
+# 上传的压缩包可能保留了宿主机权限，统一放开只读权限，避免 nginx worker 无法读取静态文件
+RUN chmod -R a+rX /usr/share/nginx/html
 
 COPY nginx.conf /etc/nginx/nginx.conf
 
