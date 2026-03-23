@@ -10,14 +10,7 @@ import { getProjectComposePath, getProjectDir } from "@/server/getProjectPaths"
 import { writeTextToFile } from "@/server/writeTextToFile"
 
 import { ClientError } from "@/utils/clientError"
-import { getComposeXName, normalizeComposeProjectContent } from "@/utils/compose"
-
-const defaultComposeContent = `services:
-    app:
-        image: nginx:latest
-        ports:
-            - "80:80"
-`
+import { defaultComposeContent, getComposeXName, normalizeComposeProjectContent } from "@/utils/compose"
 
 export const addProject = createSharedFn({
     name: "addProject",

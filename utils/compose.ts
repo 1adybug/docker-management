@@ -86,12 +86,7 @@ export interface NormalizeComposeProjectContentParams {
     content: string
 }
 
-export const defaultComposeContent = `services:
-    app:
-        image: nginx:latest
-        ports:
-            - "80:80"
-`
+export const defaultComposeContent = "{}\n"
 
 export const composeNameKey = "x-name"
 
