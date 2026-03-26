@@ -10,7 +10,6 @@ import { defaultPageSize } from "@/schemas/pageSize"
 import { queryOperationLogSchema } from "@/schemas/queryOperationLog"
 
 import { createSharedFn } from "@/server/createSharedFn"
-import { getCurrentUser } from "@/server/getCurrentUser"
 import { isAdmin } from "@/server/isAdmin"
 
 export const queryOperationLog = createSharedFn({
@@ -30,8 +29,6 @@ export const queryOperationLog = createSharedFn({
     sortBy = "createdAt",
     sortOrder = "desc",
 }) {
-    const user = await getCurrentUser()
-
     const where = getOperationLogWhere({
         AND: [
             ...action
@@ -59,18 +56,6 @@ export const queryOperationLog = createSharedFn({
             gte: createdAfter,
             lte: createdBefore,
         },
-        OR: [
-            {
-                action: {
-                    not: "queryOperationLog",
-                },
-            },
-            {
-                userId: {
-                    not: user?.id,
-                },
-            },
-        ],
     })
 
     const orderBy: OperationLogOrderByWithRelationInput[] = [
