@@ -123,11 +123,13 @@ async function getCachedCurrentUser(context: ResponseFnContext) {
     return context[responseContextUser]
 }
 
+export interface ErrorResponseContextFn {
+    name: string
+}
+
 export interface ErrorResponseContext extends ResponseFnContext {
     args: unknown[]
-    fn: {
-        name: string
-    }
+    fn: ErrorResponseContextFn
 }
 
 function getResponseError(context: ResponseFnContext, result: ExtendedResponseData<unknown>) {

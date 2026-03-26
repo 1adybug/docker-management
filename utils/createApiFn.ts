@@ -13,21 +13,26 @@ export type GetPathname<TPathname extends string> = `/${TPathname extends `/${in
 
 export type IsRouteFn<TFn extends OriginalResponseFn<any, any, any, any>> = IsNever<NonNullable<TFn["route"]>["pathname"]> extends true ? false : true
 
+// eslint-disable-next-line
 export type CreateApiFnConfig<TFn extends OriginalResponseFn<any, any, any, any>> = {
     /** 如果没有传入 schema，传入的参数会被丢弃 */
     schema?: TFn["schema"]
 } & (IsRouteFn<TFn> extends true
-    ? {
+    ? // eslint-disable-next-line
+      {
           pathname: GetPathname<NonNullable<TFn["route"]>["pathname"]>
       }
-    : {
+    : // eslint-disable-next-line
+      {
           pathname?: undefined
       }) &
     (NonNullable<TFn["route"]>["bodyType"] extends "formData"
-        ? {
+        ? // eslint-disable-next-line
+          {
               bodyType: NonNullable<TFn["route"]>["bodyType"]
           }
-        : {
+        : // eslint-disable-next-line
+          {
               bodyType?: NonNullable<TFn["route"]>["bodyType"]
           })
 

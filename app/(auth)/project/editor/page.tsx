@@ -52,6 +52,15 @@ export interface MonacoGlobal {
     MonacoEnvironment?: MonacoEnvironment
 }
 
+export interface MonacoEditorController {
+    defineTheme: (name: string, theme: unknown) => void
+    setTheme: (name: string) => void
+}
+
+export interface MonacoInstance {
+    editor: MonacoEditorController
+}
+
 async function ensureMonacoConfigured() {
     if (typeof window === "undefined") return
     if (isMonacoConfigured) return
@@ -227,7 +236,7 @@ const Page: FC = () => {
         if (!monacoInstance) return
         const theme = monacoThemeMap[editorTheme]
         if (!theme) return
-        const editorApi = monacoInstance as { editor: { defineTheme: (name: string, theme: unknown) => void; setTheme: (name: string) => void } }
+        const editorApi = monacoInstance as MonacoInstance
         editorApi.editor.defineTheme(editorTheme, theme)
         editorApi.editor.setTheme(editorTheme)
     }, [editorTheme, monacoInstance])

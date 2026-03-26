@@ -66,3 +66,4 @@ test*
 *.db
 data/projects/
 projects/
+data/backups
