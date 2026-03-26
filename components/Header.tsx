@@ -117,8 +117,9 @@ const Header: FC<HeaderProps> = ({ className, ...rest }) => {
                         ),
                 )}
             </div>
-            <div className="flex items-center gap-2">
-                <div>{user?.name}</div>
+            <div className="flex items-center gap-4">
+                <div>{user?.nickname}</div>
+                <div className="text-slate-500">{user?.name}</div>
                 <Button size="small" color="orange" variant="filled" loading={isSignOutPending} onClick={onSignOut}>
                     注销
                 </Button>
