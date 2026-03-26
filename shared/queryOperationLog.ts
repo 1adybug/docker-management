@@ -10,7 +10,6 @@ import { defaultPageSize } from "@/schemas/pageSize"
 import { queryOperationLogSchema } from "@/schemas/queryOperationLog"
 
 import { createSharedFn } from "@/server/createSharedFn"
-import { getCurrentUser } from "@/server/getCurrentUser"
 import { isAdmin } from "@/server/isAdmin"
 
 export const queryOperationLog = createSharedFn({
@@ -24,13 +23,12 @@ export const queryOperationLog = createSharedFn({
     ip = "",
     userAgent = "",
     name = "",
+    nickname = "",
     pageNum = defaultPageNum,
     pageSize = defaultPageSize,
     sortBy = "createdAt",
     sortOrder = "desc",
 }) {
-    const user = await getCurrentUser()
-
     const where = getOperationLogWhere({
         AND: [
             ...action
@@ -49,23 +47,15 @@ export const queryOperationLog = createSharedFn({
                 .split(" ")
                 .filter(Boolean)
                 .map(item => ({ name: { contains: item } })),
+            ...nickname
+                .split(" ")
+                .filter(Boolean)
+                .map(item => ({ nickname: { contains: item } })),
         ],
         createdAt: {
             gte: createdAfter,
             lte: createdBefore,
         },
-        OR: [
-            {
-                action: {
-                    not: "queryOperationLog",
-                },
-            },
-            {
-                userId: {
-                    not: user?.id,
-                },
-            },
-        ],
     })
 
     const orderBy: OperationLogOrderByWithRelationInput[] = [
@@ -75,7 +65,7 @@ export const queryOperationLog = createSharedFn({
     ]
 
     if (sortBy !== "createdAt") {
-        if (sortBy === "action" || sortBy === "ip" || sortBy === "userAgent") {
+        if (sortBy === "action" || sortBy === "ip" || sortBy === "userAgent" || sortBy === "nickname") {
             orderBy.unshift({
                 [sortBy]: sortOrder,
             })

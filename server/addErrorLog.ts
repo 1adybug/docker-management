@@ -37,6 +37,7 @@ export async function addErrorLog({ error, action, args }: AddErrorLogParams) {
                     ip: await getIp(),
                     userAgent: await getUserAgent(),
                     name: user?.name,
+                    nickname: user?.nickname,
                     phoneNumber: user?.phoneNumber,
                     role: user?.role,
                     userId: user?.id,

@@ -25,6 +25,7 @@ export const queryErrorLog = createSharedFn({
     ip = "",
     userAgent = "",
     name = "",
+    nickname = "",
     pageNum = defaultPageNum,
     pageSize = defaultPageSize,
     sortBy = "createdAt",
@@ -56,6 +57,10 @@ export const queryErrorLog = createSharedFn({
                 .split(" ")
                 .filter(Boolean)
                 .map(item => ({ name: { contains: item } })),
+            ...nickname
+                .split(" ")
+                .filter(Boolean)
+                .map(item => ({ nickname: { contains: item } })),
         ],
         createdAt: {
             gte: createdAfter,
@@ -70,7 +75,7 @@ export const queryErrorLog = createSharedFn({
     ]
 
     if (sortBy !== "createdAt") {
-        if (sortBy === "action" || sortBy === "ip" || sortBy === "userAgent" || sortBy === "type" || sortBy === "message") {
+        if (sortBy === "action" || sortBy === "ip" || sortBy === "userAgent" || sortBy === "nickname" || sortBy === "type" || sortBy === "message") {
             orderBy.unshift({
                 [sortBy]: sortOrder,
             })

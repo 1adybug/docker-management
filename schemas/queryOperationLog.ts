@@ -32,6 +32,11 @@ export const queryOperationLogSchema = z.object(
             .trim()
             .max(63, { message: `用户名长度不能超过 ${63} 个字符` })
             .optional(),
+        nickname: z
+            .string({ message: "无效的昵称" })
+            .trim()
+            .max(24, { message: `昵称长度不能超过 ${24} 个字符` })
+            .optional(),
         pageNum: pageNumSchema.optional(),
         pageSize: pageSizeSchema.optional(),
         sortBy: operationLogSortBySchema.optional(),
