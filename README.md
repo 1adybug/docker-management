@@ -43,6 +43,10 @@ git remote set-url --push template no_push://template
 | `JWT_SECRET`                             | 按认证配置 | 兼容旧认证方案时使用（当前默认不依赖）     | `your_jwt_secret`             |
 | `NEXT_TELEMETRY_DISABLED`                | 否         | 是否关闭 Next 遥测上报                     | `1`                           |
 | `REDIS_URL`                              | 按需       | Redis 地址（仅使用 Redis 限流存储时需要）  | `redis://127.0.0.1:6379`      |
+| `AUTO_BACKUP_ENABLED`                    | 否         | 是否开启应用内自动备份                     | `0`（默认关闭）               |
+| `AUTO_BACKUP_SCHEDULE`                   | 否         | 自动备份频率与保留策略配置                 | 见下方示例                    |
+| `AUTO_BACKUP_LOG_RETENTION`              | 否         | 日志保留时长                               | `365d`                        |
+| `AUTO_BACKUP_S3`                         | 否         | S3 / 兼容对象存储配置                      | 见下方示例                    |
 
 ### 推荐的本地 `.env` 示例
 
@@ -77,6 +81,18 @@ NEXT_TELEMETRY_DISABLED="1"
 
 # 可选：仅在你启用 Redis 限流存储时使用
 REDIS_URL="redis://127.0.0.1:6379"
+
+# 自动备份（默认关闭）
+AUTO_BACKUP_ENABLED="0"
+
+# 频率与保留策略
+AUTO_BACKUP_SCHEDULE='{"hourly":{"every":1,"retain":48},"daily":{"every":1,"retain":30},"weekly":{"every":1,"retain":12},"monthly":{"every":1,"retain":12}}'
+
+# 日志保留时长
+AUTO_BACKUP_LOG_RETENTION="365d"
+
+# S3 / 兼容对象存储（可选）
+AUTO_BACKUP_S3='{"endpoint":"https://s3.example.com","region":"auto","bucket":"example-backups","accessKeyId":"your_access_key_id","secretAccessKey":"your_secret_access_key","prefix":"geshu-next-template","forcePathStyle":true}'
 ```
 
 ### Better Auth URL 解析规则
@@ -91,6 +107,139 @@ REDIS_URL="redis://127.0.0.1:6379"
 1. 浏览器当前域名 `window.location.origin`
 2. `NEXT_PUBLIC_BETTER_AUTH_URL`
 3. 开发环境兜底 `http://localhost:3000`
+
+## 自动备份
+
+项目支持在应用启动时通过 `instrumentation.ts` 自动启动 SQLite 备份调度器。
+
+适用前提：
+
+- 当前部署为单实例或单主实例
+- 应用进程是常驻运行，而不是短生命周期 Serverless
+- 生产环境的 `/app/data` 已挂载为持久化目录
+
+### 默认策略
+
+- 每小时 1 份，保留 48 小时
+- 每天 1 份，保留 30 天
+- 每周 1 份，保留 12 周
+- 每月 1 份，保留 12 个月
+- `OperationLog` 和 `ErrorLog` 默认只保留 1 年内数据
+
+### 环境变量
+
+#### `AUTO_BACKUP_ENABLED`
+
+是否开启自动备份，默认关闭。
+
+支持取值：
+
+- `1`
+- `0`
+- `true`
+- `false`
+- `yes`
+- `no`
+- `on`
+- `off`
+
+#### `AUTO_BACKUP_SCHEDULE`
+
+使用 JSON 字符串配置备份频率与保留数量。
+
+示例：
+
+```env
+AUTO_BACKUP_SCHEDULE='{"hourly":{"every":1,"retain":48},"daily":{"every":1,"retain":30},"weekly":{"every":1,"retain":12},"monthly":{"every":1,"retain":12}}'
+```
+
+字段说明：
+
+- `every`: 每隔多少个周期执行一次
+- `retain`: 当前层级最多保留多少份本地备份
+
+周期说明：
+
+- `hourly.every = 2` 表示每 2 小时备份一次
+- `daily.every = 3` 表示每 3 天备份一次
+- `weekly.every = 2` 表示每 2 周备份一次
+- `monthly.every = 3` 表示每 3 个月备份一次
+
+如果该值为空、不是合法 JSON、字段缺失或字段不是正整数，会回退到默认策略。
+
+#### `AUTO_BACKUP_LOG_RETENTION`
+
+日志保留时长，默认 `365d`。
+
+支持格式：
+
+- `30d`
+- `52w`
+- `24h`
+- `90m`
+
+无效时会回退到 `365d`。
+
+#### `AUTO_BACKUP_S3`
+
+使用 JSON 字符串配置 S3 或兼容对象存储。
+
+示例：
+
+```env
+AUTO_BACKUP_S3='{"endpoint":"https://s3.example.com","region":"auto","bucket":"example-backups","accessKeyId":"your_access_key_id","secretAccessKey":"your_secret_access_key","prefix":"geshu-next-template","forcePathStyle":true}'
+```
+
+字段说明：
+
+- `endpoint`: 对象存储地址
+- `region`: 区域
+- `bucket`: 桶名
+- `accessKeyId`: 访问密钥 ID
+- `secretAccessKey`: 访问密钥 Secret
+- `prefix`: 可选，对象前缀
+- `forcePathStyle`: 可选，兼容部分 S3 网关
+
+如果该值缺失或无效，则只做本地备份，不上传对象存储。
+
+### 目录结构
+
+自动备份会在 `data/backups` 下创建目录：
+
+```text
+data/backups/
+├─ hourly/
+├─ daily/
+├─ weekly/
+├─ monthly/
+├─ manifests/
+├─ tmp/
+└─ state.json
+```
+
+说明：
+
+- 各层级目录保存对应备份文件
+- `manifests` 保存每份备份的元数据
+- `tmp` 保存临时压缩文件
+- `state.json` 用于避免同一周期重复备份
+
+### 工作方式
+
+1. 应用启动时注册备份调度器
+2. 调度器每分钟检查一次是否进入新的小时 / 日 / 周 / 月周期
+3. 命中周期后使用 SQLite 热备份生成一致性快照
+4. 备份成功后执行完整性校验
+5. 然后按本地保留策略清理旧备份
+6. 每天执行一次日志清理
+7. 如果 `AUTO_BACKUP_S3` 有效，再将备份压缩后上传到对象存储
+
+### 注意事项
+
+- 该方案适合单实例常驻进程
+- 如果未来部署为多实例，建议补充分布式锁，避免重复备份
+- 如果应用长时间停机，错过的周期不会逐个补跑，只会在恢复后补当前周期
+- 恢复时建议优先从本地备份恢复，远端对象存储作为灾备副本
 
 ## Server Action 限流
 
