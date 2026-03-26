@@ -12,8 +12,9 @@
         "format": "prettier --write .",
         "fg": "pnpm run format && git add . && git commit -m \"✨feature: format\"",
         "prepare": "husky",
-        "db:dev": "cross-env NODE_ENV=development prisma db push",
-        "db:prod": "cross-env NODE_ENV=production prisma db push",
+        "migrate": "cross-env NODE_ENV=development prisma migrate dev",
+        "db:dev": "cross-env NODE_ENV=development prisma migrate deploy",
+        "db:prod": "cross-env NODE_ENV=production prisma migrate deploy",
         "studio:dev": "cross-env NODE_ENV=development prisma studio",
         "studio:prod": "cross-env NODE_ENV=production prisma studio"
     },

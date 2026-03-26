@@ -35,6 +35,10 @@ const navs: NavItem[] = [
         name: "镜像管理",
     },
     {
+        href: "/profile",
+        name: "个人中心",
+    },
+    {
         href: "/user",
         name: "用户管理",
         filter: isAdmin,

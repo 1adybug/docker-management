@@ -31,7 +31,7 @@ import { getSortOrder } from "@/utils/getSortOrder"
 const Page: FC = () => {
     const [query, setQuery] = transformState(
         useQueryState({
-            keys: ["id", "name", "email", "phoneNumber"],
+            keys: ["id", "name", "nickname", "email", "phoneNumber"],
             parse: {
                 createdBefore: naturalParser,
                 createdAfter: naturalParser,
@@ -99,6 +99,13 @@ const Page: FC = () => {
             align: "center",
             sorter: true,
             sortOrder: getSortOrder(query, "name"),
+        },
+        {
+            title: "昵称",
+            dataIndex: "nickname",
+            align: "center",
+            sorter: true,
+            sortOrder: getSortOrder(query, "nickname"),
         },
         {
             title: "手机号",
@@ -222,6 +229,8 @@ const Page: FC = () => {
         ...rest,
     })
 
+    console.log(data)
+
     const { mutateAsync: unbanUserAsync, isPending: isUnbanUserPending } = useUnbanUser()
     const { mutateAsync: deleteUserAsync, isPending: isDeleteUserPending } = useDeleteUser()
 
@@ -248,6 +257,9 @@ const Page: FC = () => {
             <div className="flex-none px-4">
                 <Form<FormParams> name="query-user-form" form={form} className="gap-y-4" layout="inline" onFinish={setQuery}>
                     <FormItem<FormParams> name="name" label="用户名">
+                        <Input />
+                    </FormItem>
+                    <FormItem<FormParams> name="nickname" label="昵称">
                         <Input />
                     </FormItem>
                     <FormItem<FormParams> name="phoneNumber" label="手机号">

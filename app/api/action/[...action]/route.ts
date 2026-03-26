@@ -28,8 +28,10 @@ import { renameDockerImage } from "@/shared/renameDockerImage"
 import { runComposeProject } from "@/shared/runComposeProject"
 import { runDockerContainer } from "@/shared/runDockerContainer"
 import { runProject } from "@/shared/runProject"
+import { sendCurrentUserPhoneNumberOtp } from "@/shared/sendCurrentUserPhoneNumberOtp"
 import { sendPhoneNumberOtp } from "@/shared/sendPhoneNumberOtp"
 import { unbanUser } from "@/shared/unbanUser"
+import { updateCurrentUserProfile } from "@/shared/updateCurrentUserProfile"
 import { updateProject } from "@/shared/updateProject"
 import { updateUser } from "@/shared/updateUser"
 import { uploadDockerImage } from "@/shared/uploadDockerImage"
@@ -71,8 +73,10 @@ registerRoute(renameDockerImage)
 registerRoute(runComposeProject)
 registerRoute(runDockerContainer)
 registerRoute(runProject)
+registerRoute(sendCurrentUserPhoneNumberOtp)
 registerRoute(sendPhoneNumberOtp)
 registerRoute(unbanUser)
+registerRoute(updateCurrentUserProfile)
 registerRoute(updateProject)
 registerRoute(updateUser)
 registerRoute(uploadDockerImage)

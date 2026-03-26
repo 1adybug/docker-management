@@ -26,7 +26,7 @@ export const createFirstUser = createSharedFn({
         message: "初始化尝试过于频繁，请稍后再试",
         getKey: getCreateFirstUserRateLimitKey,
     }),
-})(async function createFirstUser({ name, phoneNumber }) {
+})(async function createFirstUser({ name, nickname, phoneNumber }) {
     const count = await prisma.user.count()
     if (count > 0) throw new ClientError("禁止操作")
 
@@ -38,13 +38,13 @@ export const createFirstUser = createSharedFn({
                 password: getRandomPassword(),
                 role: UserRole.管理员,
                 data: {
+                    nickname,
                     phoneNumber,
                 },
             },
         })
 
         const user2 = await prisma.user.findUniqueOrThrow({ where: { id: user.id } })
-
         return user2
     } catch (error) {
         throw new ClientError({

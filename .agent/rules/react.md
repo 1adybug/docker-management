@@ -154,7 +154,11 @@ description:
             doSomething()
         }
 
-        return <div onClick={onClick} {...rest}>Hello World!</div>
+        return (
+            <div onClick={onClick} {...rest}>
+                Hello World!
+            </div>
+        )
     }
     ```
 

@@ -96,8 +96,9 @@ let globalRateLimitOptions: RateLimitOptions = { ...defaultGlobalRateLimitOption
 let globalRateLimitStore: RateLimitStore = createMemoryRateLimitStore()
 
 const rateLimitEnabledEnv = process.env.RATE_LIMIT_ENABLED
+const isDevelopment = process.env.NODE_ENV === "development"
 
-let globalRateLimitEnabled = rateLimitEnabledEnv === undefined ? true : getBooleanFromEnv(rateLimitEnabledEnv)
+let globalRateLimitEnabled = rateLimitEnabledEnv === undefined ? !isDevelopment : getBooleanFromEnv(rateLimitEnabledEnv)
 
 function normalizePositiveInteger(value: number | undefined, fallback: number) {
     if (typeof value !== "number" || !Number.isFinite(value)) return fallback

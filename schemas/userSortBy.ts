@@ -1,7 +1,7 @@
 import { getParser } from "."
 import { z } from "zod/v4"
 
-export const userSortBySchema = z.enum(["name", "email", "phoneNumber", "role", "createdAt", "updatedAt", "banned"], {
+export const userSortBySchema = z.enum(["name", "nickname", "email", "phoneNumber", "role", "createdAt", "updatedAt", "banned"], {
     message: "无效的排序字段",
 })
 

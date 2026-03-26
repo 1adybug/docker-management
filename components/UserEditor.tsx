@@ -11,6 +11,7 @@ import { useGetUser } from "@/hooks/useGetUser"
 import { useUpdateUser } from "@/hooks/useUpdateUser"
 
 import { AddUserParams } from "@/schemas/addUser"
+import { nicknameSchema } from "@/schemas/nickname"
 import { phoneNumberSchema } from "@/schemas/phoneNumber"
 import { UpdateUserParams } from "@/schemas/updateUser"
 import { usernameSchema } from "@/schemas/username"
@@ -79,6 +80,9 @@ const UserEditor: FC<UserEditorProps> = ({
         >
             <Form<AddUserParams> name="user-editor" form={form} disabled={isRequesting} labelCol={{ flex: "56px" }} onFinish={onFinish}>
                 <FormItem<AddUserParams> name="name" label="用户名" rules={[schemaToRule(usernameSchema)]}>
+                    <Input autoComplete="off" allowClear />
+                </FormItem>
+                <FormItem<AddUserParams> name="nickname" label="昵称" rules={[schemaToRule(nicknameSchema)]}>
                     <Input autoComplete="off" allowClear />
                 </FormItem>
                 <FormItem<AddUserParams> name="phoneNumber" label="手机号" rules={[schemaToRule(phoneNumberSchema)]}>

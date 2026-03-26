@@ -38,6 +38,14 @@ export const auth = betterAuth({
     secret: authSecret,
     ...(authBaseUrl ? { baseURL: authBaseUrl } : {}),
     database: prismaAdapter(prisma, { provider: "sqlite" }),
+    user: {
+        additionalFields: {
+            nickname: {
+                type: "string",
+                required: true,
+            },
+        },
+    },
     advanced: {
         cookiePrefix: CookiePrefix,
     },

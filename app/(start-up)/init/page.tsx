@@ -11,6 +11,7 @@ import { schemaToRule } from "soda-antd"
 import { useCreateFirstUser } from "@/hooks/useCreateFirstUser"
 
 import { CreateFirstUserParams } from "@/schemas/createFirstUser"
+import { nicknameSchema } from "@/schemas/nickname"
 import { phoneNumberSchema } from "@/schemas/phoneNumber"
 import { usernameSchema } from "@/schemas/username"
 
@@ -28,6 +29,9 @@ const Page: FC = () => {
         <Form<CreateFirstUserParams> name="create-first-user-form" form={form} className="!mx-auto flex w-64 flex-col" onFinish={mutateAsync}>
             <FormItem<CreateFirstUserParams> name="name" rules={[schemaToRule(usernameSchema)]}>
                 <Input placeholder="用户名" autoComplete="off" />
+            </FormItem>
+            <FormItem<CreateFirstUserParams> name="nickname" rules={[schemaToRule(nicknameSchema)]}>
+                <Input placeholder="昵称" autoComplete="off" />
             </FormItem>
             <FormItem<CreateFirstUserParams> name="phoneNumber" rules={[schemaToRule(phoneNumberSchema)]}>
                 <Input placeholder="手机号" autoComplete="off" />

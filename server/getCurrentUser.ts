@@ -1,8 +1,8 @@
 import { headers } from "next/headers"
 
-import { User } from "@/prisma/generated/client"
+import { prisma } from "@/prisma"
 
-import { UserRole } from "@/schemas/userRole"
+import { User } from "@/prisma/generated/client"
 
 import { auth } from "./auth"
 
@@ -12,15 +12,10 @@ export async function getCurrentUser(): Promise<User | undefined> {
     })
     const user = session?.user
     if (!user) return undefined
-    const { phoneNumber, image = null, role = UserRole.用户, banned = false, banReason = null, banExpires = null, phoneNumberVerified = false, ...rest } = user
-    return {
-        banned,
-        banExpires,
-        banReason,
-        role: role as UserRole,
-        image,
-        phoneNumber: phoneNumber!,
-        phoneNumberVerified,
-        ...rest,
-    }
+
+    const currentUser = await prisma.user.findUnique({
+        where: { id: user.id },
+    })
+
+    return currentUser || undefined
 }

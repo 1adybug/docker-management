@@ -20,6 +20,7 @@ export const queryUser = createSharedFn({
 })(async function queryUser({
     id,
     name = "",
+    nickname = "",
     email = "",
     phoneNumber = "",
     createdAfter,
@@ -33,6 +34,7 @@ export const queryUser = createSharedFn({
 }) {
     const phoneNumberItems = phoneNumber.split(/\s+/).filter(Boolean)
     const nameItems = name.split(/\s+/).filter(Boolean)
+    const nicknameItems = nickname.split(/\s+/).filter(Boolean)
     const emailItems = email.split(/\s+/).filter(Boolean)
 
     const where = id
@@ -49,6 +51,11 @@ export const queryUser = createSharedFn({
               AND: [
                   ...nameItems.map(item => ({
                       name: {
+                          contains: item,
+                      },
+                  })),
+                  ...nicknameItems.map(item => ({
+                      nickname: {
                           contains: item,
                       },
                   })),
@@ -72,7 +79,15 @@ export const queryUser = createSharedFn({
     ]
 
     if (sortBy !== "createdAt") {
-        if (sortBy === "name" || sortBy === "email" || sortBy === "phoneNumber" || sortBy === "role" || sortBy === "updatedAt" || sortBy === "banned") {
+        if (
+            sortBy === "name" ||
+            sortBy === "nickname" ||
+            sortBy === "email" ||
+            sortBy === "phoneNumber" ||
+            sortBy === "role" ||
+            sortBy === "updatedAt" ||
+            sortBy === "banned"
+        ) {
             orderBy.unshift({
                 [sortBy]: sortOrder,
             })

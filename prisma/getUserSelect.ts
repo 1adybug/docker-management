@@ -18,6 +18,7 @@ export const defaultUserSelect = getUserSelect({
     phoneNumber: true,
     role: true,
     name: true,
+    nickname: true,
     image: true,
     emailVerified: true,
     phoneNumberVerified: true,

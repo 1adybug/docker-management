@@ -14,7 +14,7 @@ export const addUser = createSharedFn({
     name: "addUser",
     schema: addUserSchema,
     filter: isAdmin,
-})(async function addUser({ name, phoneNumber, role }) {
+})(async function addUser({ name, nickname, phoneNumber, role }) {
     const phoneNumberCount = await prisma.user.count({ where: { phoneNumber } })
     if (phoneNumberCount > 0) throw new ClientError("手机号已被注册")
 
@@ -30,13 +30,13 @@ export const addUser = createSharedFn({
                 password: getRandomPassword(),
                 role,
                 data: {
+                    nickname,
                     phoneNumber,
                 },
             },
         })
 
         const user2 = await prisma.user.findUniqueOrThrow({ where: { id: user.id } })
-
         return user2
     } catch (error) {
         throw new ClientError({

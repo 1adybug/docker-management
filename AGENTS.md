@@ -3,10 +3,9 @@
 ## Style Rules
 
 - 页面的 CSS 样式你应该尽量通过以下两种方式实现：
-
-  1. 对于 `Ant Design` 或者 `@heroui/react` 等组件库提供的组件，请在组件库提供的 `ConfigProvider` 等类似的全局配置组件进行修改，如果你需要修改某个组件的全局样式，你可以在 `@/components/Registry.tsx` 中进行修改，它包裹了整个应用，如果你只需要单独修改某个位置的某个组件，请使用 `ConfigProvider` 包裹你需要修改的组件
-  2. 对于一般样式，优先使用组件的 `className` 或者 `classNames` 或其他类名属性 + `tailwindcss` 实现
-  3. 有且仅有以上两种方式无法实现时，请你使用 `style` 属性或者在 css 文件中定义样式
+    1. 对于 `Ant Design` 或者 `@heroui/react` 等组件库提供的组件，请在组件库提供的 `ConfigProvider` 等类似的全局配置组件进行修改，如果你需要修改某个组件的全局样式，你可以在 `@/components/Registry.tsx` 中进行修改，它包裹了整个应用，如果你只需要单独修改某个位置的某个组件，请使用 `ConfigProvider` 包裹你需要修改的组件
+    2. 对于一般样式，优先使用组件的 `className` 或者 `classNames` 或其他类名属性 + `tailwindcss` 实现
+    3. 有且仅有以上两种方式无法实现时，请你使用 `style` 属性或者在 css 文件中定义样式
 
 - 当你使用 `flex` 布局时，对于宽度或者高度需要保持固定的子元素设置 `flex-none`
 - 对于 `React` 组件（也就是非 `div` 等 `html` 元素）的样式，请谨慎使用 `!important` 修改样式，请优先使用 `ConfigProvider` 或者组件暴露的属性（比如 `radius` / `shape`等）修改样式，最后再考虑使用 `!important`
@@ -292,7 +291,11 @@
             doSomething()
         }
 
-        return <div onClick={onClick} {...rest}>Hello World!</div>
+        return (
+            <div onClick={onClick} {...rest}>
+                Hello World!
+            </div>
+        )
     }
     ```
 
@@ -374,7 +377,6 @@
 
         ```typescript
         import { createUseQuery } from "soda-tanstack-query"
-
         import { queryUser } from "@/apis/queryUser"
 
         export const useQueryUser = createUseQuery({
@@ -389,7 +391,6 @@
         ```typescript
         import { isNonNullable } from "deepsea-tools"
         import { createUseQuery } from "soda-tanstack-query"
-
         import { getUser } from "@/apis/getUser"
 
         export function getUserOptional(id?: string | undefined) {
@@ -406,7 +407,6 @@
 
         ```typescript
         import { useMutation, UseMutationOptions } from "@tanstack/react-query"
-        
         import { addUser } from "@/apis/addUser"
 
         // UseMutationOptions 的泛型参数为 api 函数的返回值类型、错误类型（默认 `Error`）、请求参数类型、上下文类型
@@ -433,6 +433,7 @@
                 onSuccess(data, variables, onMutateResult, context) {
                     // 成功后刷新 user 相关的 query
                     context.client.invalidateQueries({ queryKey: ["query-user"] })
+
                     context.client.invalidateQueries({ queryKey: ["get-user", data.id] })
 
                     message.open({
@@ -468,11 +469,13 @@
 1. 在 `@/schemas` 目录下创建一个名为 `addUser.ts` 的文件，它的内容应该如下：
 
     ```typescript
+    import { getParser } from "."
     import { z } from "zod"
 
-    import { getParser } from "."
     import { phoneSchema } from "./phone"
+
     import { roleSchema } from "./role"
+
     import { usernameSchema } from "./username"
 
     export const addUserSchema = z.object(
@@ -493,11 +496,8 @@
 
     ```typescript
     import { prisma } from "@/prisma"
-
     import { User } from "@/prisma/generated/client"
-    
     import { AddUserParams } from "@/schemas/addUser"
-
     import { ClientError } from "@/utils/clientError"
 
     export async function addUser({ username, phone }: AddUserParams) {
@@ -528,9 +528,7 @@
     "use server"
 
     import { addUserSchema } from "@/schemas/addUser"
-
     import { createResponseFn } from "@/server/createResponseFn"
-
     import { addUser } from "@/shared/addUser"
 
     export const addUserAction = createResponseFn({
@@ -540,34 +538,17 @@
     })
     ```
 
-4. 在 `@/hooks` 目录下创建一个名为 `useAddUser.ts` 的文件，创建它的规则与 `api.mdc` 中创建 `hook` 的规则一致，唯一不同的地方是，你需要先使用 `createRequestFn` 创建 `queryFn` 或者 `mutationFn` 函数，命名为 `addUserClient` 并且导出，例如：
+4. 在 `@/presets` 目录下创建一个名为 `createUseAddUser.ts` 的文件，它的内容应该如下：
 
     ```typescript
     import { useId } from "react"
 
-    import { useMutation, UseMutationOptions } from "@tanstack/react-query"
-    import { createRequestFn } from "deepsea-tools"
+    import { withUseMutationDefaults } from "soda-tanstack-query"
+    import { addUser } from "@/shared/addUser"
 
-    import { addUserAction } from "@/actions/addUser"
-
-    import { addUserSchema } from "@/schemas/addUser"
-
-    export const addUserClient = createRequestFn({
-        fn: addUserAction,
-        // 如果这个函数的参数存在 schema，你就传递 schema 参数
-        schema: addUserSchema,
-    })
-
-    export interface UseAddUserParams<TOnMutateResult = unknown> extends Omit<
-        UseMutationOptions<Awaited<ReturnType<typeof addUserClient>>, Error, Parameters<typeof addUserClient>[0], TOnMutateResult>,
-        "mutationFn"
-    > {}
-
-    export function useAddUser<TOnMutateResult = unknown>({ onMutate, onSuccess, onError, onSettled, ...rest }: UseAddUserParams<TOnMutateResult> = {}) {
+    export const createUseAddUser = withUseMutationDefaults<typeof addUser>(() => {
         const key = useId()
-
-        return useMutation({
-            mutationFn: addUserClient,
+        return {
             onMutate(variables, context) {
                 message.open({
                     key,
@@ -575,11 +556,11 @@
                     content: "新增用户中...",
                     duration: 0,
                 })
-
-                return onMutate?.(variables, context) as TOnMutateResult | Promise<TOnMutateResult>
             },
             onSuccess(data, variables, onMutateResult, context) {
+                // 请在此刷新其他需要刷新的关联的 query
                 context.client.invalidateQueries({ queryKey: ["query-user"] })
+
                 context.client.invalidateQueries({ queryKey: ["get-user", data.id] })
 
                 message.open({
@@ -587,20 +568,25 @@
                     type: "success",
                     content: "新增用户成功",
                 })
-
-                return onSuccess?.(data, variables, onMutateResult, context)
             },
             onError(error, variables, onMutateResult, context) {
                 message.destroy(key)
+            },
+            onSettled(data, error, variables, onMutateResult, context) {},
+        }
+    })
+    ```
 
-                return onError?.(error, variables, onMutateResult, context)
-            },
-            onSettled(data, error, variables, onMutateResult, context) {
-                return onSettled?.(data, error, variables, onMutateResult, context)
-            },
-            ...rest,
-        })
-    }
+5. 在 `@/hooks` 目录下创建一个名为 `useAddUser.ts` 的文件，它的内容应该如下：
+
+    ```typescript
+    import { createRequestFn } from "deepsea-tools"
+    import { addUserAction } from "@/actions/addUser"
+    import { createUseAddUser } from "@/presets/createUseAddUser"
+
+    export const addUserClient = createRequestFn(addUserAction)
+
+    export const useAddUser = createUseAddUser(addUserClient)
     ```
 
 ### Schema
@@ -608,9 +594,8 @@
 当你需要创建一个 `schema` 时，如果是一个对象或者数组，你应该将它们独立出来作为一个文件，而不是直接在 `schema` 中定义，例如：
 
 ```typescript
-import { z } from "zod"
-
 import { getParser } from "."
+import { z } from "zod"
 
 export const addUserSchema = z.object(
     {
@@ -633,9 +618,8 @@ export const addUserParser = getParser(addUserSchema)
 你应该将 `usernameSchema` 和 `phoneSchema` 独立出来成为两个独立的文件，便于复用，而不是直接在 `schema` 中定义，例如：
 
 ```typescript
-import { z } from "zod"
-
 import { getParser } from "."
+import { z } from "zod"
 
 export const usernameSchema = z
     .string({ message: "无效的用户名" })

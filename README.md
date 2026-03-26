@@ -24,26 +24,28 @@ git remote set-url --push template no_push://template
 
 ### 变量清单
 
-| 变量名                        | 必填       | 说明                                                     | 示例 / 默认值                 |
-| ----------------------------- | ---------- | -------------------------------------------------------- | ----------------------------- |
-| `COOKIE_PREFIX`               | 是         | 登录相关 Cookie 前缀                                     | `geshu`                       |
-| `DEFAULT_EMAIL_DOMAIN`        | 是         | 临时邮箱域名（用于手机号生成邮箱）                       | `example.com`                 |
-| `BETTER_AUTH_SECRET`          | 是         | Better Auth 签名密钥                                     | `your_better_auth_secret`     |
-| `BETTER_AUTH_URL`             | 按需       | 服务端 Better Auth 基础地址                              | `https://example.com`         |
-| `NEXT_PUBLIC_BETTER_AUTH_URL` | 按需       | 客户端 Better Auth 基础地址                              | `https://example.com`         |
-| `IS_INTRANET`                 | 否         | 是否走内网短信通道                                       | `0`（默认关闭）               |
-| `ALIYUN_ACCESS_KEY_ID`        | 按需       | 阿里云短信密钥 ID（公网短信时需要）                      | `your_key_id`                 |
-| `ALIYUN_ACCESS_KEY_SECRET`    | 按需       | 阿里云短信密钥 Secret（公网短信时需要）                  | `your_key_secret`             |
-| `QJP_SMS_URL`                 | 按需       | 内网短信服务地址（内网短信时需要）                       | `http://sms.example.com/send` |
-| `RATE_LIMIT_ENABLED`          | 否         | 全局限流开关                                             | `1`（默认开启）               |
-| `DOCKER_PATH_MAPPINGS`        | 否         | 宿主机路径到容器路径的映射，用于读取外部 compose 文件    | `/srv/app=>/host-app`         |
-| `PROJECTS_ROOT`               | 否         | 平台项目在当前运行环境可访问的根目录                     | `/app/projects`               |
-| `PROJECTS_HOST_ROOT`          | 否         | 平台项目在宿主机上的真实根目录，默认等于 `PROJECTS_ROOT` | `/home/projects`              |
-| `NEXT_OUTPUT`                 | 否         | Next 构建输出模式                                        | `standalone` / `export`       |
-| `DATABASE_URL`                | 按部署方式 | 数据库连接字符串（如改用外部数据库时使用）               | `postgresql://...`            |
-| `JWT_SECRET`                  | 按认证配置 | 兼容旧认证方案时使用（当前默认不依赖）                   | `your_jwt_secret`             |
-| `NEXT_TELEMETRY_DISABLED`     | 否         | 是否关闭 Next 遥测上报                                   | `1`                           |
-| `REDIS_URL`                   | 按需       | Redis 地址（仅使用 Redis 限流存储时需要）                | `redis://127.0.0.1:6379`      |
+| 变量名                                   | 必填       | 说明                                                     | 示例 / 默认值                 |
+| ---------------------------------------- | ---------- | -------------------------------------------------------- | ----------------------------- |
+| `COOKIE_PREFIX`                          | 是         | 登录相关 Cookie 前缀                                     | `geshu`                       |
+| `DEFAULT_EMAIL_DOMAIN`                   | 是         | 临时邮箱域名（用于手机号生成邮箱）                       | `example.com`                 |
+| `BETTER_AUTH_SECRET`                     | 是         | Better Auth 签名密钥                                     | `your_better_auth_secret`     |
+| `BETTER_AUTH_URL`                        | 按需       | 服务端 Better Auth 基础地址                              | `https://example.com`         |
+| `NEXT_PUBLIC_BETTER_AUTH_URL`            | 按需       | 客户端 Better Auth 基础地址                              | `https://example.com`         |
+| `IS_INTRANET`                            | 否         | 是否走内网短信通道                                       | `0`（默认关闭）               |
+| `ALIYUN_ACCESS_KEY_ID`                   | 按需       | 阿里云短信密钥 ID（公网短信时需要）                      | `your_key_id`                 |
+| `ALIYUN_ACCESS_KEY_SECRET`               | 按需       | 阿里云短信密钥 Secret（公网短信时需要）                  | `your_key_secret`             |
+| `QJP_SMS_URL`                            | 按需       | 内网短信服务地址（内网短信时需要）                       | `http://sms.example.com/send` |
+| `RATE_LIMIT_ENABLED`                     | 否         | 全局限流开关                                             | `1`（默认开启）               |
+| `ALLOW_CURRENT_USER_UPDATE_NICKNAME`     | 否         | 是否允许用户自行修改昵称                                 | `1`（默认开启）               |
+| `ALLOW_CURRENT_USER_UPDATE_PHONE_NUMBER` | 否         | 是否允许用户自行修改手机号                               | `1`（默认开启）               |
+| `DOCKER_PATH_MAPPINGS`                   | 否         | 宿主机路径到容器路径的映射，用于读取外部 compose 文件    | `/srv/app=>/host-app`         |
+| `PROJECTS_ROOT`                          | 否         | 平台项目在当前运行环境可访问的根目录                     | `/app/projects`               |
+| `PROJECTS_HOST_ROOT`                     | 否         | 平台项目在宿主机上的真实根目录，默认等于 `PROJECTS_ROOT` | `/home/projects`              |
+| `NEXT_OUTPUT`                            | 否         | Next 构建输出模式                                        | `standalone` / `export`       |
+| `DATABASE_URL`                           | 按部署方式 | 数据库连接字符串（如改用外部数据库时使用）               | `postgresql://...`            |
+| `JWT_SECRET`                             | 按认证配置 | 兼容旧认证方案时使用（当前默认不依赖）                   | `your_jwt_secret`             |
+| `NEXT_TELEMETRY_DISABLED`                | 否         | 是否关闭 Next 遥测上报                                   | `1`                           |
+| `REDIS_URL`                              | 按需       | Redis 地址（仅使用 Redis 限流存储时需要）                | `redis://127.0.0.1:6379`      |
 
 ### 推荐的本地 `.env` 示例
 
@@ -67,6 +69,15 @@ QJP_SMS_URL=""
 
 # 限流配置
 RATE_LIMIT_ENABLED="1"
+
+# 用户资料自助修改
+ALLOW_CURRENT_USER_UPDATE_NICKNAME="1"
+ALLOW_CURRENT_USER_UPDATE_PHONE_NUMBER="1"
+
+# 容器项目目录与宿主机路径映射（按需）
+DOCKER_PATH_MAPPINGS=""
+PROJECTS_ROOT="/app/projects"
+PROJECTS_HOST_ROOT="/app/projects"
 
 # 构建与运行
 NEXT_OUTPUT="standalone"

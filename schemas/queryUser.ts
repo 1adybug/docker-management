@@ -15,6 +15,7 @@ export const queryUserSchema = z.object(
     {
         id: userIdSchema.optional(),
         name: z.string({ message: "无效的用户名" }).trim().optional(),
+        nickname: z.string({ message: "无效的昵称" }).trim().optional(),
         email: z.string({ message: "无效的邮箱" }).trim().optional(),
         phoneNumber: z.string({ message: "无效的手机号" }).trim().optional(),
         createdBefore: createdBeforeSchema.optional(),

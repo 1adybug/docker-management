@@ -69,8 +69,8 @@ RUN mkdir -p /app/data /app/projects && chown -R nextjs:nodejs /app/data /app/pr
 RUN npm install -g "prisma@$(node -p "require('./prisma-package.json').version")" --registry=https://registry.npmmirror.com \
     && rm ./prisma-package.json
 
-# 创建启动脚本，先以 root 执行 prisma db push，然后切换用户运行应用
-RUN printf '#!/bin/sh\nset -eu\nmkdir -p /app/data /app/projects\nchown -R nextjs:nodejs /app/data /app/projects\nchmod -R u+rwX,g+rwX /app/data /app/projects\nif [ -S /var/run/docker.sock ]; then\n    docker_gid=$(stat -c "%%g" /var/run/docker.sock)\n    docker_group=$(getent group "${docker_gid}" | cut -d: -f1 || true)\n    if [ -z "${docker_group}" ]; then\n        docker_group=dockerhost\n        groupadd --system --gid "${docker_gid}" "${docker_group}"\n    fi\n    usermod -aG "${docker_group}" nextjs\nfi\nprisma db push\nchown -R nextjs:nodejs /app/data /app/projects\nchmod -R u+rwX,g+rwX /app/data /app/projects\nexec gosu nextjs node server.js\n' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+# 创建启动脚本，先以 root 执行 Prisma 迁移，然后切换用户运行应用
+RUN printf '#!/bin/sh\nset -eu\nmkdir -p /app/data /app/projects\nchown -R nextjs:nodejs /app/data /app/projects\nchmod -R u+rwX,g+rwX /app/data /app/projects\nif [ -S /var/run/docker.sock ]; then\n    docker_gid=$(stat -c "%%g" /var/run/docker.sock)\n    docker_group=$(getent group "${docker_gid}" | cut -d: -f1 || true)\n    if [ -z "${docker_group}" ]; then\n        docker_group=dockerhost\n        groupadd --system --gid "${docker_gid}" "${docker_group}"\n    fi\n    usermod -aG "${docker_group}" nextjs\nfi\nprisma migrate deploy\nchown -R nextjs:nodejs /app/data /app/projects\nchmod -R u+rwX,g+rwX /app/data /app/projects\nexec gosu nextjs node server.js\n' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
 
 EXPOSE 3000
 

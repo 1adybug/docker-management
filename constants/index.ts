@@ -43,3 +43,9 @@ export const DockerContainerStatus = {
 } as const
 
 export type DockerContainerStatus = (typeof DockerContainerStatus)[keyof typeof DockerContainerStatus]
+
+export const AllowCurrentUserUpdateNickname =
+    process.env.ALLOW_CURRENT_USER_UPDATE_NICKNAME === undefined ? true : getBooleanFromEnv(process.env.ALLOW_CURRENT_USER_UPDATE_NICKNAME)
+
+export const AllowCurrentUserUpdatePhoneNumber =
+    process.env.ALLOW_CURRENT_USER_UPDATE_PHONE_NUMBER === undefined ? true : getBooleanFromEnv(process.env.ALLOW_CURRENT_USER_UPDATE_PHONE_NUMBER)

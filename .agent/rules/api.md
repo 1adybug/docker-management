@@ -65,7 +65,6 @@ description:
 
         ```typescript
         import { createUseQuery } from "soda-tanstack-query"
-
         import { queryUser } from "@/apis/queryUser"
 
         export const useQueryUser = createUseQuery({
@@ -80,7 +79,6 @@ description:
         ```typescript
         import { isNonNullable } from "deepsea-tools"
         import { createUseQuery } from "soda-tanstack-query"
-
         import { getUser } from "@/apis/getUser"
 
         export function getUserOptional(id?: string | undefined) {
@@ -97,7 +95,6 @@ description:
 
         ```typescript
         import { useMutation, UseMutationOptions } from "@tanstack/react-query"
-        
         import { addUser } from "@/apis/addUser"
 
         // UseMutationOptions 的泛型参数为 api 函数的返回值类型、错误类型（默认 `Error`）、请求参数类型、上下文类型
@@ -124,6 +121,7 @@ description:
                 onSuccess(data, variables, onMutateResult, context) {
                     // 成功后刷新 user 相关的 query
                     context.client.invalidateQueries({ queryKey: ["query-user"] })
+
                     context.client.invalidateQueries({ queryKey: ["get-user", data.id] })
 
                     message.open({

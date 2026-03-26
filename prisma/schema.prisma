@@ -2,8 +2,8 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-    provider               = "prisma-client"
-    output                 = "generated"
+    provider = "prisma-client"
+    output   = "generated"
 }
 
 datasource db {
@@ -51,6 +51,7 @@ model User {
     createdAt           DateTime       @default(now())
     updatedAt           DateTime       @updatedAt
     name                String         @unique
+    nickname            String
     email               String
     emailVerified       Boolean        @default(false)
     image               String?
