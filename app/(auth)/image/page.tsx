@@ -3,6 +3,7 @@
 import { FC, useEffect, useMemo, useRef, useState } from "react"
 
 import { IconBrandDocker, IconBrandReact, IconCoffee, IconCopy, IconPencil, IconTrash } from "@tabler/icons-react"
+import { useQueryClient } from "@tanstack/react-query"
 import { Button, Checkbox, Form, Input, message, Modal, Popconfirm, Select, Table, TableProps, Tag } from "antd"
 import { useForm } from "antd/es/form/Form"
 import FormItem from "antd/es/form/FormItem"
@@ -16,7 +17,7 @@ import { useQueryState } from "soda-next"
 import { useBuildJarDockerImage } from "@/hooks/useBuildJarDockerImage"
 import { useBuildStaticDockerImage } from "@/hooks/useBuildStaticDockerImage"
 import { useCopyDockerImage } from "@/hooks/useCopyDockerImage"
-import { useDeleteDockerImage } from "@/hooks/useDeleteDockerImage"
+import { deleteDockerImageClient, useDeleteDockerImage } from "@/hooks/useDeleteDockerImage"
 import { useQueryDockerImageDetail } from "@/hooks/useQueryDockerImageDetail"
 import { useRenameDockerImage } from "@/hooks/useRenameDockerImage"
 import { runProjectClient } from "@/hooks/useRunProject"
@@ -73,6 +74,11 @@ export interface UploadDockerImageParams {
 export interface RestartProjectsState {
     imageName?: string
     projectItems: DockerImageProjectItem[]
+}
+
+export interface BatchDeleteDockerImageErrorItem {
+    name: string
+    message: string
 }
 
 const DEFAULT_JAR_START_COMMAND = "java -jar app.jar"
@@ -279,6 +285,7 @@ function getSorterOrder(order?: string | null) {
 
 const Page: FC = () => {
     const { data, isLoading, refetch } = useQueryDockerImageDetail()
+    const queryClient = useQueryClient()
     const { mutateAsync: deleteDockerImage, isPending: isDeletePending } = useDeleteDockerImage()
     const { mutateAsync: uploadDockerImage, isPending: isUploadPending } = useUploadDockerImage()
     const { mutateAsync: buildJarDockerImage, isPending: isBuildJarPending } = useBuildJarDockerImage()
@@ -310,6 +317,7 @@ const Page: FC = () => {
     const [isCopyModalOpen, setIsCopyModalOpen] = useState(false)
     const [isRestartProjectsModalOpen, setIsRestartProjectsModalOpen] = useState(false)
     const [isRestartProjectsPending, setIsRestartProjectsPending] = useState(false)
+    const [isBatchDeletePending, setIsBatchDeletePending] = useState(false)
     const [buildStaticTarget, setBuildStaticTarget] = useState<DockerImageItem | undefined>(undefined)
     const [buildJarTarget, setBuildJarTarget] = useState<DockerImageItem | undefined>(undefined)
     const [renameTarget, setRenameTarget] = useState<DockerImageItem | undefined>(undefined)
@@ -320,6 +328,7 @@ const Page: FC = () => {
     })
 
     const [selectedRestartProjectNames, setSelectedRestartProjectNames] = useState<string[]>([])
+    const [selectedImageReferences, setSelectedImageReferences] = useState<string[]>([])
     const { y } = useScroll(container, { paginationMargin: 32 })
     const pageNum = query.pageNum ?? 1
     const pageSize = query.pageSize ?? 10
@@ -372,7 +381,14 @@ const Page: FC = () => {
         isBuildJarPending ||
         isRenamePending ||
         isCopyPending ||
-        isRestartProjectsPending
+        isRestartProjectsPending ||
+        isBatchDeletePending
+
+    useEffect(() => {
+        const referenceSet = new Set((data ?? []).map(item => item.reference))
+
+        setSelectedImageReferences(prev => prev.filter(item => referenceSet.has(item)))
+    }, [data])
 
     useEffect(() => {
         if (!isBuildStaticModalOpen) return
@@ -497,6 +513,126 @@ const Page: FC = () => {
 
     async function onDelete(name: string) {
         await deleteDockerImage({ name })
+        setSelectedImageReferences(prev => prev.filter(item => item !== name))
+    }
+
+    async function refreshDockerImageQueries() {
+        await Promise.all([
+            queryClient.invalidateQueries({ queryKey: ["query-docker-image"] }),
+            queryClient.invalidateQueries({ queryKey: ["query-docker-image-detail"] }),
+            queryClient.invalidateQueries({ queryKey: ["query-docker-container"] }),
+        ])
+    }
+
+    async function onBatchDelete() {
+        if (selectedImageReferences.length === 0) {
+            message.error("请先选择需要删除的镜像")
+            return
+        }
+
+        const key = "batch-delete-docker-image"
+
+        const imageReferences = [...selectedImageReferences]
+
+        const failedItems: BatchDeleteDockerImageErrorItem[] = []
+
+        try {
+            setIsBatchDeletePending(true)
+
+            message.open({
+                key,
+                type: "loading",
+                content: `删除 ${imageReferences.length} 个镜像中...`,
+                duration: 0,
+            })
+
+            for (const name of imageReferences) {
+                try {
+                    await deleteDockerImageClient({ name })
+                } catch (error) {
+                    failedItems.push({
+                        name,
+                        message: error instanceof Error ? error.message : String(error),
+                    })
+                }
+            }
+
+            await refreshDockerImageQueries()
+
+            if (failedItems.length === 0) {
+                setSelectedImageReferences([])
+
+                message.open({
+                    key,
+                    type: "success",
+                    content: `成功删除 ${imageReferences.length} 个镜像`,
+                })
+
+                return
+            }
+
+            const successCount = imageReferences.length - failedItems.length
+
+            setSelectedImageReferences(failedItems.map(item => item.name))
+
+            message.open({
+                key,
+                type: successCount > 0 ? "warning" : "error",
+                content:
+                    successCount > 0 ? `成功删除 ${successCount} 个镜像，失败 ${failedItems.length} 个` : `删除失败，共 ${failedItems.length} 个镜像未删除`,
+            })
+
+            Modal.warning({
+                title: successCount > 0 ? "部分镜像删除失败" : "镜像删除失败",
+                okText: "知道了",
+                content: (
+                    <div className="space-y-2 text-sm text-slate-600">
+                        <div>{successCount > 0 ? `已成功删除 ${successCount} 个镜像，以下镜像删除失败：` : "以下镜像删除失败："}</div>
+                        <div className="max-h-60 space-y-2 overflow-y-auto">
+                            {failedItems.map(item => (
+                                <div key={item.name} className="rounded-md bg-slate-50 px-3 py-2">
+                                    <div className="font-medium text-slate-800">{item.name}</div>
+                                    <div>{item.message}</div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                ),
+            })
+        } finally {
+            setIsBatchDeletePending(false)
+        }
+    }
+
+    function onBatchDeleteConfirm() {
+        if (selectedImageReferences.length === 0) {
+            message.error("请先选择需要删除的镜像")
+            return
+        }
+
+        Modal.confirm({
+            title: `以下 ${selectedImageReferences.length} 个镜像将被删除`,
+            okText: "确认删除",
+            cancelText: "取消",
+            okButtonProps: {
+                danger: true,
+            },
+            content: (
+                <div className="space-y-2 text-sm text-slate-600">
+                    <div>删除后可能影响相关容器。</div>
+                    <div className="max-h-60 space-y-2 overflow-y-auto rounded-md bg-slate-50 p-3">
+                        {selectedImageReferences.map(item => (
+                            <div key={item} className="break-all text-slate-700">
+                                {item}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            ),
+            onOk() {
+                return onBatchDelete()
+            },
+        })
     }
 
     function onOpenBuildStaticModal(data?: DockerImageItem) {
@@ -762,6 +898,19 @@ const Page: FC = () => {
         setQuery({} as QueryImageFormParams)
     }
 
+    const rowSelection: TableProps<DockerImageItem>["rowSelection"] = {
+        preserveSelectedRowKeys: true,
+        selectedRowKeys: selectedImageReferences,
+        onChange(selectedRowKeys) {
+            setSelectedImageReferences(selectedRowKeys.map(item => String(item)))
+        },
+        getCheckboxProps() {
+            return {
+                disabled: isRequesting,
+            }
+        },
+    }
+
     const columns: Columns<DockerImageItem> = [
         {
             title: "镜像名称",
@@ -1011,10 +1160,20 @@ const Page: FC = () => {
                             shape="circle"
                             color="default"
                             variant="text"
-                            title="上传 Jar 文件制作镜像"
+                            title="刷新"
                             disabled={isRequesting}
                             icon={<RotateCw className="size-4" />}
                             onClick={onRefresh}
+                        />
+                        <Button
+                            size="small"
+                            shape="circle"
+                            color="danger"
+                            variant="text"
+                            title="删除所选"
+                            disabled={isRequesting || selectedImageReferences.length === 0}
+                            icon={<IconTrash className="size-4" />}
+                            onClick={onBatchDeleteConfirm}
                         />
                     </div>
                 </Form>
@@ -1023,7 +1182,7 @@ const Page: FC = () => {
                 <Table<DockerImageItem>
                     columns={columns}
                     dataSource={pagedData}
-                    loading={isLoading}
+                    loading={isLoading || isBatchDeletePending}
                     onChange={onTableChange}
                     pagination={{
                         current: pageNum,
@@ -1031,7 +1190,8 @@ const Page: FC = () => {
                         total: sortedData.length,
                         showTotal,
                     }}
-                    rowKey={({ name, id }) => `${name}-${id}`}
+                    rowKey={({ reference }) => reference}
+                    rowSelection={rowSelection}
                     scroll={{ y }}
                 />
             </div>
