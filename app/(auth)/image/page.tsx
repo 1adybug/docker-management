@@ -375,21 +375,13 @@ const Page: FC = () => {
         isRestartProjectsPending
 
     useEffect(() => {
-        if (!isBuildStaticModalOpen) {
-            buildStaticForm.resetFields()
-            setStaticFile(undefined)
-            return
-        }
+        if (!isBuildStaticModalOpen) return
 
         buildStaticForm.setFieldValue("nginxImage", defaultNginxImage)
     }, [buildStaticForm, defaultNginxImage, isBuildStaticModalOpen])
 
     useEffect(() => {
-        if (!isBuildJarModalOpen) {
-            buildJarForm.resetFields()
-            setJarFile(undefined)
-            return
-        }
+        if (!isBuildJarModalOpen) return
 
         buildJarForm.setFieldsValue({
             javaImage: defaultJavaImage,
@@ -398,10 +390,7 @@ const Page: FC = () => {
     }, [buildJarForm, defaultJavaImage, isBuildJarModalOpen])
 
     useEffect(() => {
-        if (!isRenameModalOpen) {
-            renameForm.resetFields()
-            return
-        }
+        if (!isRenameModalOpen) return
 
         renameForm.setFieldsValue({
             tag: renameTarget?.tag,
@@ -410,10 +399,7 @@ const Page: FC = () => {
     }, [isRenameModalOpen, renameForm, renameTarget])
 
     useEffect(() => {
-        if (!isCopyModalOpen) {
-            copyForm.resetFields()
-            return
-        }
+        if (!isCopyModalOpen) return
 
         copyForm.setFieldsValue({
             tag: copyTarget?.tag,
@@ -533,26 +519,40 @@ const Page: FC = () => {
         setIsCopyModalOpen(true)
     }
 
-    function onCloseBuildStaticModal() {
-        if (isBuildStaticPending) return
+    function resetBuildStaticModal() {
+        buildStaticForm.resetFields()
+        setStaticFile(undefined)
         setBuildStaticTarget(undefined)
         setIsBuildStaticModalOpen(false)
     }
 
-    function onCloseBuildJarModal() {
-        if (isBuildJarPending) return
+    function resetBuildJarModal() {
+        buildJarForm.resetFields()
+        setJarFile(undefined)
         setBuildJarTarget(undefined)
         setIsBuildJarModalOpen(false)
     }
 
     function resetRenameModal() {
+        renameForm.resetFields()
         setRenameTarget(undefined)
         setIsRenameModalOpen(false)
     }
 
     function resetCopyModal() {
+        copyForm.resetFields()
         setCopyTarget(undefined)
         setIsCopyModalOpen(false)
+    }
+
+    function onCloseBuildStaticModal() {
+        if (isBuildStaticPending) return
+        resetBuildStaticModal()
+    }
+
+    function onCloseBuildJarModal() {
+        if (isBuildJarPending) return
+        resetBuildJarModal()
     }
 
     function onCloseRenameModal() {
@@ -611,8 +611,7 @@ const Page: FC = () => {
 
         const result = await buildStaticDockerImage(formData)
         if (target && !result.skipFollowUp) onOpenRestartProjectsModal(target)
-        setBuildStaticTarget(undefined)
-        setIsBuildStaticModalOpen(false)
+        resetBuildStaticModal()
     }
 
     async function onBuildJarFinish(values: JarDockerImageFormParams) {
@@ -647,8 +646,7 @@ const Page: FC = () => {
 
         const result = await buildJarDockerImage(formData)
         if (target && !result.skipFollowUp) onOpenRestartProjectsModal(target)
-        setBuildJarTarget(undefined)
-        setIsBuildJarModalOpen(false)
+        resetBuildJarModal()
     }
 
     async function onRename(values: ImageTagFormParams) {
