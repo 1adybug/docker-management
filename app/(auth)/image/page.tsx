@@ -126,8 +126,10 @@ function compareOptionalNumber(first?: number, second?: number) {
     return first - second
 }
 
+const dockerSizeRegex = /^([+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][+-]?\d+)?)\s*([a-zA-Z]+)$/u
+
 function formatDockerSize(value?: string) {
-    const match = value?.trim().match(/^([\d.+-eE]+)\s*([a-zA-Z]+)$/u)
+    const match = value?.trim().match(dockerSizeRegex)
     if (!match) return value || "-"
 
     const size = Number(match[1])
@@ -137,7 +139,7 @@ function formatDockerSize(value?: string) {
 }
 
 function getDockerSizeValue(value?: string) {
-    const match = value?.trim().match(/^([\d.+-eE]+)\s*([a-zA-Z]+)$/u)
+    const match = value?.trim().match(dockerSizeRegex)
     if (!match) return undefined
 
     const size = Number(match[1])
