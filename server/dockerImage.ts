@@ -1,10 +1,15 @@
 import dayjs from "dayjs"
+import utc from "dayjs/plugin/utc"
 
 import { dockerImageNameParser } from "@/schemas/dockerImageName"
 
 import { runDockerCommand } from "@/server/docker"
 
 import { ClientError } from "@/utils/clientError"
+
+dayjs.extend(utc)
+
+const DOCKER_IMAGE_TAG_UTC_OFFSET = 8 * 60
 
 export interface DockerImageNameParts {
     repository: string
@@ -92,7 +97,8 @@ export function getDockerImageNameByRepositoryAndTag(repository: string, tag: st
 
 export function formatDockerImageTimeTag(date: Date) {
     if (Number.isNaN(date.getTime())) throw new ClientError("镜像时间无效")
-    return dayjs(date).format("YYMMDDHHmmssd")
+    // 备份镜像 tag 需要固定按业务时区生成，避免容器内部使用 UTC 时少 8 小时
+    return dayjs.utc(date).utcOffset(DOCKER_IMAGE_TAG_UTC_OFFSET).format("YYMMDDHHmmssd")
 }
 
 function parseDockerImageInspectOutput(output: string) {
