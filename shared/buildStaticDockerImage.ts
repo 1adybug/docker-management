@@ -17,6 +17,7 @@ import { createSharedFn } from "@/server/createSharedFn"
 import { buildDockerImage } from "@/server/docker"
 import { getReplaceDockerTemporaryName, inspectDockerImage, replaceDockerImage } from "@/server/dockerImage"
 import { createDockerTempDirectory, deleteDockerTempDirectory } from "@/server/dockerTempDirectory"
+import { getDockerBaseImageLabel } from "@/server/getDockerBaseImageLabel"
 import { writeTextToFile } from "@/server/writeTextToFile"
 import { writeWebFileToPath } from "@/server/writeWebFileToPath"
 
@@ -140,6 +141,8 @@ async function getExecutable7zaPath() {
 
 function getDockerfileContent(nginxImage: string) {
     return `FROM ${nginxImage}
+
+${getDockerBaseImageLabel({ baseImage: nginxImage })}
 
 WORKDIR /usr/share/nginx/html
 

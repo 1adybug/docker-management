@@ -9,6 +9,7 @@ import { createSharedFn } from "@/server/createSharedFn"
 import { buildDockerImage } from "@/server/docker"
 import { getReplaceDockerTemporaryName, inspectDockerImage, replaceDockerImage } from "@/server/dockerImage"
 import { createDockerTempDirectory, deleteDockerTempDirectory } from "@/server/dockerTempDirectory"
+import { getDockerBaseImageLabel } from "@/server/getDockerBaseImageLabel"
 import { writeTextToFile } from "@/server/writeTextToFile"
 import { writeWebFileToPath } from "@/server/writeWebFileToPath"
 
@@ -37,6 +38,8 @@ export interface BuildJarDockerImageResult {
 
 function getDockerfileContent(javaImage: string) {
     return `FROM ${javaImage}
+
+${getDockerBaseImageLabel({ baseImage: javaImage })}
 
 WORKDIR /app
 
