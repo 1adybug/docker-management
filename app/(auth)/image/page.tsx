@@ -2,14 +2,14 @@
 
 import { FC, useEffect, useMemo, useRef, useState } from "react"
 
-import { IconBrandDocker, IconBrandReact, IconCoffee, IconCopy, IconPencil, IconTrash } from "@tabler/icons-react"
+import { IconArrowBarToDown, IconBrandDocker, IconBrandReact, IconCoffee, IconCopy, IconPencil, IconTrash } from "@tabler/icons-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { Button, Checkbox, Form, Input, message, Modal, Popconfirm, Select, Table, TableProps, Tag } from "antd"
 import { useForm } from "antd/es/form/Form"
 import FormItem from "antd/es/form/FormItem"
 import { InputFileButton } from "deepsea-components"
 import { formatTime, showTotal } from "deepsea-tools"
-import { RotateCw } from "lucide-react"
+import { ArrowDownToLine, RotateCw } from "lucide-react"
 import Link from "next/link"
 import { Columns, schemaToRule, useScroll } from "soda-antd"
 import { useQueryState } from "soda-next"
@@ -18,6 +18,7 @@ import { useBuildJarDockerImage } from "@/hooks/useBuildJarDockerImage"
 import { useBuildStaticDockerImage } from "@/hooks/useBuildStaticDockerImage"
 import { useCopyDockerImage } from "@/hooks/useCopyDockerImage"
 import { deleteDockerImageClient, useDeleteDockerImage } from "@/hooks/useDeleteDockerImage"
+import { usePullDockerImage } from "@/hooks/usePullDockerImage"
 import { useQueryDockerImageDetail } from "@/hooks/useQueryDockerImageDetail"
 import { useRenameDockerImage } from "@/hooks/useRenameDockerImage"
 import { runProjectClient } from "@/hooks/useRunProject"
@@ -300,6 +301,7 @@ const Page: FC = () => {
     const queryClient = useQueryClient()
     const { mutateAsync: deleteDockerImage, isPending: isDeletePending } = useDeleteDockerImage()
     const { mutateAsync: uploadDockerImage, isPending: isUploadPending } = useUploadDockerImage()
+    const { mutateAsync: pullDockerImage, isPending: isPullPending } = usePullDockerImage()
     const { mutateAsync: buildJarDockerImage, isPending: isBuildJarPending } = useBuildJarDockerImage()
     const { mutateAsync: buildStaticDockerImage, isPending: isBuildStaticPending } = useBuildStaticDockerImage()
     const { mutateAsync: renameDockerImage, isPending: isRenamePending } = useRenameDockerImage()
@@ -389,6 +391,7 @@ const Page: FC = () => {
         isLoading ||
         isDeletePending ||
         isUploadPending ||
+        isPullPending ||
         isBuildStaticPending ||
         isBuildJarPending ||
         isRenamePending ||
@@ -521,6 +524,14 @@ const Page: FC = () => {
 
         const result = await uploadDockerImage(formData)
         if (data && !result.skipFollowUp) onOpenRestartProjectsModal(data)
+    }
+
+    async function onPull(data: DockerImageItem) {
+        const result = await pullDockerImage({
+            name: data.name,
+        })
+
+        if (!result.skipFollowUp) onOpenRestartProjectsModal(data)
     }
 
     async function onDelete(name: string) {
@@ -1034,6 +1045,7 @@ const Page: FC = () => {
             title: "操作",
             key: "operation",
             align: "center",
+            width: 280,
             render(value, record) {
                 return (
                     <div className="flex flex-wrap justify-center gap-2">
@@ -1074,6 +1086,18 @@ const Page: FC = () => {
                                 disabled={isRequesting}
                                 icon={<IconCoffee className="size-4" />}
                                 onClick={() => onOpenBuildJarModal(record)}
+                            />
+                        )}
+                        {record.isDangling ? null : (
+                            <Button
+                                size="small"
+                                shape="circle"
+                                color="default"
+                                variant="text"
+                                title="拉取镜像"
+                                disabled={isRequesting}
+                                icon={<ArrowDownToLine className="size-4" />}
+                                onClick={() => onPull(record)}
                             />
                         )}
                         <Button

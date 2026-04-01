@@ -16,6 +16,7 @@ import { deleteUser } from "@/shared/deleteUser"
 import { getProject } from "@/shared/getProject"
 import { getUser } from "@/shared/getUser"
 import { login } from "@/shared/login"
+import { pullDockerImage } from "@/shared/pullDockerImage"
 import { queryDockerContainer } from "@/shared/queryDockerContainer"
 import { queryDockerImage } from "@/shared/queryDockerImage"
 import { queryDockerImageDetail } from "@/shared/queryDockerImageDetail"
@@ -61,6 +62,7 @@ registerRoute(deleteUser)
 registerRoute(getProject)
 registerRoute(getUser)
 registerRoute(login)
+registerRoute(pullDockerImage)
 registerRoute(queryDockerContainer)
 registerRoute(queryDockerImage)
 registerRoute(queryDockerImageDetail)
