@@ -272,6 +272,7 @@ const Page: FC = () => {
                         pageSize,
                         total: data?.total,
                         showTotal,
+                        showSizeChanger: true,
                         onChange(page, size) {
                             setQuery(prev => ({ ...prev, pageNum: page, pageSize: size }))
                         },
