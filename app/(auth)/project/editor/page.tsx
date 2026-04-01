@@ -443,7 +443,7 @@ const Page: FC = () => {
 
                                                 return (
                                                     <div key={field.key} className="rounded border border-solid border-neutral-200 p-4">
-                                                        <div className="mb-4 flex items-center justify-between">
+                                                        <div className="mb-6 flex items-center justify-between">
                                                             <div className="flex items-center gap-2">
                                                                 <span className="font-medium">服务</span>
                                                                 {serviceName ? <Tag color="blue">{serviceName}</Tag> : null}
@@ -452,7 +452,7 @@ const Page: FC = () => {
                                                                 删除服务
                                                             </Button>
                                                         </div>
-                                                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                                        <div className="grid grid-cols-1 gap-x-4 gap-y-0 md:grid-cols-2">
                                                             <FormItem
                                                                 name={[field.name, "name"]}
                                                                 label="服务名称"
@@ -480,7 +480,7 @@ const Page: FC = () => {
                                                             </FormItem>
                                                         </div>
                                                         {entrypointMode === ProjectFormCommandMode.数组 ? (
-                                                            <FormItem<ProjectFormData> label="入口点" className="mb-0 mt-4">
+                                                            <FormItem<ProjectFormData> label="入口点">
                                                                 <Form.List name={[field.name, "entrypointItems"]}>
                                                                     {(entrypointFields, { add: addEntrypoint, remove: removeEntrypoint }) => (
                                                                         <div className="flex flex-col gap-2">
@@ -488,7 +488,7 @@ const Page: FC = () => {
                                                                                 <div key={entrypointField.key} className="flex items-start gap-2">
                                                                                     <FormItem
                                                                                         name={entrypointField.name}
-                                                                                        className="mb-0 flex-1"
+                                                                                        className="flex-1"
                                                                                         rules={[{ required: true, message: "请输入入口点项" }]}
                                                                                     >
                                                                                         <Input placeholder="例如: sh" />
@@ -511,12 +511,12 @@ const Page: FC = () => {
                                                                 </Form.List>
                                                             </FormItem>
                                                         ) : (
-                                                            <FormItem name={[field.name, "entrypoint"]} label="入口点" className="mt-4">
+                                                            <FormItem name={[field.name, "entrypoint"]} label="入口点">
                                                                 <Input placeholder="例如: sh -c" />
                                                             </FormItem>
                                                         )}
                                                         {commandMode === ProjectFormCommandMode.数组 ? (
-                                                            <FormItem<ProjectFormData> label="启动命令" className="mb-0 mt-4">
+                                                            <FormItem<ProjectFormData> label="启动命令">
                                                                 <Form.List name={[field.name, "commandItems"]}>
                                                                     {(commandFields, { add: addCommand, remove: removeCommand }) => (
                                                                         <div className="flex flex-col gap-2">
@@ -524,7 +524,7 @@ const Page: FC = () => {
                                                                                 <div key={commandField.key} className="flex items-start gap-2">
                                                                                     <FormItem
                                                                                         name={commandField.name}
-                                                                                        className="mb-0 flex-1"
+                                                                                        className="flex-1"
                                                                                         rules={[{ required: true, message: "请输入命令项" }]}
                                                                                     >
                                                                                         <Input placeholder="例如: npm" />
@@ -547,11 +547,11 @@ const Page: FC = () => {
                                                                 </Form.List>
                                                             </FormItem>
                                                         ) : (
-                                                            <FormItem name={[field.name, "command"]} label="启动命令" className="mt-4">
+                                                            <FormItem name={[field.name, "command"]} label="启动命令">
                                                                 <Input placeholder="例如: npm run start" />
                                                             </FormItem>
                                                         )}
-                                                        <FormItem<ProjectFormData> label="依赖服务" className="mb-0 mt-4">
+                                                        <FormItem<ProjectFormData> label="依赖服务">
                                                             <Form.List name={[field.name, "dependsOnItems"]}>
                                                                 {(dependsOnFields, { add: addDependsOn, remove: removeDependsOn }) => (
                                                                     <div className="flex flex-col gap-2">
@@ -562,7 +562,6 @@ const Page: FC = () => {
                                                                             >
                                                                                 <FormItem
                                                                                     name={[dependsOnField.name, "serviceName"]}
-                                                                                    className="mb-0"
                                                                                     rules={[{ required: true, message: "请选择依赖服务" }]}
                                                                                 >
                                                                                     <Select
@@ -571,17 +570,17 @@ const Page: FC = () => {
                                                                                         placeholder="选择依赖服务"
                                                                                     />
                                                                                 </FormItem>
-                                                                                <FormItem name={[dependsOnField.name, "condition"]} className="mb-0">
+                                                                                <FormItem name={[dependsOnField.name, "condition"]}>
                                                                                     <Select
                                                                                         allowClear
                                                                                         options={dependsOnConditionOptions}
                                                                                         placeholder="依赖条件"
                                                                                     />
                                                                                 </FormItem>
-                                                                                <FormItem name={[dependsOnField.name, "restart"]} className="mb-0">
+                                                                                <FormItem name={[dependsOnField.name, "restart"]}>
                                                                                     <Select allowClear options={booleanOptions} placeholder="变更时重启" />
                                                                                 </FormItem>
-                                                                                <FormItem name={[dependsOnField.name, "required"]} className="mb-0">
+                                                                                <FormItem name={[dependsOnField.name, "required"]}>
                                                                                     <Select allowClear options={booleanOptions} placeholder="是否必需" />
                                                                                 </FormItem>
                                                                                 <Button
@@ -601,17 +600,22 @@ const Page: FC = () => {
                                                                 )}
                                                             </Form.List>
                                                         </FormItem>
-                                                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                                            <FormItem<ProjectFormData> label="端口映射" className="mb-0">
+                                                        <div className="grid grid-cols-1 gap-x-4 gap-y-0 md:grid-cols-2">
+                                                            <FormItem<ProjectFormData> label="端口映射">
                                                                 <Form.List name={[field.name, "ports"]}>
                                                                     {(portFields, { add: addPort, remove: removePort }) => (
                                                                         <div className="flex flex-col gap-2">
                                                                             {portFields.map(portField => (
                                                                                 <div key={portField.key} className="flex items-start gap-2">
-                                                                                    <FormItem name={portField.name} className="mb-0 flex-1">
+                                                                                    <FormItem name={portField.name} className="flex-1">
                                                                                         <Input placeholder="例如: 8080:80" />
                                                                                     </FormItem>
-                                                                                    <Button type="text" danger onClick={() => removePort(portField.name)}>
+                                                                                    <Button
+                                                                                        className="flex-none"
+                                                                                        type="text"
+                                                                                        danger
+                                                                                        onClick={() => removePort(portField.name)}
+                                                                                    >
                                                                                         移除
                                                                                     </Button>
                                                                                 </div>
@@ -623,16 +627,21 @@ const Page: FC = () => {
                                                                     )}
                                                                 </Form.List>
                                                             </FormItem>
-                                                            <FormItem<ProjectFormData> label="挂载卷" className="mb-0">
+                                                            <FormItem<ProjectFormData> label="挂载卷">
                                                                 <Form.List name={[field.name, "volumes"]}>
                                                                     {(volumeFields, { add: addVolume, remove: removeVolume }) => (
                                                                         <div className="flex flex-col gap-2">
                                                                             {volumeFields.map(volumeField => (
                                                                                 <div key={volumeField.key} className="flex items-start gap-2">
-                                                                                    <FormItem name={volumeField.name} className="mb-0 flex-1">
+                                                                                    <FormItem name={volumeField.name} className="flex-1">
                                                                                         <Input placeholder="例如: ./data:/app/data" />
                                                                                     </FormItem>
-                                                                                    <Button type="text" danger onClick={() => removeVolume(volumeField.name)}>
+                                                                                    <Button
+                                                                                        className="flex-none"
+                                                                                        type="text"
+                                                                                        danger
+                                                                                        onClick={() => removeVolume(volumeField.name)}
+                                                                                    >
                                                                                         移除
                                                                                     </Button>
                                                                                 </div>
@@ -645,19 +654,24 @@ const Page: FC = () => {
                                                                 </Form.List>
                                                             </FormItem>
                                                         </div>
-                                                        <FormItem<ProjectFormData> label="环境变量" className="mb-0 mt-4">
+                                                        <FormItem<ProjectFormData> label="环境变量">
                                                             <Form.List name={[field.name, "environment"]}>
                                                                 {(envFields, { add: addEnv, remove: removeEnv }) => (
                                                                     <div className="flex flex-col gap-2">
                                                                         {envFields.map(envField => (
                                                                             <div key={envField.key} className="grid grid-cols-[1fr_1fr_auto] gap-2">
-                                                                                <FormItem name={[envField.name, "key"]} className="mb-0">
+                                                                                <FormItem name={[envField.name, "key"]}>
                                                                                     <Input placeholder="KEY" />
                                                                                 </FormItem>
-                                                                                <FormItem name={[envField.name, "value"]} className="mb-0">
+                                                                                <FormItem name={[envField.name, "value"]}>
                                                                                     <Input placeholder="VALUE" />
                                                                                 </FormItem>
-                                                                                <Button type="text" danger onClick={() => removeEnv(envField.name)}>
+                                                                                <Button
+                                                                                    className="flex-none"
+                                                                                    type="text"
+                                                                                    danger
+                                                                                    onClick={() => removeEnv(envField.name)}
+                                                                                >
                                                                                     移除
                                                                                 </Button>
                                                                             </div>
