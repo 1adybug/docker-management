@@ -126,8 +126,18 @@ function compareOptionalNumber(first?: number, second?: number) {
     return first - second
 }
 
+function formatDockerSize(value?: string) {
+    const match = value?.trim().match(/^([\d.+-eE]+)\s*([a-zA-Z]+)$/u)
+    if (!match) return value || "-"
+
+    const size = Number(match[1])
+    if (Number.isNaN(size)) return value || "-"
+
+    return `${size.toLocaleString("en-US", { useGrouping: false, maximumFractionDigits: 20 })}${match[2]}`
+}
+
 function getDockerSizeValue(value?: string) {
-    const match = value?.trim().match(/^([\d.]+)\s*([a-zA-Z]+)$/u)
+    const match = value?.trim().match(/^([\d.+-eE]+)\s*([a-zA-Z]+)$/u)
     if (!match) return undefined
 
     const size = Number(match[1])
@@ -954,6 +964,9 @@ const Page: FC = () => {
             align: "center",
             sorter: true,
             sortOrder: getSortOrder(query, "size"),
+            render(value: string) {
+                return formatDockerSize(value)
+            },
         },
         {
             title: "创建时间",
