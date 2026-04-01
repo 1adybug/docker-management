@@ -472,8 +472,8 @@ const Page: FC = () => {
                                                             <FormItem name={[field.name, "entrypointMode"]} label="入口点类型">
                                                                 <Select options={commandModeOptions} placeholder="选择入口点类型" />
                                                             </FormItem>
-                                                            <FormItem name={[field.name, "commandMode"]} label="命令类型">
-                                                                <Select options={commandModeOptions} placeholder="选择命令类型" />
+                                                            <FormItem name={[field.name, "commandMode"]} label="启动命令类型">
+                                                                <Select options={commandModeOptions} placeholder="选择启动命令类型" />
                                                             </FormItem>
                                                             <FormItem name={[field.name, "networks"]} label="服务网络">
                                                                 <Select mode="tags" options={networkOptions} placeholder="输入并回车创建网络" />
