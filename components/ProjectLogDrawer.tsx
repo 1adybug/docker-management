@@ -3,6 +3,8 @@ import { ComponentProps, FC } from "react"
 import { Drawer, Empty } from "antd"
 import { clsx, StrictOmit } from "deepsea-tools"
 
+import { ansiToHtml } from "@/utils/ansi"
+
 export interface ProjectLogDrawerProps extends StrictOmit<ComponentProps<typeof Drawer>, "children" | "title" | "onClose"> {
     name?: string
     content?: string
@@ -30,7 +32,10 @@ const ProjectLogDrawer: FC<ProjectLogDrawerProps> = ({
         {...rest}
     >
         {content ? (
-            <pre className="whitespace-pre-wrap break-words rounded bg-neutral-950 px-4 py-3 text-xs text-white">{content}</pre>
+            <pre
+                className="whitespace-pre-wrap break-words rounded bg-neutral-950 px-4 py-3 text-xs text-neutral-100"
+                dangerouslySetInnerHTML={{ __html: ansiToHtml(content) }}
+            />
         ) : (
             <Empty description={emptyDescription} />
         )}
