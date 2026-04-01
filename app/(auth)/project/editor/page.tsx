@@ -38,6 +38,7 @@ import {
     formDataToCompose,
     formDataToYaml,
     parseComposeYaml,
+    ProjectFormCommandMode,
     ProjectFormData,
 } from "@/utils/compose"
 
@@ -142,6 +143,28 @@ function getRestartOptions() {
     }))
 }
 
+function getCommandModeOptions() {
+    return Object.entries(ProjectFormCommandMode).map(([label, value]) => ({
+        label,
+        value,
+    }))
+}
+
+function getDependsOnConditionOptions() {
+    return [
+        { label: "服务启动后", value: "service_started" },
+        { label: "服务健康后", value: "service_healthy" },
+        { label: "服务成功完成后", value: "service_completed_successfully" },
+    ]
+}
+
+function getBooleanOptions() {
+    return [
+        { label: "是", value: true },
+        { label: "否", value: false },
+    ]
+}
+
 function getServiceNames(services?: ProjectFormData["services"]) {
     return (services ?? [])
         .map(item => item?.name?.trim())
@@ -197,6 +220,9 @@ const Page: FC = () => {
     const networkOptions = useMemo(() => (networkList ?? []).map(item => ({ value: item })), [networkList])
     const imageOptions = useMemo(() => (imageData ?? []).map(item => ({ value: item.name })), [imageData])
     const restartOptions = useMemo(() => getRestartOptions(), [])
+    const commandModeOptions = useMemo(() => getCommandModeOptions(), [])
+    const dependsOnConditionOptions = useMemo(() => getDependsOnConditionOptions(), [])
+    const booleanOptions = useMemo(() => getBooleanOptions(), [])
 
     useEffect(() => {
         let isMounted = true
@@ -247,6 +273,11 @@ const Page: FC = () => {
         router.push("/project")
     }
 
+    async function getValidatedFormData() {
+        await form.validateFields()
+        return form.getFieldsValue(true) as ProjectFormData
+    }
+
     async function onSyncYamlToForm() {
         try {
             const compose = parseComposeYaml(yamlValue)
@@ -260,7 +291,7 @@ const Page: FC = () => {
 
     async function onSyncFormToYaml() {
         try {
-            const values = await form.validateFields()
+            const values = await getValidatedFormData()
             const content = formDataToYaml(values, composeData)
             setComposeData(formDataToCompose(values, composeData))
             setYamlValue(content)
@@ -270,7 +301,7 @@ const Page: FC = () => {
 
     async function onSaveForm() {
         try {
-            const values = await form.validateFields()
+            const values = await getValidatedFormData()
             const projectName = isUpdate ? searchName : values.name
             if (!projectName) return
 
@@ -392,12 +423,23 @@ const Page: FC = () => {
                                         <div className="mt-4 flex flex-col gap-4">
                                             <div className="flex items-center justify-between">
                                                 <div className="font-medium">服务配置</div>
-                                                <Button type="dashed" onClick={() => add({})}>
+                                                <Button
+                                                    type="dashed"
+                                                    onClick={() =>
+                                                        add({
+                                                            commandMode: ProjectFormCommandMode.字符串,
+                                                            entrypointMode: ProjectFormCommandMode.字符串,
+                                                        })
+                                                    }
+                                                >
                                                     新增服务
                                                 </Button>
                                             </div>
                                             {fields.map(field => {
                                                 const serviceName = form.getFieldValue(["services", field.name, "name"])
+                                                const entrypointMode =
+                                                    form.getFieldValue(["services", field.name, "entrypointMode"]) ?? ProjectFormCommandMode.字符串
+                                                const commandMode = form.getFieldValue(["services", field.name, "commandMode"]) ?? ProjectFormCommandMode.字符串
 
                                                 return (
                                                     <div key={field.key} className="rounded border border-solid border-neutral-200 p-4">
@@ -427,16 +469,138 @@ const Page: FC = () => {
                                                             <FormItem name={[field.name, "restart"]} label="重启策略">
                                                                 <Select allowClear options={restartOptions} placeholder="选择重启策略" />
                                                             </FormItem>
-                                                            <FormItem name={[field.name, "command"]} label="启动命令">
-                                                                <Input placeholder="例如: npm run start" />
+                                                            <FormItem name={[field.name, "entrypointMode"]} label="入口点类型">
+                                                                <Select options={commandModeOptions} placeholder="选择入口点类型" />
                                                             </FormItem>
-                                                            <FormItem name={[field.name, "dependsOn"]} label="依赖服务">
-                                                                <Select mode="multiple" options={serviceNameOptions} placeholder="选择依赖服务" />
+                                                            <FormItem name={[field.name, "commandMode"]} label="命令类型">
+                                                                <Select options={commandModeOptions} placeholder="选择命令类型" />
                                                             </FormItem>
                                                             <FormItem name={[field.name, "networks"]} label="服务网络">
                                                                 <Select mode="tags" options={networkOptions} placeholder="输入并回车创建网络" />
                                                             </FormItem>
                                                         </div>
+                                                        {entrypointMode === ProjectFormCommandMode.数组 ? (
+                                                            <FormItem<ProjectFormData> label="入口点" className="mb-0 mt-4">
+                                                                <Form.List name={[field.name, "entrypointItems"]}>
+                                                                    {(entrypointFields, { add: addEntrypoint, remove: removeEntrypoint }) => (
+                                                                        <div className="flex flex-col gap-2">
+                                                                            {entrypointFields.map(entrypointField => (
+                                                                                <div key={entrypointField.key} className="flex items-start gap-2">
+                                                                                    <FormItem
+                                                                                        name={entrypointField.name}
+                                                                                        className="mb-0 flex-1"
+                                                                                        rules={[{ required: true, message: "请输入入口点项" }]}
+                                                                                    >
+                                                                                        <Input placeholder="例如: sh" />
+                                                                                    </FormItem>
+                                                                                    <Button
+                                                                                        className="flex-none"
+                                                                                        type="text"
+                                                                                        danger
+                                                                                        onClick={() => removeEntrypoint(entrypointField.name)}
+                                                                                    >
+                                                                                        移除
+                                                                                    </Button>
+                                                                                </div>
+                                                                            ))}
+                                                                            <Button className="self-start" type="dashed" onClick={() => addEntrypoint("")}>
+                                                                                新增入口点项
+                                                                            </Button>
+                                                                        </div>
+                                                                    )}
+                                                                </Form.List>
+                                                            </FormItem>
+                                                        ) : (
+                                                            <FormItem name={[field.name, "entrypoint"]} label="入口点" className="mt-4">
+                                                                <Input placeholder="例如: sh -c" />
+                                                            </FormItem>
+                                                        )}
+                                                        {commandMode === ProjectFormCommandMode.数组 ? (
+                                                            <FormItem<ProjectFormData> label="启动命令" className="mb-0 mt-4">
+                                                                <Form.List name={[field.name, "commandItems"]}>
+                                                                    {(commandFields, { add: addCommand, remove: removeCommand }) => (
+                                                                        <div className="flex flex-col gap-2">
+                                                                            {commandFields.map(commandField => (
+                                                                                <div key={commandField.key} className="flex items-start gap-2">
+                                                                                    <FormItem
+                                                                                        name={commandField.name}
+                                                                                        className="mb-0 flex-1"
+                                                                                        rules={[{ required: true, message: "请输入命令项" }]}
+                                                                                    >
+                                                                                        <Input placeholder="例如: npm" />
+                                                                                    </FormItem>
+                                                                                    <Button
+                                                                                        className="flex-none"
+                                                                                        type="text"
+                                                                                        danger
+                                                                                        onClick={() => removeCommand(commandField.name)}
+                                                                                    >
+                                                                                        移除
+                                                                                    </Button>
+                                                                                </div>
+                                                                            ))}
+                                                                            <Button className="self-start" type="dashed" onClick={() => addCommand("")}>
+                                                                                新增命令项
+                                                                            </Button>
+                                                                        </div>
+                                                                    )}
+                                                                </Form.List>
+                                                            </FormItem>
+                                                        ) : (
+                                                            <FormItem name={[field.name, "command"]} label="启动命令" className="mt-4">
+                                                                <Input placeholder="例如: npm run start" />
+                                                            </FormItem>
+                                                        )}
+                                                        <FormItem<ProjectFormData> label="依赖服务" className="mb-0 mt-4">
+                                                            <Form.List name={[field.name, "dependsOnItems"]}>
+                                                                {(dependsOnFields, { add: addDependsOn, remove: removeDependsOn }) => (
+                                                                    <div className="flex flex-col gap-2">
+                                                                        {dependsOnFields.map(dependsOnField => (
+                                                                            <div
+                                                                                key={dependsOnField.key}
+                                                                                className="grid grid-cols-1 gap-2 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]"
+                                                                            >
+                                                                                <FormItem
+                                                                                    name={[dependsOnField.name, "serviceName"]}
+                                                                                    className="mb-0"
+                                                                                    rules={[{ required: true, message: "请选择依赖服务" }]}
+                                                                                >
+                                                                                    <Select
+                                                                                        allowClear
+                                                                                        options={serviceNameOptions.filter(item => item.value !== serviceName)}
+                                                                                        placeholder="选择依赖服务"
+                                                                                    />
+                                                                                </FormItem>
+                                                                                <FormItem name={[dependsOnField.name, "condition"]} className="mb-0">
+                                                                                    <Select
+                                                                                        allowClear
+                                                                                        options={dependsOnConditionOptions}
+                                                                                        placeholder="依赖条件"
+                                                                                    />
+                                                                                </FormItem>
+                                                                                <FormItem name={[dependsOnField.name, "restart"]} className="mb-0">
+                                                                                    <Select allowClear options={booleanOptions} placeholder="变更时重启" />
+                                                                                </FormItem>
+                                                                                <FormItem name={[dependsOnField.name, "required"]} className="mb-0">
+                                                                                    <Select allowClear options={booleanOptions} placeholder="是否必需" />
+                                                                                </FormItem>
+                                                                                <Button
+                                                                                    className="flex-none"
+                                                                                    type="text"
+                                                                                    danger
+                                                                                    onClick={() => removeDependsOn(dependsOnField.name)}
+                                                                                >
+                                                                                    移除
+                                                                                </Button>
+                                                                            </div>
+                                                                        ))}
+                                                                        <Button className="self-start" type="dashed" onClick={() => addDependsOn({})}>
+                                                                            新增依赖
+                                                                        </Button>
+                                                                    </div>
+                                                                )}
+                                                            </Form.List>
+                                                        </FormItem>
                                                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                                             <FormItem<ProjectFormData> label="端口映射" className="mb-0">
                                                                 <Form.List name={[field.name, "ports"]}>
