@@ -1204,6 +1204,7 @@ const Page: FC = () => {
                         pageSize,
                         total: sortedData.length,
                         showTotal,
+                        showSizeChanger: true,
                     }}
                     rowKey={({ reference }) => reference}
                     rowSelection={rowSelection}

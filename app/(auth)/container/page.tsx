@@ -974,6 +974,7 @@ const Page: FC = () => {
                         pageSize,
                         showTotal,
                         total: tableRows.length,
+                        showSizeChanger: true,
                     }}
                     expandable={{
                         expandedRowKeys,

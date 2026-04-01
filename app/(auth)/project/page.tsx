@@ -625,6 +625,7 @@ const Page: FC = () => {
                         pageSize,
                         total: data?.total,
                         showTotal,
+                        showSizeChanger: true,
                     }}
                     rowKey="name"
                     scroll={{ y }}
