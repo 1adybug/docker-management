@@ -48,13 +48,20 @@ export interface AutoBackupConfig {
     tempDirectoryPath: string
 }
 
-export interface JsonObject {
-    [key: string]: unknown
-}
-
 export interface GetTierDirectoryPathParams {
     backupDirectoryPath: string
     tier: BackupTier
+}
+
+export interface GetPositiveIntegerFromEnvParams {
+    env?: string
+    defaultValue: number
+}
+
+export interface GetBackupTierScheduleFromEnvParams {
+    everyEnv?: string
+    retainEnv?: string
+    defaultValue: BackupTierSchedule
 }
 
 export const DefaultAutoBackupSchedule: AutoBackupSchedule = {
@@ -89,9 +96,9 @@ export function getAutoBackupConfig() {
 
     const config: AutoBackupConfig = {
         enabled: AutoBackupEnabled,
-        schedule: getAutoBackupSchedule(process.env.AUTO_BACKUP_SCHEDULE),
+        schedule: getAutoBackupSchedule(),
         logRetentionMs: getLogRetentionMs(process.env.AUTO_BACKUP_LOG_RETENTION),
-        s3: getS3BackupConfig(process.env.AUTO_BACKUP_S3),
+        s3: getS3BackupConfig(),
         databasePath: getDatabasePath(),
         dataDirectoryPath,
         backupDirectoryPath,
@@ -103,31 +110,31 @@ export function getAutoBackupConfig() {
     return config
 }
 
-export function getAutoBackupSchedule(env?: string) {
-    if (!env?.trim()) return DefaultAutoBackupSchedule
-
-    try {
-        const value = JSON.parse(env) as JsonObject
-        if (!isJsonObject(value)) return DefaultAutoBackupSchedule
-
-        const hourly = getBackupTierSchedule(value.hourly)
-        const daily = getBackupTierSchedule(value.daily)
-        const weekly = getBackupTierSchedule(value.weekly)
-        const monthly = getBackupTierSchedule(value.monthly)
-
-        if (!hourly || !daily || !weekly || !monthly) return DefaultAutoBackupSchedule
-
-        const schedule: AutoBackupSchedule = {
-            hourly,
-            daily,
-            weekly,
-            monthly,
-        }
-
-        return schedule
-    } catch {
-        return DefaultAutoBackupSchedule
+export function getAutoBackupSchedule(env: NodeJS.ProcessEnv = process.env) {
+    const schedule: AutoBackupSchedule = {
+        hourly: getBackupTierScheduleFromEnv({
+            everyEnv: env.AUTO_BACKUP_SCHEDULE_HOURLY_EVERY,
+            retainEnv: env.AUTO_BACKUP_SCHEDULE_HOURLY_RETAIN,
+            defaultValue: DefaultAutoBackupSchedule.hourly,
+        }),
+        daily: getBackupTierScheduleFromEnv({
+            everyEnv: env.AUTO_BACKUP_SCHEDULE_DAILY_EVERY,
+            retainEnv: env.AUTO_BACKUP_SCHEDULE_DAILY_RETAIN,
+            defaultValue: DefaultAutoBackupSchedule.daily,
+        }),
+        weekly: getBackupTierScheduleFromEnv({
+            everyEnv: env.AUTO_BACKUP_SCHEDULE_WEEKLY_EVERY,
+            retainEnv: env.AUTO_BACKUP_SCHEDULE_WEEKLY_RETAIN,
+            defaultValue: DefaultAutoBackupSchedule.weekly,
+        }),
+        monthly: getBackupTierScheduleFromEnv({
+            everyEnv: env.AUTO_BACKUP_SCHEDULE_MONTHLY_EVERY,
+            retainEnv: env.AUTO_BACKUP_SCHEDULE_MONTHLY_RETAIN,
+            defaultValue: DefaultAutoBackupSchedule.monthly,
+        }),
     }
+
+    return schedule
 }
 
 export function getLogRetentionMs(env?: string) {
@@ -153,38 +160,29 @@ export function getLogRetentionMs(env?: string) {
     return DefaultLogRetentionMs
 }
 
-export function getS3BackupConfig(env?: string) {
-    if (!env?.trim()) return undefined
+export function getS3BackupConfig(env: NodeJS.ProcessEnv = process.env) {
+    const endpoint = getNonEmptyString(env.AUTO_BACKUP_S3_ENDPOINT)
+    const region = getNonEmptyString(env.AUTO_BACKUP_S3_REGION)
+    const bucket = getNonEmptyString(env.AUTO_BACKUP_S3_BUCKET)
+    const accessKeyId = getNonEmptyString(env.AUTO_BACKUP_S3_ACCESS_KEY_ID)
+    const secretAccessKey = getNonEmptyString(env.AUTO_BACKUP_S3_SECRET_ACCESS_KEY)
 
-    try {
-        const value = JSON.parse(env) as JsonObject
-        if (!isJsonObject(value)) return undefined
+    if (!endpoint || !region || !bucket || !accessKeyId || !secretAccessKey) return undefined
 
-        const endpoint = getNonEmptyString(value.endpoint)
-        const region = getNonEmptyString(value.region)
-        const bucket = getNonEmptyString(value.bucket)
-        const accessKeyId = getNonEmptyString(value.accessKeyId)
-        const secretAccessKey = getNonEmptyString(value.secretAccessKey)
+    const prefix = getOptionalString(env.AUTO_BACKUP_S3_PREFIX)
+    const forcePathStyle = getOptionalBooleanFromEnv(env.AUTO_BACKUP_S3_FORCE_PATH_STYLE)
 
-        if (!endpoint || !region || !bucket || !accessKeyId || !secretAccessKey) return undefined
-
-        const prefix = getOptionalString(value.prefix)
-        const forcePathStyle = getOptionalBoolean(value.forcePathStyle)
-
-        const config: S3BackupConfig = {
-            endpoint,
-            region,
-            bucket,
-            accessKeyId,
-            secretAccessKey,
-            ...(prefix ? { prefix } : {}),
-            ...(forcePathStyle === undefined ? {} : { forcePathStyle }),
-        }
-
-        return config
-    } catch {
-        return undefined
+    const config: S3BackupConfig = {
+        endpoint,
+        region,
+        bucket,
+        accessKeyId,
+        secretAccessKey,
+        ...(prefix ? { prefix } : {}),
+        ...(forcePathStyle === undefined ? {} : { forcePathStyle }),
     }
+
+    return config
 }
 
 export function getDatabasePath() {
@@ -198,40 +196,29 @@ export function getTierDirectoryPath({ backupDirectoryPath, tier }: GetTierDirec
     return resolve(backupDirectoryPath, tier)
 }
 
-export function getBackupTierSchedule(value: unknown) {
-    if (typeof value === "number") {
-        const retain = getPositiveInteger(value)
-        if (!retain) return undefined
+export function getPositiveIntegerFromEnv({ env, defaultValue }: GetPositiveIntegerFromEnvParams) {
+    const value = env?.trim()
+    if (!value) return defaultValue
 
-        const schedule: BackupTierSchedule = {
-            every: 1,
-            retain,
-        }
+    const number = Number(value)
+    if (!Number.isInteger(number) || number <= 0) return defaultValue
 
-        return schedule
-    }
+    return number
+}
 
-    if (!isJsonObject(value)) return undefined
-
-    const every = getPositiveInteger(value.every)
-    const retain = getPositiveInteger(value.retain)
-
-    if (!every || !retain) return undefined
-
+export function getBackupTierScheduleFromEnv({ everyEnv, retainEnv, defaultValue }: GetBackupTierScheduleFromEnvParams) {
     const schedule: BackupTierSchedule = {
-        every,
-        retain,
+        every: getPositiveIntegerFromEnv({
+            env: everyEnv,
+            defaultValue: defaultValue.every,
+        }),
+        retain: getPositiveIntegerFromEnv({
+            env: retainEnv,
+            defaultValue: defaultValue.retain,
+        }),
     }
 
     return schedule
-}
-
-export function isJsonObject(value: unknown): value is JsonObject {
-    return typeof value === "object" && value !== null && !Array.isArray(value)
-}
-
-export function getPositiveInteger(value: unknown) {
-    return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : undefined
 }
 
 export function getNonEmptyString(value: unknown) {
@@ -242,6 +229,7 @@ export function getOptionalString(value: unknown) {
     return typeof value === "string" && value.trim() ? value.trim() : undefined
 }
 
-export function getOptionalBoolean(value: unknown) {
-    return typeof value === "boolean" ? value : undefined
+export function getOptionalBooleanFromEnv(env?: string) {
+    if (!env?.trim()) return undefined
+    return getBooleanFromEnv(env)
 }

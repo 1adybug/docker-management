@@ -44,9 +44,22 @@ git remote set-url --push template no_push://template
 | `NEXT_TELEMETRY_DISABLED`                | 否         | 是否关闭 Next 遥测上报                     | `1`                           |
 | `REDIS_URL`                              | 按需       | Redis 地址（仅使用 Redis 限流存储时需要）  | `redis://127.0.0.1:6379`      |
 | `AUTO_BACKUP_ENABLED`                    | 否         | 是否开启应用内自动备份                     | `0`（默认关闭）               |
-| `AUTO_BACKUP_SCHEDULE`                   | 否         | 自动备份频率与保留策略配置                 | 见下方示例                    |
+| `AUTO_BACKUP_SCHEDULE_HOURLY_EVERY`      | 否         | 每小时备份的执行周期                       | `1`                           |
+| `AUTO_BACKUP_SCHEDULE_HOURLY_RETAIN`     | 否         | 每小时备份的保留数量                       | `48`                          |
+| `AUTO_BACKUP_SCHEDULE_DAILY_EVERY`       | 否         | 每日备份的执行周期                         | `1`                           |
+| `AUTO_BACKUP_SCHEDULE_DAILY_RETAIN`      | 否         | 每日备份的保留数量                         | `30`                          |
+| `AUTO_BACKUP_SCHEDULE_WEEKLY_EVERY`      | 否         | 每周备份的执行周期                         | `1`                           |
+| `AUTO_BACKUP_SCHEDULE_WEEKLY_RETAIN`     | 否         | 每周备份的保留数量                         | `12`                          |
+| `AUTO_BACKUP_SCHEDULE_MONTHLY_EVERY`     | 否         | 每月备份的执行周期                         | `1`                           |
+| `AUTO_BACKUP_SCHEDULE_MONTHLY_RETAIN`    | 否         | 每月备份的保留数量                         | `12`                          |
 | `AUTO_BACKUP_LOG_RETENTION`              | 否         | 日志保留时长                               | `365d`                        |
-| `AUTO_BACKUP_S3`                         | 否         | S3 / 兼容对象存储配置                      | 见下方示例                    |
+| `AUTO_BACKUP_S3_ENDPOINT`                | 按需       | S3 / 兼容对象存储地址                      | `https://s3.example.com`      |
+| `AUTO_BACKUP_S3_REGION`                  | 按需       | S3 / 兼容对象存储区域                      | `auto`                        |
+| `AUTO_BACKUP_S3_BUCKET`                  | 按需       | S3 / 兼容对象存储桶名                      | `example-backups`             |
+| `AUTO_BACKUP_S3_ACCESS_KEY_ID`           | 按需       | S3 / 兼容对象存储访问密钥 ID               | `your_access_key_id`          |
+| `AUTO_BACKUP_S3_SECRET_ACCESS_KEY`       | 按需       | S3 / 兼容对象存储访问密钥 Secret           | `your_secret_access_key`      |
+| `AUTO_BACKUP_S3_PREFIX`                  | 否         | S3 / 兼容对象存储对象前缀                  | `geshu-next-template`         |
+| `AUTO_BACKUP_S3_FORCE_PATH_STYLE`        | 否         | 是否强制使用 Path Style                    | `1`                           |
 
 ### 推荐的本地 `.env` 示例
 
@@ -86,13 +99,26 @@ REDIS_URL="redis://127.0.0.1:6379"
 AUTO_BACKUP_ENABLED="0"
 
 # 频率与保留策略
-AUTO_BACKUP_SCHEDULE='{"hourly":{"every":1,"retain":48},"daily":{"every":1,"retain":30},"weekly":{"every":1,"retain":12},"monthly":{"every":1,"retain":12}}'
+AUTO_BACKUP_SCHEDULE_HOURLY_EVERY="1"
+AUTO_BACKUP_SCHEDULE_HOURLY_RETAIN="48"
+AUTO_BACKUP_SCHEDULE_DAILY_EVERY="1"
+AUTO_BACKUP_SCHEDULE_DAILY_RETAIN="30"
+AUTO_BACKUP_SCHEDULE_WEEKLY_EVERY="1"
+AUTO_BACKUP_SCHEDULE_WEEKLY_RETAIN="12"
+AUTO_BACKUP_SCHEDULE_MONTHLY_EVERY="1"
+AUTO_BACKUP_SCHEDULE_MONTHLY_RETAIN="12"
 
 # 日志保留时长
 AUTO_BACKUP_LOG_RETENTION="365d"
 
 # S3 / 兼容对象存储（可选）
-AUTO_BACKUP_S3='{"endpoint":"https://s3.example.com","region":"auto","bucket":"example-backups","accessKeyId":"your_access_key_id","secretAccessKey":"your_secret_access_key","prefix":"geshu-next-template","forcePathStyle":true}'
+AUTO_BACKUP_S3_ENDPOINT="https://s3.example.com"
+AUTO_BACKUP_S3_REGION="auto"
+AUTO_BACKUP_S3_BUCKET="example-backups"
+AUTO_BACKUP_S3_ACCESS_KEY_ID="your_access_key_id"
+AUTO_BACKUP_S3_SECRET_ACCESS_KEY="your_secret_access_key"
+AUTO_BACKUP_S3_PREFIX="geshu-next-template"
+AUTO_BACKUP_S3_FORCE_PATH_STYLE="1"
 ```
 
 ### Better Auth URL 解析规则
@@ -143,29 +169,38 @@ AUTO_BACKUP_S3='{"endpoint":"https://s3.example.com","region":"auto","bucket":"e
 - `on`
 - `off`
 
-#### `AUTO_BACKUP_SCHEDULE`
+#### `AUTO_BACKUP_SCHEDULE_*`
 
-使用 JSON 字符串配置备份频率与保留数量。
+使用平铺环境变量配置备份频率与保留数量，不再支持 JSON 字符串。
 
 示例：
 
 ```env
-AUTO_BACKUP_SCHEDULE='{"hourly":{"every":1,"retain":48},"daily":{"every":1,"retain":30},"weekly":{"every":1,"retain":12},"monthly":{"every":1,"retain":12}}'
+AUTO_BACKUP_SCHEDULE_HOURLY_EVERY="1"
+AUTO_BACKUP_SCHEDULE_HOURLY_RETAIN="48"
+AUTO_BACKUP_SCHEDULE_DAILY_EVERY="1"
+AUTO_BACKUP_SCHEDULE_DAILY_RETAIN="30"
+AUTO_BACKUP_SCHEDULE_WEEKLY_EVERY="1"
+AUTO_BACKUP_SCHEDULE_WEEKLY_RETAIN="12"
+AUTO_BACKUP_SCHEDULE_MONTHLY_EVERY="1"
+AUTO_BACKUP_SCHEDULE_MONTHLY_RETAIN="12"
 ```
 
 字段说明：
 
-- `every`: 每隔多少个周期执行一次
-- `retain`: 当前层级最多保留多少份本地备份
+- `AUTO_BACKUP_SCHEDULE_*_EVERY`: 每隔多少个周期执行一次
+- `AUTO_BACKUP_SCHEDULE_*_RETAIN`: 当前层级最多保留多少份本地备份
 
 周期说明：
 
-- `hourly.every = 2` 表示每 2 小时备份一次
-- `daily.every = 3` 表示每 3 天备份一次
-- `weekly.every = 2` 表示每 2 周备份一次
-- `monthly.every = 3` 表示每 3 个月备份一次
+- `AUTO_BACKUP_SCHEDULE_HOURLY_EVERY="2"` 表示每 2 小时备份一次
+- `AUTO_BACKUP_SCHEDULE_DAILY_EVERY="3"` 表示每 3 天备份一次
+- `AUTO_BACKUP_SCHEDULE_WEEKLY_EVERY="2"` 表示每 2 周备份一次
+- `AUTO_BACKUP_SCHEDULE_MONTHLY_EVERY="3"` 表示每 3 个月备份一次
 
-如果该值为空、不是合法 JSON、字段缺失或字段不是正整数，会回退到默认策略。
+所有 `EVERY` 和 `RETAIN` 字段都必须是正整数。
+
+如果某个字段为空、缺失或不是正整数，只会回退该字段的默认值，不影响其他字段。
 
 #### `AUTO_BACKUP_LOG_RETENTION`
 
@@ -180,27 +215,33 @@ AUTO_BACKUP_SCHEDULE='{"hourly":{"every":1,"retain":48},"daily":{"every":1,"reta
 
 无效时会回退到 `365d`。
 
-#### `AUTO_BACKUP_S3`
+#### `AUTO_BACKUP_S3_*`
 
-使用 JSON 字符串配置 S3 或兼容对象存储。
+使用平铺环境变量配置 S3 或兼容对象存储，不再支持 JSON 字符串。
 
 示例：
 
 ```env
-AUTO_BACKUP_S3='{"endpoint":"https://s3.example.com","region":"auto","bucket":"example-backups","accessKeyId":"your_access_key_id","secretAccessKey":"your_secret_access_key","prefix":"geshu-next-template","forcePathStyle":true}'
+AUTO_BACKUP_S3_ENDPOINT="https://s3.example.com"
+AUTO_BACKUP_S3_REGION="auto"
+AUTO_BACKUP_S3_BUCKET="example-backups"
+AUTO_BACKUP_S3_ACCESS_KEY_ID="your_access_key_id"
+AUTO_BACKUP_S3_SECRET_ACCESS_KEY="your_secret_access_key"
+AUTO_BACKUP_S3_PREFIX="geshu-next-template"
+AUTO_BACKUP_S3_FORCE_PATH_STYLE="1"
 ```
 
 字段说明：
 
-- `endpoint`: 对象存储地址
-- `region`: 区域
-- `bucket`: 桶名
-- `accessKeyId`: 访问密钥 ID
-- `secretAccessKey`: 访问密钥 Secret
-- `prefix`: 可选，对象前缀
-- `forcePathStyle`: 可选，兼容部分 S3 网关
+- `AUTO_BACKUP_S3_ENDPOINT`: 对象存储地址
+- `AUTO_BACKUP_S3_REGION`: 区域
+- `AUTO_BACKUP_S3_BUCKET`: 桶名
+- `AUTO_BACKUP_S3_ACCESS_KEY_ID`: 访问密钥 ID
+- `AUTO_BACKUP_S3_SECRET_ACCESS_KEY`: 访问密钥 Secret
+- `AUTO_BACKUP_S3_PREFIX`: 可选，对象前缀
+- `AUTO_BACKUP_S3_FORCE_PATH_STYLE`: 可选，兼容部分 S3 网关，支持 `1`、`0`、`true`、`false`、`yes`、`no`、`on`、`off`
 
-如果该值缺失或无效，则只做本地备份，不上传对象存储。
+只要任一必填字段缺失或无效，则只做本地备份，不上传对象存储。
 
 ### 目录结构
 
@@ -232,7 +273,7 @@ data/backups/
 4. 备份成功后执行完整性校验
 5. 然后按本地保留策略清理旧备份
 6. 每天执行一次日志清理
-7. 如果 `AUTO_BACKUP_S3` 有效，再将备份压缩后上传到对象存储
+7. 如果 `AUTO_BACKUP_S3_*` 配置有效，再将备份压缩后上传到对象存储
 
 ### 注意事项
 
