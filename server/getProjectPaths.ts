@@ -6,9 +6,31 @@ function isWindowsAbsolutePath(path: string) {
     return /^[a-zA-Z]:[\\/]/u.test(path) || /^\\\\[^\\]+\\[^\\]+/u.test(path)
 }
 
+function getDockerDesktopHostPath(path: string) {
+    if (process.platform === "win32" || !isWindowsAbsolutePath(path)) return undefined
+
+    const normalizedPath = win32.normalize(path)
+    const driveMatch = normalizedPath.match(/^([a-zA-Z]):(?:\\(.*))?$/u)
+
+    if (!driveMatch?.[1]) return undefined
+
+    const drive = driveMatch[1].toLowerCase()
+    const segments = driveMatch[2]?.split(/\\+/u).filter(Boolean) ?? []
+    const suffix = segments.join("/")
+
+    return suffix ? `/run/desktop/mnt/host/${drive}/${suffix}` : `/run/desktop/mnt/host/${drive}`
+}
+
 function normalizeAbsoluteDirectory(path: string) {
     if (isWindowsAbsolutePath(path)) return win32.normalize(path)
     return resolve(path)
+}
+
+function normalizeDockerHostDirectory(path: string) {
+    const dockerDesktopPath = getDockerDesktopHostPath(path)
+    if (dockerDesktopPath) return dockerDesktopPath
+
+    return normalizeAbsoluteDirectory(path)
 }
 
 function resolveDirectoryPath(root: string, path: string) {
@@ -58,7 +80,7 @@ export function getProjectHostRoot() {
     const root = process.env.PROJECTS_HOST_ROOT?.trim()
     if (!root) return getProjectRoot()
 
-    return ensureAbsoluteDirectory(root, "PROJECTS_HOST_ROOT")
+    return normalizeDockerHostDirectory(ensureAbsoluteDirectory(root, "PROJECTS_HOST_ROOT"))
 }
 
 /** 项目目录 */
