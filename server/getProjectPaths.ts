@@ -1,9 +1,30 @@
-import { isAbsolute, resolve, sep } from "node:path"
+import { isAbsolute, relative, resolve, win32 } from "node:path"
 
 import { ClientError } from "@/utils/clientError"
 
 function isWindowsAbsolutePath(path: string) {
-    return /^[a-zA-Z]:[\\/]/u.test(path)
+    return /^[a-zA-Z]:[\\/]/u.test(path) || /^\\\\[^\\]+\\[^\\]+/u.test(path)
+}
+
+function normalizeAbsoluteDirectory(path: string) {
+    if (isWindowsAbsolutePath(path)) return win32.normalize(path)
+    return resolve(path)
+}
+
+function resolveDirectoryPath(root: string, path: string) {
+    if (isWindowsAbsolutePath(root)) return win32.resolve(root, path)
+    return resolve(root, path)
+}
+
+function isSubDirectory(root: string, path: string) {
+    const relativePath = isWindowsAbsolutePath(root) ? win32.relative(root, path) : relative(root, path)
+
+    if (!relativePath) return true
+    if (relativePath === "..") return false
+    if (relativePath.startsWith("../") || relativePath.startsWith("..\\")) return false
+    if (isAbsolute(relativePath) || isWindowsAbsolutePath(relativePath)) return false
+
+    return true
 }
 
 function ensureAbsoluteDirectory(path: string, label: string) {
@@ -12,15 +33,14 @@ function ensureAbsoluteDirectory(path: string, label: string) {
     if (!cleanPath) throw new ClientError(`${label} 无效`)
     if (!isAbsolute(cleanPath) && !isWindowsAbsolutePath(cleanPath)) throw new ClientError(`${label} 必须为绝对路径`)
 
-    return resolve(cleanPath)
+    return normalizeAbsoluteDirectory(cleanPath)
 }
 
 function resolveProjectDirectory(root: string, name: string) {
-    const dir = resolve(root, name)
-    const rootLower = `${root.toLowerCase()}${sep}`
-    const dirLower = `${dir.toLowerCase()}${sep}`
+    const normalizedRoot = normalizeAbsoluteDirectory(root)
+    const dir = resolveDirectoryPath(normalizedRoot, name)
 
-    if (!dirLower.startsWith(rootLower)) throw new ClientError("项目名称无效")
+    if (!isSubDirectory(normalizedRoot, dir)) throw new ClientError("项目名称无效")
 
     return dir
 }
@@ -53,5 +73,5 @@ export function getProjectHostDir(name: string) {
 
 /** docker-compose.yml 路径 */
 export function getProjectComposePath(name: string) {
-    return resolve(getProjectDir(name), "docker-compose.yml")
+    return resolveDirectoryPath(getProjectDir(name), "docker-compose.yml")
 }
