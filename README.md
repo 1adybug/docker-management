@@ -41,6 +41,7 @@ git remote set-url --push template no_push://template
 | `DOCKER_PATH_MAPPINGS`                   | 否         | 宿主机路径到容器路径的映射，用于读取外部 compose 文件    | `/srv/app=>/host-app`         |
 | `PROJECTS_ROOT`                          | 否         | 平台项目在当前运行环境可访问的根目录                     | `/app/projects`               |
 | `PROJECTS_HOST_ROOT`                     | 否         | 平台项目在宿主机上的真实根目录，默认等于 `PROJECTS_ROOT` | `/home/projects`              |
+| `DOCKER_TEMP_ROOT`                       | 否         | Docker 构建临时目录，默认优先使用 `data/tmp/docker`      | `/app/data/tmp/docker`        |
 | `NEXT_OUTPUT`                            | 否         | Next 构建输出模式                                        | `standalone` / `export`       |
 | `DATABASE_URL`                           | 按部署方式 | 数据库连接字符串（如改用外部数据库时使用）               | `postgresql://...`            |
 | `JWT_SECRET`                             | 按认证配置 | 兼容旧认证方案时使用（当前默认不依赖）                   | `your_jwt_secret`             |
@@ -95,6 +96,7 @@ ALLOW_CURRENT_USER_UPDATE_PHONE_NUMBER="1"
 DOCKER_PATH_MAPPINGS=""
 PROJECTS_ROOT="/app/projects"
 PROJECTS_HOST_ROOT="/app/projects"
+DOCKER_TEMP_ROOT=""
 
 # 构建与运行
 NEXT_OUTPUT="standalone"
@@ -191,6 +193,25 @@ services:
 ```
 
 这样平台项目的 `docker-compose.yml` 会继续写入容器中的 `/app/projects`，但执行 `docker compose` 时会按照宿主机的 `/home/projects` 解析相对路径。
+
+### Docker 临时目录
+
+平台在上传镜像包、解压 `dist`、执行 `docker build` 之前，会先创建一个临时工作目录。
+
+- 默认会优先使用当前运行目录下的 `data/tmp/docker`
+- 如果设置了 `DOCKER_TEMP_ROOT`，则优先使用该目录
+- 只有前两者都不可用时，才会回退到系统临时目录，例如容器内的 `/tmp`
+
+这样可以避免部分容器环境里 `/tmp` 权限异常导致的 `EACCES: permission denied, mkdtemp '/tmp/docker-management-*'` 问题。
+
+如果你希望显式指定目录，推荐在容器部署时配置：
+
+```yaml
+services:
+    app:
+        environment:
+            DOCKER_TEMP_ROOT: /app/data/tmp/docker
+```
 
 ### Better Auth URL 解析规则
 
