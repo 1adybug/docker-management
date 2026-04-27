@@ -16,10 +16,10 @@ import {
 } from "@/constants/systemSettings"
 
 import { prisma } from "@/prisma"
+import { DatabaseUrl } from "@/prisma/databaseUrl"
 
 import { ClientError } from "@/utils/clientError"
 
-import { DatabaseUrl } from "./databaseUrl"
 import { ensureSystem7zaAvailable } from "./system7za"
 
 export interface SystemSettingValueMap {

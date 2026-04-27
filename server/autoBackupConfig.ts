@@ -2,7 +2,8 @@ import { resolve } from "node:path"
 
 import { SystemSettingKey } from "@/constants/systemSettings"
 
-import { DatabaseUrl } from "./databaseUrl"
+import { DatabaseUrl } from "@/prisma/databaseUrl"
+
 import { getSystemSettingValueMap, normalizeBooleanValue, SystemSettingValueMap } from "./systemSettings"
 
 export const BackupTier = {
