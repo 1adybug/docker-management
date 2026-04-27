@@ -139,7 +139,7 @@ declare global {
 export async function startAutoBackupScheduler() {
     if (globalThis.__AUTO_BACKUP_SCHEDULER__) return globalThis.__AUTO_BACKUP_SCHEDULER__
 
-    const config = getAutoBackupConfig()
+    const config = await getAutoBackupConfig()
 
     if (!config.enabled) {
         console.log("[auto-backup] 自动备份未开启")
@@ -154,12 +154,12 @@ export async function startAutoBackupScheduler() {
 
     globalThis.__AUTO_BACKUP_SCHEDULER__ = scheduler
 
-    void runAutoBackupMaintenance(config).catch(error => {
+    void runAutoBackupMaintenance().catch(error => {
         console.error("[auto-backup] 首次自动备份执行失败", error)
     })
 
     scheduler.timer = setInterval(() => {
-        void runAutoBackupMaintenance(config).catch(error => {
+        void runAutoBackupMaintenance().catch(error => {
             console.error("[auto-backup] 自动备份执行失败", error)
         })
     }, 60 * 1000)
@@ -169,7 +169,30 @@ export async function startAutoBackupScheduler() {
     return scheduler
 }
 
-export async function runAutoBackupMaintenance(config: AutoBackupConfig = getAutoBackupConfig()) {
+export function stopAutoBackupScheduler() {
+    const scheduler = globalThis.__AUTO_BACKUP_SCHEDULER__
+    if (!scheduler) return undefined
+
+    if (scheduler.timer) clearInterval(scheduler.timer)
+    globalThis.__AUTO_BACKUP_SCHEDULER__ = undefined
+
+    console.log("[auto-backup] 自动备份调度器已停止")
+
+    return scheduler
+}
+
+export async function syncAutoBackupScheduler() {
+    const config = await getAutoBackupConfig()
+
+    if (!config.enabled) return stopAutoBackupScheduler()
+
+    return startAutoBackupScheduler()
+}
+
+export async function runAutoBackupMaintenance(config?: AutoBackupConfig) {
+    config ??= await getAutoBackupConfig()
+    if (!config.enabled) return undefined
+
     return withFileLock({ lockFilePath: config.lockFilePath }, async () => {
         const state = await getBackupState(config.stateFilePath)
 

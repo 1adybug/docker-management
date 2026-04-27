@@ -1,4 +1,4 @@
-import { AllowCurrentUserUpdatePhoneNumber } from "@/constants"
+import { SystemSettingKey } from "@/constants/systemSettings"
 
 import { prisma } from "@/prisma"
 
@@ -8,6 +8,7 @@ import { auth } from "@/server/auth"
 import { createRateLimit, RateLimitContext } from "@/server/createRateLimit"
 import { createSharedFn } from "@/server/createSharedFn"
 import { getCurrentUser } from "@/server/getCurrentUser"
+import { getBooleanSystemSettingValue } from "@/server/systemSettings"
 
 import { ClientError } from "@/utils/clientError"
 
@@ -36,7 +37,8 @@ export const sendCurrentUserPhoneNumberOtp = createSharedFn({
     const user = await getCurrentUser()
     if (!user) throw new ClientError({ message: "请先登录", code: 401 })
 
-    if (!AllowCurrentUserUpdatePhoneNumber) throw new ClientError("当前环境不允许用户修改手机号")
+    const allowUpdatePhoneNumber = await getBooleanSystemSettingValue(SystemSettingKey.允许修改手机号)
+    if (!allowUpdatePhoneNumber) throw new ClientError("当前系统设置不允许用户修改手机号")
 
     if (phoneNumber !== user.phoneNumber) {
         const count = await prisma.user.count({

@@ -1,4 +1,4 @@
-import { QjpSmsUrl } from "@/constants"
+import { getSmsConfig } from "./smsConfig"
 
 export interface SendQjpSmsParams {
     phone: string | string[]
@@ -20,7 +20,10 @@ export async function sendQjpSms({ phone, content }: SendQjpSmsParams) {
     const invalidPhones = phone.filter(p => !phoneReg.test(p))
     if (invalidPhones.length > 0) throw new Error(`invalid phone${invalidPhones.length > 1 ? "s" : ""}: ${invalidPhones.join(",")}`)
     phone = phone.join(",")
-    const url = new URL(QjpSmsUrl!)
+    const { qjpSmsUrl } = getSmsConfig()
+    if (!qjpSmsUrl) throw new Error("缺少内网短信地址")
+
+    const url = new URL(qjpSmsUrl)
     url.searchParams.set("u_key", "")
     url.searchParams.set("a_key", "")
     url.searchParams.set("mobiles", phone)

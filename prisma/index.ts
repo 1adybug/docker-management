@@ -1,6 +1,6 @@
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3"
 
-import { DatabaseUrl } from "@/prisma.config"
+import { DatabaseUrl } from "@/server/databaseUrl"
 
 import { PrismaClient } from "./generated/client"
 

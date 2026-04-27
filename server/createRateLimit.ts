@@ -1,6 +1,8 @@
+import { SystemSettingKey } from "@/constants/systemSettings"
+
 import { User } from "@/prisma/generated/client"
 
-import { getBooleanFromEnv } from "@/utils/getBooleanFromEnv"
+import { getBooleanSystemSettingValue } from "@/server/systemSettings"
 
 import { createMemoryRateLimitStore } from "./createMemoryRateLimitStore"
 
@@ -95,10 +97,9 @@ let globalRateLimitOptions: RateLimitOptions = { ...defaultGlobalRateLimitOption
 
 let globalRateLimitStore: RateLimitStore = createMemoryRateLimitStore()
 
-const rateLimitEnabledEnv = process.env.RATE_LIMIT_ENABLED
 const isDevelopment = process.env.NODE_ENV === "development"
 
-let globalRateLimitEnabled = rateLimitEnabledEnv === undefined ? !isDevelopment : getBooleanFromEnv(rateLimitEnabledEnv)
+let globalRateLimitEnabled: boolean | undefined
 
 function normalizePositiveInteger(value: number | undefined, fallback: number) {
     if (typeof value !== "number" || !Number.isFinite(value)) return fallback
@@ -126,8 +127,15 @@ export function setGlobalRateLimitEnabled(enabled: boolean) {
     globalRateLimitEnabled = enabled
 }
 
-export function isGlobalRateLimitEnabled() {
-    return globalRateLimitEnabled
+export async function isGlobalRateLimitEnabled() {
+    if (globalRateLimitEnabled !== undefined) return globalRateLimitEnabled
+
+    try {
+        return await getBooleanSystemSettingValue(SystemSettingKey.全局限流)
+    } catch (error) {
+        console.error("[rate-limit] 读取系统设置失败，使用代码默认值", error)
+        return !isDevelopment
+    }
 }
 
 export function createRateLimit<T extends CreateRateLimitParams>(rateLimit: T) {
@@ -184,7 +192,7 @@ export async function resolveRateLimitKey({ context, options }: ResolveRateLimit
 }
 
 export async function checkRateLimit({ context, rateLimit }: CheckRateLimitParams): Promise<RateLimitCheckResult | undefined> {
-    if (!isGlobalRateLimitEnabled()) return undefined
+    if (!(await isGlobalRateLimitEnabled())) return undefined
 
     const options = resolveRateLimitOptions({ rateLimit })
     if (!options.enabled) return undefined

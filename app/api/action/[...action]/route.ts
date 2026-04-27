@@ -23,6 +23,7 @@ import { queryDockerImageDetail } from "@/shared/queryDockerImageDetail"
 import { queryErrorLog } from "@/shared/queryErrorLog"
 import { queryOperationLog } from "@/shared/queryOperationLog"
 import { queryProject } from "@/shared/queryProject"
+import { querySystemSettings } from "@/shared/querySystemSettings"
 import { queryUser } from "@/shared/queryUser"
 import { readComposeProject } from "@/shared/readComposeProject"
 import { renameDockerImage } from "@/shared/renameDockerImage"
@@ -34,6 +35,7 @@ import { sendPhoneNumberOtp } from "@/shared/sendPhoneNumberOtp"
 import { unbanUser } from "@/shared/unbanUser"
 import { updateCurrentUserProfile } from "@/shared/updateCurrentUserProfile"
 import { updateProject } from "@/shared/updateProject"
+import { updateSystemSettings } from "@/shared/updateSystemSettings"
 import { updateUser } from "@/shared/updateUser"
 import { uploadDockerImage } from "@/shared/uploadDockerImage"
 
@@ -69,6 +71,7 @@ registerRoute(queryDockerImageDetail)
 registerRoute(queryErrorLog)
 registerRoute(queryOperationLog)
 registerRoute(queryProject)
+registerRoute(querySystemSettings)
 registerRoute(queryUser)
 registerRoute(readComposeProject)
 registerRoute(renameDockerImage)
@@ -80,6 +83,7 @@ registerRoute(sendPhoneNumberOtp)
 registerRoute(unbanUser)
 registerRoute(updateCurrentUserProfile)
 registerRoute(updateProject)
+registerRoute(updateSystemSettings)
 registerRoute(updateUser)
 registerRoute(uploadDockerImage)
 

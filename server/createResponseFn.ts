@@ -290,7 +290,7 @@ const filterMiddleware: ResponseMiddleware = async function filterMiddleware(con
 }
 
 const rateLimitMiddleware: ResponseMiddleware = async function rateLimitMiddleware(context, next) {
-    if (!isGlobalRateLimitEnabled()) {
+    if (!(await isGlobalRateLimitEnabled())) {
         await next()
         return
     }

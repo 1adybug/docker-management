@@ -4,6 +4,10 @@ import { hostname } from "node:os"
 import { dirname } from "node:path"
 import { promisify } from "node:util"
 
+import { SystemSettingKey } from "@/constants/systemSettings"
+
+import { getCachedSystemSettingValue } from "@/server/systemSettings"
+
 import { ClientError } from "@/utils/clientError"
 
 const execFileAsync = promisify(execFile)
@@ -136,7 +140,7 @@ function parseDockerPathMappingsFromText(value: string) {
 
 /** 读取 Docker 路径映射 */
 export function getDockerPathMappings() {
-    const raw = process.env.DOCKER_PATH_MAPPINGS?.trim()
+    const raw = getCachedSystemSettingValue(SystemSettingKey.Docker路径映射)?.trim()
     if (!raw) return []
 
     const mappings = raw.startsWith("[") ? parseDockerPathMappingsFromJson(raw) : parseDockerPathMappingsFromText(raw)

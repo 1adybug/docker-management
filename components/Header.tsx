@@ -53,6 +53,11 @@ const navs: NavItem[] = [
         name: "错误日志",
         filter: isAdmin,
     },
+    {
+        href: "/system-setting",
+        name: "系统设置",
+        filter: isAdmin,
+    },
 ]
 
 export interface HeaderProps extends StrictOmit<ComponentProps<"header">, "children"> {}

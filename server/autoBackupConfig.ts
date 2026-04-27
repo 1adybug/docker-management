@@ -1,8 +1,9 @@
 import { resolve } from "node:path"
 
-import { DatabaseUrl } from "@/prisma.config"
+import { SystemSettingKey } from "@/constants/systemSettings"
 
-import { getBooleanFromEnv } from "@/utils/getBooleanFromEnv"
+import { DatabaseUrl } from "./databaseUrl"
+import { getSystemSettingValueMap, normalizeBooleanValue, SystemSettingValueMap } from "./systemSettings"
 
 export const BackupTier = {
     小时: "hourly",
@@ -53,14 +54,14 @@ export interface GetTierDirectoryPathParams {
     tier: BackupTier
 }
 
-export interface GetPositiveIntegerFromEnvParams {
-    env?: string
+export interface GetPositiveIntegerParams {
+    value?: string
     defaultValue: number
 }
 
-export interface GetBackupTierScheduleFromEnvParams {
-    everyEnv?: string
-    retainEnv?: string
+export interface GetBackupTierScheduleParams {
+    everyValue?: string
+    retainValue?: string
     defaultValue: BackupTierSchedule
 }
 
@@ -85,20 +86,19 @@ export const DefaultAutoBackupSchedule: AutoBackupSchedule = {
 
 export const DefaultLogRetentionMs = 365 * 24 * 60 * 60 * 1000
 
-export const AutoBackupEnabled = getBooleanFromEnv(process.env.AUTO_BACKUP_ENABLED)
-
-export function getAutoBackupConfig() {
-    const dataDirectoryPath = resolve(process.cwd(), "data")
+export async function getAutoBackupConfig() {
+    const values = await getSystemSettingValueMap()
+    const dataDirectoryPath = resolve(/* turbopackIgnore: true */ process.cwd(), "data")
     const backupDirectoryPath = resolve(dataDirectoryPath, "backups")
     const stateFilePath = resolve(backupDirectoryPath, "state.json")
     const lockFilePath = resolve(backupDirectoryPath, "backup.lock")
     const tempDirectoryPath = resolve(backupDirectoryPath, "tmp")
 
     const config: AutoBackupConfig = {
-        enabled: AutoBackupEnabled,
-        schedule: getAutoBackupSchedule(),
-        logRetentionMs: getLogRetentionMs(process.env.AUTO_BACKUP_LOG_RETENTION),
-        s3: getS3BackupConfig(),
+        enabled: normalizeBooleanValue(values[SystemSettingKey.自动备份]),
+        schedule: getAutoBackupSchedule(values),
+        logRetentionMs: getLogRetentionMs(values[SystemSettingKey.自动备份日志保留]),
+        s3: getS3BackupConfig(values),
         databasePath: getDatabasePath(),
         dataDirectoryPath,
         backupDirectoryPath,
@@ -110,26 +110,26 @@ export function getAutoBackupConfig() {
     return config
 }
 
-export function getAutoBackupSchedule(env: NodeJS.ProcessEnv = process.env) {
+export function getAutoBackupSchedule(values: SystemSettingValueMap = {}) {
     const schedule: AutoBackupSchedule = {
-        hourly: getBackupTierScheduleFromEnv({
-            everyEnv: env.AUTO_BACKUP_SCHEDULE_HOURLY_EVERY,
-            retainEnv: env.AUTO_BACKUP_SCHEDULE_HOURLY_RETAIN,
+        hourly: getBackupTierSchedule({
+            everyValue: values[SystemSettingKey.小时备份周期],
+            retainValue: values[SystemSettingKey.小时备份保留数量],
             defaultValue: DefaultAutoBackupSchedule.hourly,
         }),
-        daily: getBackupTierScheduleFromEnv({
-            everyEnv: env.AUTO_BACKUP_SCHEDULE_DAILY_EVERY,
-            retainEnv: env.AUTO_BACKUP_SCHEDULE_DAILY_RETAIN,
+        daily: getBackupTierSchedule({
+            everyValue: values[SystemSettingKey.每日备份周期],
+            retainValue: values[SystemSettingKey.每日备份保留数量],
             defaultValue: DefaultAutoBackupSchedule.daily,
         }),
-        weekly: getBackupTierScheduleFromEnv({
-            everyEnv: env.AUTO_BACKUP_SCHEDULE_WEEKLY_EVERY,
-            retainEnv: env.AUTO_BACKUP_SCHEDULE_WEEKLY_RETAIN,
+        weekly: getBackupTierSchedule({
+            everyValue: values[SystemSettingKey.每周备份周期],
+            retainValue: values[SystemSettingKey.每周备份保留数量],
             defaultValue: DefaultAutoBackupSchedule.weekly,
         }),
-        monthly: getBackupTierScheduleFromEnv({
-            everyEnv: env.AUTO_BACKUP_SCHEDULE_MONTHLY_EVERY,
-            retainEnv: env.AUTO_BACKUP_SCHEDULE_MONTHLY_RETAIN,
+        monthly: getBackupTierSchedule({
+            everyValue: values[SystemSettingKey.每月备份周期],
+            retainValue: values[SystemSettingKey.每月备份保留数量],
             defaultValue: DefaultAutoBackupSchedule.monthly,
         }),
     }
@@ -137,40 +137,40 @@ export function getAutoBackupSchedule(env: NodeJS.ProcessEnv = process.env) {
     return schedule
 }
 
-export function getLogRetentionMs(env?: string) {
-    if (!env?.trim()) return DefaultLogRetentionMs
+export function getLogRetentionMs(value?: string) {
+    if (!value?.trim()) return DefaultLogRetentionMs
 
-    const match = env
+    const match = value
         .trim()
         .toLowerCase()
         .match(/^(\d+)\s*(m|min|minute|minutes|h|hour|hours|d|day|days|w|week|weeks)$/)
 
     if (!match) return DefaultLogRetentionMs
 
-    const value = Number(match[1])
-    if (!Number.isInteger(value) || value <= 0) return DefaultLogRetentionMs
+    const durationValue = Number(match[1])
+    if (!Number.isInteger(durationValue) || durationValue <= 0) return DefaultLogRetentionMs
 
     const unit = match[2]
 
-    if (unit === "m" || unit === "min" || unit === "minute" || unit === "minutes") return value * 60 * 1000
-    if (unit === "h" || unit === "hour" || unit === "hours") return value * 60 * 60 * 1000
-    if (unit === "d" || unit === "day" || unit === "days") return value * 24 * 60 * 60 * 1000
-    if (unit === "w" || unit === "week" || unit === "weeks") return value * 7 * 24 * 60 * 60 * 1000
+    if (unit === "m" || unit === "min" || unit === "minute" || unit === "minutes") return durationValue * 60 * 1000
+    if (unit === "h" || unit === "hour" || unit === "hours") return durationValue * 60 * 60 * 1000
+    if (unit === "d" || unit === "day" || unit === "days") return durationValue * 24 * 60 * 60 * 1000
+    if (unit === "w" || unit === "week" || unit === "weeks") return durationValue * 7 * 24 * 60 * 60 * 1000
 
     return DefaultLogRetentionMs
 }
 
-export function getS3BackupConfig(env: NodeJS.ProcessEnv = process.env) {
-    const endpoint = getNonEmptyString(env.AUTO_BACKUP_S3_ENDPOINT)
-    const region = getNonEmptyString(env.AUTO_BACKUP_S3_REGION)
-    const bucket = getNonEmptyString(env.AUTO_BACKUP_S3_BUCKET)
-    const accessKeyId = getNonEmptyString(env.AUTO_BACKUP_S3_ACCESS_KEY_ID)
-    const secretAccessKey = getNonEmptyString(env.AUTO_BACKUP_S3_SECRET_ACCESS_KEY)
+export function getS3BackupConfig(values: SystemSettingValueMap = {}) {
+    const endpoint = getNonEmptyString(values[SystemSettingKey.自动备份S3地址])
+    const region = getNonEmptyString(values[SystemSettingKey.自动备份S3区域])
+    const bucket = getNonEmptyString(values[SystemSettingKey.自动备份S3桶])
+    const accessKeyId = getNonEmptyString(values[SystemSettingKey.自动备份S3密钥ID])
+    const secretAccessKey = getNonEmptyString(values[SystemSettingKey.自动备份S3密钥Secret])
 
     if (!endpoint || !region || !bucket || !accessKeyId || !secretAccessKey) return undefined
 
-    const prefix = getOptionalString(env.AUTO_BACKUP_S3_PREFIX)
-    const forcePathStyle = getOptionalBooleanFromEnv(env.AUTO_BACKUP_S3_FORCE_PATH_STYLE)
+    const prefix = getOptionalString(values[SystemSettingKey.自动备份S3前缀])
+    const forcePathStyle = getOptionalBooleanValue(values[SystemSettingKey.自动备份S3PathStyle])
 
     const config: S3BackupConfig = {
         endpoint,
@@ -189,31 +189,31 @@ export function getDatabasePath() {
     if (!DatabaseUrl.startsWith("file:")) throw new Error(`当前自动备份仅支持 SQLite 文件数据库，收到的 DATABASE_URL 为: ${DatabaseUrl}`)
 
     const filePath = DatabaseUrl.slice("file:".length)
-    return resolve(process.cwd(), filePath)
+    return resolve(/* turbopackIgnore: true */ process.cwd(), filePath)
 }
 
 export function getTierDirectoryPath({ backupDirectoryPath, tier }: GetTierDirectoryPathParams) {
     return resolve(backupDirectoryPath, tier)
 }
 
-export function getPositiveIntegerFromEnv({ env, defaultValue }: GetPositiveIntegerFromEnvParams) {
-    const value = env?.trim()
-    if (!value) return defaultValue
+export function getPositiveInteger({ value, defaultValue }: GetPositiveIntegerParams) {
+    const nextValue = value?.trim()
+    if (!nextValue) return defaultValue
 
-    const number = Number(value)
+    const number = Number(nextValue)
     if (!Number.isInteger(number) || number <= 0) return defaultValue
 
     return number
 }
 
-export function getBackupTierScheduleFromEnv({ everyEnv, retainEnv, defaultValue }: GetBackupTierScheduleFromEnvParams) {
+export function getBackupTierSchedule({ everyValue, retainValue, defaultValue }: GetBackupTierScheduleParams) {
     const schedule: BackupTierSchedule = {
-        every: getPositiveIntegerFromEnv({
-            env: everyEnv,
+        every: getPositiveInteger({
+            value: everyValue,
             defaultValue: defaultValue.every,
         }),
-        retain: getPositiveIntegerFromEnv({
-            env: retainEnv,
+        retain: getPositiveInteger({
+            value: retainValue,
             defaultValue: defaultValue.retain,
         }),
     }
@@ -229,7 +229,7 @@ export function getOptionalString(value: unknown) {
     return typeof value === "string" && value.trim() ? value.trim() : undefined
 }
 
-export function getOptionalBooleanFromEnv(env?: string) {
-    if (!env?.trim()) return undefined
-    return getBooleanFromEnv(env)
+export function getOptionalBooleanValue(value?: string) {
+    if (!value?.trim()) return undefined
+    return normalizeBooleanValue(value)
 }

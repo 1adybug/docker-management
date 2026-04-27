@@ -3,9 +3,9 @@ import Dysmsapi, { SendSmsRequest } from "@alicloud/dysmsapi20170525"
 import { Config } from "@alicloud/openapi-client"
 import { RuntimeOptions } from "@alicloud/tea-util"
 
-import { AliyunAccessKeyId, AliyunAccessKeySecret } from "@/constants"
-
 import { phoneNumberRegex } from "@/schemas/phoneNumber"
+
+import { getSmsConfig } from "./smsConfig"
 
 export interface SendAliyunSmsParams {
     phone: string | string[]
@@ -22,10 +22,11 @@ export async function sendAliyunSms({ phone, signName, templateCode, params }: S
     const invalidPhones = phone.filter(p => !phoneNumberRegex.test(p))
     if (invalidPhones.length > 0) throw new Error(`invalid phone${invalidPhones.length > 1 ? "s" : ""}: ${invalidPhones.join(",")}`)
     phone = phone.join(",")
+    const { aliyunAccessKeyId, aliyunAccessKeySecret } = getSmsConfig()
     const credential = new Credential()
     const config = new Config({ credential })
-    config.accessKeyId = AliyunAccessKeyId
-    config.accessKeySecret = AliyunAccessKeySecret
+    config.accessKeyId = aliyunAccessKeyId
+    config.accessKeySecret = aliyunAccessKeySecret
     config.endpoint = `dysmsapi.aliyuncs.com`
     const client = new Dysmsapi(config)
 

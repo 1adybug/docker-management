@@ -1,5 +1,9 @@
 import { isAbsolute, relative, resolve, win32 } from "node:path"
 
+import { SystemSettingKey } from "@/constants/systemSettings"
+
+import { getCachedSystemSettingValue } from "@/server/systemSettings"
+
 import { ClientError } from "@/utils/clientError"
 
 function isWindowsAbsolutePath(path: string) {
@@ -69,7 +73,7 @@ function resolveProjectDirectory(root: string, name: string) {
 
 /** 项目根目录 */
 export function getProjectRoot() {
-    const root = process.env.PROJECTS_ROOT?.trim()
+    const root = getCachedSystemSettingValue(SystemSettingKey.项目根目录)?.trim()
     if (!root) return resolve(process.cwd(), "projects")
 
     return ensureAbsoluteDirectory(root, "PROJECTS_ROOT")
@@ -77,7 +81,7 @@ export function getProjectRoot() {
 
 /** 宿主机项目根目录 */
 export function getProjectHostRoot() {
-    const root = process.env.PROJECTS_HOST_ROOT?.trim()
+    const root = getCachedSystemSettingValue(SystemSettingKey.宿主机项目根目录)?.trim()
     if (!root) return getProjectRoot()
 
     return normalizeDockerHostDirectory(ensureAbsoluteDirectory(root, "PROJECTS_HOST_ROOT"))

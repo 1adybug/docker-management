@@ -10,6 +10,8 @@ import { crc32 } from "node:zlib"
 import { decode } from "iconv-lite"
 import yauzl, { Entry, ZipFile } from "yauzl"
 
+import { SystemSettingKey } from "@/constants/systemSettings"
+
 import { buildStaticDockerImageSchema } from "@/schemas/buildStaticDockerImage"
 import { dockerImageNameParser } from "@/schemas/dockerImageName"
 
@@ -18,6 +20,8 @@ import { buildDockerImage } from "@/server/docker"
 import { getReplaceDockerTemporaryName, inspectDockerImage, replaceDockerImage } from "@/server/dockerImage"
 import { createDockerTempDirectory, deleteDockerTempDirectory } from "@/server/dockerTempDirectory"
 import { getDockerBaseImageLabel } from "@/server/getDockerBaseImageLabel"
+import { ensureSystem7zaAvailable } from "@/server/system7za"
+import { getBooleanSystemSettingValue } from "@/server/systemSettings"
 import { writeTextToFile } from "@/server/writeTextToFile"
 import { writeWebFileToPath } from "@/server/writeWebFileToPath"
 
@@ -116,8 +120,11 @@ export interface ZipUnicodePathExtraField {
     path: string
 }
 
-function get7zaPath() {
-    if (process.env.USE_SYSTEM_7ZA === "true") return "7za"
+async function get7zaPath() {
+    if (await getBooleanSystemSettingValue(SystemSettingKey.使用系统7za)) {
+        await ensureSystem7zaAvailable()
+        return "7za"
+    }
 
     const packageJsonPath = nodeRequire.resolve("7zip-bin/package.json")
     const packageDirectory = dirname(packageJsonPath)
@@ -128,7 +135,7 @@ function get7zaPath() {
 }
 
 async function getExecutable7zaPath() {
-    const path = get7zaPath()
+    const path = await get7zaPath()
 
     if (path === "7za" || process.platform === "win32") return path
 

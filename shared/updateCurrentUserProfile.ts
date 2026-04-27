@@ -1,6 +1,6 @@
 import { headers } from "next/headers"
 
-import { AllowCurrentUserUpdateNickname, AllowCurrentUserUpdatePhoneNumber } from "@/constants"
+import { SystemSettingKey } from "@/constants/systemSettings"
 
 import { prisma } from "@/prisma"
 
@@ -10,6 +10,7 @@ import { auth } from "@/server/auth"
 import { createRateLimit, RateLimitContext } from "@/server/createRateLimit"
 import { createSharedFn } from "@/server/createSharedFn"
 import { getCurrentUser } from "@/server/getCurrentUser"
+import { getBooleanSystemSettingValue } from "@/server/systemSettings"
 
 import { ClientError } from "@/utils/clientError"
 
@@ -36,9 +37,14 @@ export const updateCurrentUserProfile = createSharedFn({
     const isPhoneNumberChanged = phoneNumber !== user.phoneNumber
     const isNicknameChanged = nickname !== user.nickname
 
-    if (isPhoneNumberChanged && !AllowCurrentUserUpdatePhoneNumber) throw new ClientError("当前环境不允许用户修改手机号")
+    const [allowUpdateNickname, allowUpdatePhoneNumber] = await Promise.all([
+        getBooleanSystemSettingValue(SystemSettingKey.允许修改昵称),
+        getBooleanSystemSettingValue(SystemSettingKey.允许修改手机号),
+    ])
 
-    if (isNicknameChanged && !AllowCurrentUserUpdateNickname) throw new ClientError("当前环境不允许用户修改昵称")
+    if (isPhoneNumberChanged && !allowUpdatePhoneNumber) throw new ClientError("当前系统设置不允许用户修改手机号")
+
+    if (isNicknameChanged && !allowUpdateNickname) throw new ClientError("当前系统设置不允许用户修改昵称")
 
     if (isPhoneNumberChanged) {
         if (!oldOtp || !newOtp) throw new ClientError("修改手机号时，请填写新旧手机号验证码")

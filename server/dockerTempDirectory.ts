@@ -3,6 +3,10 @@ import { access, mkdir, mkdtemp, readdir } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 
+import { SystemSettingKey } from "@/constants/systemSettings"
+
+import { getCachedSystemSettingValue } from "@/server/systemSettings"
+
 import { deleteFileOrFolder } from "./deleteFileOrFolder"
 
 export interface DockerTempDirectoryGlobalState {
@@ -59,7 +63,7 @@ function registerDockerTempDirectoryCleanup() {
 
 function getDockerTempDirectoryRootCandidates() {
     const roots = new Set<string>()
-    const customRoot = process.env.DOCKER_TEMP_ROOT?.trim()
+    const customRoot = getCachedSystemSettingValue(SystemSettingKey.Docker临时目录)?.trim()
 
     if (customRoot) roots.add(resolve(customRoot))
 

@@ -13,57 +13,34 @@ git remote set-url --push template no_push://template
 
 ## env 文件
 
-项目目前主要使用服务端环境变量，建议在本地使用 `.env` 或 `.env.local`，生产环境使用部署平台注入变量。
+项目目前区分“部署级环境变量”和“系统设置”两类配置。建议在本地使用 `.env` 或 `.env.local`，生产环境使用部署平台注入变量。
 
 说明：
 
 - 以 `NEXT_PUBLIC_` 开头的变量会暴露给浏览器，本项目当前无需配置这类变量
 - `NODE_ENV` 由运行命令和框架控制，一般不需要手动设置
 - `BETTER_AUTH_SECRET` 在生产环境是强制项，未配置会导致服务启动失败；开发环境会使用仅本地可用的兜底值
+- 运行时配置已经迁移到“系统设置”页面，首次升级后不会自动从旧环境变量导入，需要管理员登录后手动补配
 - 下面表格中的“必填”是按当前代码路径和默认实现整理
 
 ### 变量清单
 
-| 变量名                                   | 必填       | 说明                                                     | 示例 / 默认值                 |
-| ---------------------------------------- | ---------- | -------------------------------------------------------- | ----------------------------- |
-| `COOKIE_PREFIX`                          | 是         | 登录相关 Cookie 前缀                                     | `geshu`                       |
-| `DEFAULT_EMAIL_DOMAIN`                   | 是         | 临时邮箱域名（用于手机号生成邮箱）                       | `example.com`                 |
-| `BETTER_AUTH_SECRET`                     | 是         | Better Auth 签名密钥                                     | `your_better_auth_secret`     |
-| `BETTER_AUTH_URL`                        | 按需       | 服务端 Better Auth 基础地址                              | `https://example.com`         |
-| `NEXT_PUBLIC_BETTER_AUTH_URL`            | 按需       | 客户端 Better Auth 基础地址                              | `https://example.com`         |
-| `IS_INTRANET`                            | 否         | 是否走内网短信通道                                       | `0`（默认关闭）               |
-| `ALIYUN_ACCESS_KEY_ID`                   | 按需       | 阿里云短信密钥 ID（公网短信时需要）                      | `your_key_id`                 |
-| `ALIYUN_ACCESS_KEY_SECRET`               | 按需       | 阿里云短信密钥 Secret（公网短信时需要）                  | `your_key_secret`             |
-| `QJP_SMS_URL`                            | 按需       | 内网短信服务地址（内网短信时需要）                       | `http://sms.example.com/send` |
-| `RATE_LIMIT_ENABLED`                     | 否         | 全局限流开关                                             | `1`（默认开启）               |
-| `ALLOW_CURRENT_USER_UPDATE_NICKNAME`     | 否         | 是否允许用户自行修改昵称                                 | `1`（默认开启）               |
-| `ALLOW_CURRENT_USER_UPDATE_PHONE_NUMBER` | 否         | 是否允许用户自行修改手机号                               | `1`（默认开启）               |
-| `DOCKER_PATH_MAPPINGS`                   | 否         | 宿主机路径到容器路径的映射，用于读取外部 compose 文件    | `/srv/app=>/host-app`         |
-| `PROJECTS_ROOT`                          | 否         | 平台项目在当前运行环境可访问的根目录                     | `/app/projects`               |
-| `PROJECTS_HOST_ROOT`                     | 否         | 平台项目在宿主机上的真实根目录，默认等于 `PROJECTS_ROOT` | `/home/projects`              |
-| `DOCKER_TEMP_ROOT`                       | 否         | Docker 构建临时目录，默认优先使用 `data/tmp/docker`      | `/app/data/tmp/docker`        |
-| `NEXT_OUTPUT`                            | 否         | Next 构建输出模式                                        | `standalone` / `export`       |
-| `DATABASE_URL`                           | 按部署方式 | 数据库连接字符串（如改用外部数据库时使用）               | `postgresql://...`            |
-| `JWT_SECRET`                             | 按认证配置 | 兼容旧认证方案时使用（当前默认不依赖）                   | `your_jwt_secret`             |
-| `NEXT_TELEMETRY_DISABLED`                | 否         | 是否关闭 Next 遥测上报                                   | `1`                           |
-| `REDIS_URL`                              | 按需       | Redis 地址（仅使用 Redis 限流存储时需要）                | `redis://127.0.0.1:6379`      |
-| `AUTO_BACKUP_ENABLED`                    | 否         | 是否开启应用内自动备份                                   | `0`（默认关闭）               |
-| `AUTO_BACKUP_SCHEDULE_HOURLY_EVERY`      | 否         | 每小时备份的执行周期                                     | `1`                           |
-| `AUTO_BACKUP_SCHEDULE_HOURLY_RETAIN`     | 否         | 每小时备份的保留数量                                     | `48`                          |
-| `AUTO_BACKUP_SCHEDULE_DAILY_EVERY`       | 否         | 每日备份的执行周期                                       | `1`                           |
-| `AUTO_BACKUP_SCHEDULE_DAILY_RETAIN`      | 否         | 每日备份的保留数量                                       | `30`                          |
-| `AUTO_BACKUP_SCHEDULE_WEEKLY_EVERY`      | 否         | 每周备份的执行周期                                       | `1`                           |
-| `AUTO_BACKUP_SCHEDULE_WEEKLY_RETAIN`     | 否         | 每周备份的保留数量                                       | `12`                          |
-| `AUTO_BACKUP_SCHEDULE_MONTHLY_EVERY`     | 否         | 每月备份的执行周期                                       | `1`                           |
-| `AUTO_BACKUP_SCHEDULE_MONTHLY_RETAIN`    | 否         | 每月备份的保留数量                                       | `12`                          |
-| `AUTO_BACKUP_LOG_RETENTION`              | 否         | 日志保留时长                                             | `365d`                        |
-| `AUTO_BACKUP_S3_ENDPOINT`                | 按需       | S3 / 兼容对象存储地址                                    | `https://s3.example.com`      |
-| `AUTO_BACKUP_S3_REGION`                  | 按需       | S3 / 兼容对象存储区域                                    | `auto`                        |
-| `AUTO_BACKUP_S3_BUCKET`                  | 按需       | S3 / 兼容对象存储桶名                                    | `example-backups`             |
-| `AUTO_BACKUP_S3_ACCESS_KEY_ID`           | 按需       | S3 / 兼容对象存储访问密钥 ID                             | `your_access_key_id`          |
-| `AUTO_BACKUP_S3_SECRET_ACCESS_KEY`       | 按需       | S3 / 兼容对象存储访问密钥 Secret                         | `your_secret_access_key`      |
-| `AUTO_BACKUP_S3_PREFIX`                  | 否         | S3 / 兼容对象存储对象前缀                                | `geshu-next-template`         |
-| `AUTO_BACKUP_S3_FORCE_PATH_STYLE`        | 否         | 是否强制使用 Path Style                                  | `1`                           |
+| 变量名                        | 必填       | 说明                                       | 示例 / 默认值                 |
+| ----------------------------- | ---------- | ------------------------------------------ | ----------------------------- |
+| `COOKIE_PREFIX`               | 是         | 登录相关 Cookie 前缀                       | `geshu`                       |
+| `DEFAULT_EMAIL_DOMAIN`        | 是         | 临时邮箱域名（用于手机号生成邮箱）         | `example.com`                 |
+| `BETTER_AUTH_SECRET`          | 是         | Better Auth 签名密钥                       | `your_better_auth_secret`     |
+| `BETTER_AUTH_URL`             | 按需       | 服务端 Better Auth 基础地址                | `https://example.com`         |
+| `NEXT_PUBLIC_BETTER_AUTH_URL` | 按需       | 客户端 Better Auth 基础地址                | `https://example.com`         |
+| `IS_INTRANET`                 | 否         | 是否走内网短信通道                         | `0`（默认关闭）               |
+| `ALIYUN_ACCESS_KEY_ID`        | 按需       | 阿里云短信密钥 ID（公网短信时需要）        | `your_key_id`                 |
+| `ALIYUN_ACCESS_KEY_SECRET`    | 按需       | 阿里云短信密钥 Secret（公网短信时需要）    | `your_key_secret`             |
+| `QJP_SMS_URL`                 | 按需       | 内网短信服务地址（内网短信时需要）         | `http://sms.example.com/send` |
+| `NEXT_OUTPUT`                 | 否         | Next 构建输出模式                          | `standalone` / `export`       |
+| `DATABASE_URL`                | 按部署方式 | 数据库连接字符串（如改用外部数据库时使用） | `postgresql://...`            |
+| `JWT_SECRET`                  | 按认证配置 | 兼容旧认证方案时使用（当前默认不依赖）     | `your_jwt_secret`             |
+| `NEXT_TELEMETRY_DISABLED`     | 否         | 是否关闭 Next 遥测上报                     | `1`                           |
+| `REDIS_URL`                   | 按需       | Redis 地址（仅使用 Redis 限流存储时需要）  | `redis://127.0.0.1:6379`      |
 
 ### 推荐的本地 `.env` 示例
 
@@ -85,57 +62,34 @@ ALIYUN_ACCESS_KEY_ID=""
 ALIYUN_ACCESS_KEY_SECRET=""
 QJP_SMS_URL=""
 
-# 限流配置
-RATE_LIMIT_ENABLED="1"
-
-# 用户资料自助修改
-ALLOW_CURRENT_USER_UPDATE_NICKNAME="1"
-ALLOW_CURRENT_USER_UPDATE_PHONE_NUMBER="1"
-
-# 容器项目目录与宿主机路径映射（按需）
-DOCKER_PATH_MAPPINGS=""
-PROJECTS_ROOT="/app/projects"
-PROJECTS_HOST_ROOT="/app/projects"
-DOCKER_TEMP_ROOT=""
-
 # 构建与运行
 NEXT_OUTPUT="standalone"
 NEXT_TELEMETRY_DISABLED="1"
 
 # 可选：仅在你启用 Redis 限流存储时使用
 REDIS_URL="redis://127.0.0.1:6379"
-
-# 自动备份（默认关闭）
-AUTO_BACKUP_ENABLED="0"
-
-# 频率与保留策略
-AUTO_BACKUP_SCHEDULE_HOURLY_EVERY="1"
-AUTO_BACKUP_SCHEDULE_HOURLY_RETAIN="48"
-AUTO_BACKUP_SCHEDULE_DAILY_EVERY="1"
-AUTO_BACKUP_SCHEDULE_DAILY_RETAIN="30"
-AUTO_BACKUP_SCHEDULE_WEEKLY_EVERY="1"
-AUTO_BACKUP_SCHEDULE_WEEKLY_RETAIN="12"
-AUTO_BACKUP_SCHEDULE_MONTHLY_EVERY="1"
-AUTO_BACKUP_SCHEDULE_MONTHLY_RETAIN="12"
-
-# 日志保留时长
-AUTO_BACKUP_LOG_RETENTION="365d"
-
-# S3 / 兼容对象存储（可选）
-AUTO_BACKUP_S3_ENDPOINT="https://s3.example.com"
-AUTO_BACKUP_S3_REGION="auto"
-AUTO_BACKUP_S3_BUCKET="example-backups"
-AUTO_BACKUP_S3_ACCESS_KEY_ID="your_access_key_id"
-AUTO_BACKUP_S3_SECRET_ACCESS_KEY="your_secret_access_key"
-AUTO_BACKUP_S3_PREFIX="geshu-next-template"
-AUTO_BACKUP_S3_FORCE_PATH_STYLE="1"
 ```
+
+### 系统设置迁移项
+
+以下配置已迁移到管理员“系统设置”页面维护，不再推荐通过环境变量配置：
+
+- `PRINT_AUTH_OTP`
+- `RATE_LIMIT_ENABLED`
+- `ALLOW_CURRENT_USER_UPDATE_NICKNAME`
+- `ALLOW_CURRENT_USER_UPDATE_PHONE_NUMBER`
+- `AUTO_BACKUP_*`
+- `DOCKER_PATH_MAPPINGS`
+- `PROJECTS_ROOT`
+- `PROJECTS_HOST_ROOT`
+- `DOCKER_TEMP_ROOT`
+- `USE_SYSTEM_7ZA`
 
 ### 容器内管理宿主机 Docker
 
 如果本项目运行在 Docker 容器内，并且你希望它管理宿主机上的“非平台项目” `docker-compose.yml`，除了挂载 `/var/run/docker.sock` 以外，还需要把宿主机上的 compose 目录额外挂载进当前容器。
 
-同时通过 `DOCKER_PATH_MAPPINGS` 告诉系统“宿主机路径”与“容器内挂载路径”的对应关系，格式支持两种：
+同时在管理员“系统设置”页面中配置“Docker 路径映射”，告诉系统“宿主机路径”与“容器内挂载路径”的对应关系，格式支持两种：
 
 ```env
 DOCKER_PATH_MAPPINGS="/srv/projects=>/host-projects"
@@ -167,7 +121,7 @@ services:
 
 ### 平台项目目录
 
-平台内创建的项目默认保存在当前运行目录下的 `projects` 文件夹中。你也可以通过以下环境变量覆盖：
+平台内创建的项目默认保存在当前运行目录下的 `projects` 文件夹中。你也可以在管理员“系统设置”页面中修改“项目根目录”和“宿主机项目根目录”：
 
 ```env
 PROJECTS_ROOT="/app/projects"
@@ -199,7 +153,7 @@ services:
 平台在上传镜像包、解压 `dist`、执行 `docker build` 之前，会先创建一个临时工作目录。
 
 - 默认会优先使用当前运行目录下的 `data/tmp/docker`
-- 如果设置了 `DOCKER_TEMP_ROOT`，则优先使用该目录
+- 如果在系统设置中配置了 `DOCKER_TEMP_ROOT`，则优先使用该目录
 - 只有前两者都不可用时，才会回退到系统临时目录，例如容器内的 `/tmp`
 
 这样可以避免部分容器环境里 `/tmp` 权限异常导致的 `EACCES: permission denied, mkdtemp '/tmp/docker-management-*'` 问题。
@@ -212,6 +166,14 @@ services:
         environment:
             DOCKER_TEMP_ROOT: /app/data/tmp/docker
 ```
+
+### 系统 7za
+
+如果你需要在上传静态 7z 包时优先使用宿主机的 `7za` 命令，可以在管理员“系统设置”页面开启“使用系统 7za”。
+
+- 保存时会立即校验当前运行环境的 PATH 中是否存在 `7za`
+- 校验失败不会写入数据库
+- 若后续宿主机移除了 `7za`，再次构建静态镜像时会直接报错，不会静默回退
 
 ### Better Auth URL 解析规则
 
@@ -244,26 +206,17 @@ services:
 - 每月 1 份，保留 12 个月
 - `OperationLog` 和 `ErrorLog` 默认只保留 1 年内数据
 
-### 环境变量
+### 系统设置
+
+自动备份相关项已经迁移到管理员“系统设置”页面，保存后立即生效，应用会自动同步备份调度器。
 
 #### `AUTO_BACKUP_ENABLED`
 
 是否开启自动备份，默认关闭。
 
-支持取值：
-
-- `1`
-- `0`
-- `true`
-- `false`
-- `yes`
-- `no`
-- `on`
-- `off`
-
 #### `AUTO_BACKUP_SCHEDULE_*`
 
-使用平铺环境变量配置备份频率与保留数量，不再支持 JSON 字符串。
+使用系统设置配置备份频率与保留数量，不再推荐通过环境变量维护。
 
 示例：
 
@@ -309,7 +262,7 @@ AUTO_BACKUP_SCHEDULE_MONTHLY_RETAIN="12"
 
 #### `AUTO_BACKUP_S3_*`
 
-使用平铺环境变量配置 S3 或兼容对象存储，不再支持 JSON 字符串。
+使用系统设置配置 S3 或兼容对象存储，不再推荐通过环境变量维护。
 
 示例：
 
@@ -485,13 +438,9 @@ someFn.rateLimit = createRateLimit({
 
 ### 4. 全局开关
 
-#### 4.1 环境变量开关
+#### 4.1 系统设置开关
 
-通过 `RATE_LIMIT_ENABLED` 控制全局是否启用限流：
-
-- `"1"` / `"true"` / `"yes"` / `"on"`: 开启
-- `"0"` / `"false"` / `"no"` / `"off"`: 关闭
-- 不设置: 默认开启
+通过管理员“系统设置”页面中的“启用全局限流”控制全局是否启用限流。保存后立即生效。
 
 #### 4.2 运行时开关
 
