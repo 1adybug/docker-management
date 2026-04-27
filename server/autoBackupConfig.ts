@@ -186,7 +186,7 @@ export function getS3BackupConfig(values: SystemSettingValueMap = {}) {
 }
 
 export function getDatabasePath() {
-    if (!DatabaseUrl.startsWith("file:")) throw new Error(`当前自动备份仅支持 SQLite 文件数据库，收到的 DATABASE_URL 为: ${DatabaseUrl}`)
+    if (!DatabaseUrl.startsWith("file:")) throw new Error(`当前自动备份仅支持 SQLite 文件数据库，当前数据库地址为: ${DatabaseUrl}`)
 
     const filePath = DatabaseUrl.slice("file:".length)
     return resolve(/* turbopackIgnore: true */ process.cwd(), filePath)

@@ -16,8 +16,6 @@ export const BetterAuthUrl = process.env.BETTER_AUTH_URL
 
 export const NextPublicBetterAuthUrl = process.env.NEXT_PUBLIC_BETTER_AUTH_URL
 
-export const JwtSecrect = process.env.JWT_SECRECT || BetterAuthSecret || ""
-
 export const PublicApiUrl = process.env.NEXT_PUBLIC_API_URL || process.env.PUBLIC_API_URL
 
 export const DockerContainerStatus = {
