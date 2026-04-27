@@ -55,6 +55,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
+COPY --from=builder /app/server/databaseUrl.ts ./server/databaseUrl.ts
 COPY --from=deps /app/node_modules/prisma/package.json ./prisma-package.json
 RUN mkdir -p /app/data && chown -R nextjs:nodejs /app/data
 
