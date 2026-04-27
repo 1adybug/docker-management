@@ -13,6 +13,7 @@ export type SystemSettingValueKind = (typeof SystemSettingValueKind)[keyof typeo
 
 export const SystemSettingGroupKey = {
     基础设置: "base",
+    短信设置: "sms",
     限流设置: "rate-limit",
     自动备份: "auto-backup",
 } as const
@@ -21,6 +22,7 @@ export type SystemSettingGroupKey = (typeof SystemSettingGroupKey)[keyof typeof 
 
 export const SystemSettingKey = {
     默认邮箱域名: "DEFAULT_EMAIL_DOMAIN",
+    打印验证码日志: "PRINT_AUTH_OTP",
     全局限流: "RATE_LIMIT_ENABLED",
     允许修改昵称: "ALLOW_CURRENT_USER_UPDATE_NICKNAME",
     允许修改手机号: "ALLOW_CURRENT_USER_UPDATE_PHONE_NUMBER",
@@ -87,6 +89,11 @@ export const SystemSettingGroups: SystemSettingGroupDefinition[] = [
         description: "管理注册邮箱域名和用户自助修改能力。",
     },
     {
+        key: SystemSettingGroupKey.短信设置,
+        label: "短信设置",
+        description: "管理验证码调试日志，短信通道和密钥仍由环境变量配置。",
+    },
+    {
         key: SystemSettingGroupKey.限流设置,
         label: "限流设置",
         description: "控制服务端动作的全局限流开关。",
@@ -124,6 +131,14 @@ export const SystemSettingDefinitions: SystemSettingDefinition[] = [
         label: "允许用户修改手机号",
         description: "关闭后，个人中心不再显示手机号编辑入口。",
         defaultValue: "1",
+    },
+    {
+        key: SystemSettingKey.打印验证码日志,
+        group: SystemSettingGroupKey.短信设置,
+        kind: SystemSettingValueKind.布尔,
+        label: "在日志中打印验证码",
+        description: "开启后，发送手机号验证码时会在服务端系统日志打印账户和验证码。",
+        defaultValue: "0",
     },
     {
         key: SystemSettingKey.全局限流,
