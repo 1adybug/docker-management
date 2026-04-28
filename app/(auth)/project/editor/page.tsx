@@ -190,6 +190,7 @@ const Page: FC = () => {
     const searchCopyFrom = searchParams.get("copyFrom") ?? undefined
     const isCopy = isNonNullable(searchCopyFrom)
     const isUpdate = isNonNullable(searchName) && !isCopy
+    const pageTitle = isUpdate ? "编辑项目" : isCopy ? "复制项目" : "新增项目"
 
     const [form] = useForm<ProjectFormData>()
     const [yamlValue, setYamlValue] = useState(defaultComposeContent)
@@ -369,9 +370,9 @@ const Page: FC = () => {
 
     return (
         <div className="flex h-full flex-col gap-4 pt-4">
-            <title>{isUpdate ? "编辑项目" : isCopy ? "复制项目" : "新增项目"}</title>
+            <title>{`${pageTitle} · docker`}</title>
             <div className="flex flex-wrap items-center gap-2 px-4">
-                <div>{isUpdate ? "编辑项目" : isCopy ? "复制项目" : "新增项目"}</div>
+                <div>{pageTitle}</div>
                 <div className="ml-auto flex flex-wrap gap-2">
                     <Button disabled={isRequesting} onClick={onSyncYamlToForm}>
                         从 YAML 同步

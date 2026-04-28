@@ -1145,7 +1145,6 @@ const Page: FC = () => {
 
     return (
         <div className="flex h-full flex-col gap-4 pt-4">
-            <title>镜像管理</title>
             <div className="flex-none px-4">
                 <Form<QueryImageFormParams> name="query-image-form" form={queryForm} className="gap-y-4" layout="inline" onFinish={setQuery}>
                     <FormItem<QueryImageFormParams> name="repository" label="镜像名称">
