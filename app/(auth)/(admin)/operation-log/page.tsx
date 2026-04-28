@@ -205,7 +205,6 @@ const Page: FC = () => {
 
     return (
         <div className="flex h-full flex-col gap-4 pt-4">
-            <title>操作日志</title>
             <div className="flex-none px-4">
                 <Form<FormParams> name="query-operation-log-form" className="gap-y-4" layout="inline" onFinish={setQuery}>
                     <FormItem<FormParams> name="action" label="函数名">

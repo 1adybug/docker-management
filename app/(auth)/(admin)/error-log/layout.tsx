@@ -2,16 +2,14 @@ import { FC, ReactNode } from "react"
 
 import { Metadata } from "next"
 
-import Auth from "@/components/Auth"
-
 export const metadata: Metadata = {
-    title: "登录",
+    title: "错误日志",
 }
 
 export interface LayoutProps {
     children?: ReactNode
 }
 
-const Layout: FC<LayoutProps> = ({ children }) => <Auth>{children}</Auth>
+const Layout: FC<LayoutProps> = ({ children }) => children
 
 export default Layout

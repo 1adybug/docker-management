@@ -126,7 +126,6 @@ const CurrentUserProfile: FC<CurrentUserProfileProps> = ({ className, data, allo
 
     return (
         <div className={clsx("mx-auto flex h-full w-full max-w-5xl flex-col gap-6 px-4 py-6", className)} {...rest}>
-            <title>个人中心</title>
             <div className="space-y-2">
                 <h1 className="text-2xl font-semibold text-neutral-900">个人中心</h1>
                 <p className="text-sm text-neutral-500">
