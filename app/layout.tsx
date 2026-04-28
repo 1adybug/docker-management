@@ -9,7 +9,10 @@ import "source-han-sans-sc-vf"
 import "./globals.css"
 
 export const metadata: Metadata = {
-    title: "格数科技",
+    title: {
+        default: "docker",
+        template: "%s · docker",
+    },
     description: "powered by geshu",
 }
 

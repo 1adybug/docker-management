@@ -1,10 +1,15 @@
 import { FC, ReactNode } from "react"
 
+import { Metadata } from "next"
 import { redirect } from "next/navigation"
 
 import { prisma } from "@/prisma"
 
 export const dynamic = "force-dynamic"
+
+export const metadata: Metadata = {
+    title: "初始化",
+}
 
 export interface LayoutProps {
     children?: ReactNode

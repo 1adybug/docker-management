@@ -112,7 +112,6 @@ const SystemSettingForm: FC<SystemSettingFormProps> = ({ className, ...rest }) =
 
     return (
         <div className={clsx("flex h-full flex-col overflow-hidden", className)} {...rest}>
-            <title>系统设置</title>
             <div className="flex-none border-b border-neutral-200 px-4 py-4">
                 <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0 space-y-1">
