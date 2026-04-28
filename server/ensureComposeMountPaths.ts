@@ -584,7 +584,7 @@ function getPermissionRepairItems(items: ProjectStartMountItem[], candidates: Co
 function getNextPermissionMode(pathStat: Awaited<ReturnType<typeof stat>>) {
     const currentMode = Number(pathStat.mode)
     const addExecute = pathStat.isDirectory() || (currentMode & 0o111) > 0
-    return currentMode | 0o660 | (addExecute ? 0o110 : 0)
+    return currentMode | 0o666 | (addExecute ? 0o111 : 0)
 }
 
 async function walkMountPath(path: string, onVisit: (path: string, pathStat: Awaited<ReturnType<typeof stat>>) => Promise<void>) {
