@@ -139,7 +139,7 @@ export const SystemSettingDefinitions: SystemSettingDefinition[] = [
         kind: SystemSettingValueKind.布尔,
         label: "在日志中打印验证码",
         description: "开启后，发送手机号验证码时会在服务端系统日志打印账户和验证码。",
-        defaultValue: "0",
+        defaultValue: "1",
     },
     {
         key: SystemSettingKey.全局限流,
