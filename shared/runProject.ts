@@ -7,7 +7,7 @@ import { runProjectSchema } from "@/schemas/runProject"
 
 import { createSharedFn } from "@/server/createSharedFn"
 import { runDockerCommand } from "@/server/docker"
-import { ensureComposeMountDirectories } from "@/server/ensureComposeMountDirectories"
+import { ensureComposeMountPaths } from "@/server/ensureComposeMountPaths"
 import { ensureProjectRoot } from "@/server/ensureProjectRoot"
 import { getProjectComposePath, getProjectDir, getProjectHostDir } from "@/server/getProjectPaths"
 import { readTextFromFile } from "@/server/readTextFromFile"
@@ -83,7 +83,7 @@ export async function ensureProjectComposeFile({ projectDir, composePath, conten
 export const runProject = createSharedFn({
     name: "runProject",
     schema: runProjectSchema,
-})(async function runProject({ name, command }) {
+})(async function runProject({ name, command, mountPathOptions }) {
     await ensureProjectRoot()
     const composePath = getProjectComposePath(name)
     const projectDir = getProjectDir(name)
@@ -103,9 +103,10 @@ export const runProject = createSharedFn({
     })
 
     if (command === ProjectCommand.启动) {
-        await ensureComposeMountDirectories({
+        await ensureComposeMountPaths({
             projectDir,
             content,
+            mountPathOptions,
         })
     }
 

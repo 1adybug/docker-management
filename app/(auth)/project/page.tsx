@@ -3,7 +3,7 @@
 import { FC, useEffect, useMemo, useRef, useState } from "react"
 
 import { IconCopy, IconDownload, IconEdit, IconFileText, IconPlayerPlay, IconPlayerStop, IconRefresh, IconTrash } from "@tabler/icons-react"
-import { Button, DatePicker, Form, Input, Modal, Table, TableProps, Tabs } from "antd"
+import { Button, Checkbox, DatePicker, Form, Input, Modal, Select, Table, TableProps, Tabs } from "antd"
 import { useForm } from "antd/es/form/Form"
 import FormItem from "antd/es/form/FormItem"
 import { clsx, formatTime, naturalParser, showTotal } from "deepsea-tools"
@@ -28,6 +28,8 @@ import { pageNumParser } from "@/schemas/pageNum"
 import { pageSizeParser } from "@/schemas/pageSize"
 import { ProjectCommand } from "@/schemas/projectCommand"
 import { ProjectSortByParams, projectSortBySchema } from "@/schemas/projectSortBy"
+import { ProjectStartMountOption } from "@/schemas/projectStartMountOption"
+import { ProjectStartMountPathKind } from "@/schemas/projectStartMountPathKind"
 import { sortOrderSchema } from "@/schemas/sortOrder"
 
 import { DockerContainerItem } from "@/shared/queryDockerContainer"
@@ -58,12 +60,46 @@ export interface ProjectContainerStatusMap {
 export interface ProjectStartCheckState {
     name?: string
     data?: CheckProjectStartResult
+    mountPathOptions: ProjectStartMountOption[]
 }
 
 /** 项目删除目标 */
 export interface ProjectDeleteTarget {
     name: string
     displayName?: string
+}
+
+export interface RequestStartCheckParams {
+    name: string
+    mountPathOptions: ProjectStartMountOption[]
+}
+
+export interface UpdateStartCheckMountPathOptionParams {
+    mountPathOptions: ProjectStartMountOption[]
+    key: string
+    pathKind: ProjectStartMountPathKind
+    createDirectory?: boolean
+}
+
+export interface StartCheckMountPathKindChangeParams {
+    item: ProjectStartMountItem
+    pathKind: ProjectStartMountPathKind
+}
+
+export interface StartCheckMountPathCreateDirectoryChangeParams {
+    item: ProjectStartMountItem
+    createDirectory: boolean
+}
+
+export interface ProjectStartMountItemCardProps {
+    item: ProjectStartMountItem
+    disabled: boolean
+    onPathKindChange: (params: StartCheckMountPathKindChangeParams) => void | Promise<void>
+    onCreateDirectoryChange: (params: StartCheckMountPathCreateDirectoryChangeParams) => void | Promise<void>
+}
+
+const defaultProjectStartCheckState: ProjectStartCheckState = {
+    mountPathOptions: [],
 }
 
 /** 解析容器状态 */
@@ -98,7 +134,7 @@ function getProjectContainerStatusMap(containers?: DockerContainerItem[]) {
 
 function getStartCheckStatusText(status: ProjectStartMountStatus) {
     if (status === ProjectStartMountStatus.已存在) return "已存在"
-    if (status === ProjectStartMountStatus.将创建) return "将自动创建"
+    if (status === ProjectStartMountStatus.将创建) return "将创建"
     return "不可创建"
 }
 
@@ -106,6 +142,38 @@ function getStartCheckStatusClassName(status: ProjectStartMountStatus) {
     if (status === ProjectStartMountStatus.已存在) return "border-emerald-200 bg-emerald-50 text-emerald-700"
     if (status === ProjectStartMountStatus.将创建) return "border-sky-200 bg-sky-50 text-sky-700"
     return "border-red-200 bg-red-50 text-red-700"
+}
+
+function getProjectStartMountPathKindText(pathKind: ProjectStartMountPathKind) {
+    if (pathKind === ProjectStartMountPathKind.文件) return "文件"
+    return "文件夹"
+}
+
+function getProjectStartMountPathKindOptions() {
+    return Object.entries(ProjectStartMountPathKind).map(([label, value]) => ({
+        label,
+        value,
+    }))
+}
+
+function getNextMountPathOptions({ mountPathOptions, key, pathKind, createDirectory }: UpdateStartCheckMountPathOptionParams) {
+    const nextOption = {
+        key,
+        pathKind,
+        createDirectory: pathKind === ProjectStartMountPathKind.文件夹 ? (createDirectory ?? true) : undefined,
+    } as ProjectStartMountOption
+
+    const nextMountPathOptions = [...mountPathOptions]
+
+    const targetIndex = nextMountPathOptions.findIndex(item => item.key === key)
+
+    if (targetIndex >= 0) {
+        nextMountPathOptions[targetIndex] = nextOption
+        return nextMountPathOptions
+    }
+
+    nextMountPathOptions.push(nextOption)
+    return nextMountPathOptions
 }
 
 function getProjectDeleteTitle(target?: ProjectDeleteTarget) {
@@ -118,16 +186,56 @@ function getProjectDeleteTitle(target?: ProjectDeleteTarget) {
     return `删除项目：${displayName || name}`
 }
 
-function onRenderMountItem(item: ProjectStartMountItem) {
+const ProjectStartMountItemCard: FC<ProjectStartMountItemCardProps> = ({ item, disabled, onPathKindChange, onCreateDirectoryChange }) => {
     const isSamePath = item.sourcePath === item.resolvedPath
 
     return (
-        <div key={item.resolvedPath} className="rounded-xl border border-slate-200 bg-white p-3">
+        <div key={item.key} className="rounded-xl border border-slate-200 bg-white p-3">
             <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-medium text-slate-900">{item.sourcePath}</div>
+                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
+                        <div>服务：{item.serviceName}</div>
+                        <div>容器路径：{item.targetPath}</div>
+                        <div>类型：{getProjectStartMountPathKindText(item.pathKind)}</div>
+                    </div>
                     {!isSamePath ? <div className="mt-1 break-all text-xs text-slate-500">实际路径：{item.resolvedPath}</div> : null}
                     <div className="mt-1 text-xs text-slate-500">{item.message || "-"}</div>
+                    {item.canConfigure && !item.exists ? (
+                        <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                            <div className="flex flex-wrap items-center gap-3">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-slate-500">路径类型</span>
+                                    <Select
+                                        className="min-w-[120px]"
+                                        value={item.pathKind}
+                                        options={getProjectStartMountPathKindOptions()}
+                                        disabled={disabled}
+                                        onChange={value =>
+                                            onPathKindChange({
+                                                item,
+                                                pathKind: value,
+                                            })
+                                        }
+                                    />
+                                </div>
+                                {item.pathKind === ProjectStartMountPathKind.文件夹 ? (
+                                    <Checkbox
+                                        checked={item.createDirectory !== false}
+                                        disabled={disabled}
+                                        onChange={event =>
+                                            onCreateDirectoryChange({
+                                                item,
+                                                createDirectory: event.target.checked,
+                                            })
+                                        }
+                                    >
+                                        启动时自动创建文件夹
+                                    </Checkbox>
+                                ) : null}
+                            </div>
+                        </div>
+                    ) : null}
                 </div>
                 <div className={clsx("flex-none rounded-full border px-2 py-1 text-xs font-medium", getStartCheckStatusClassName(item.status))}>
                     {getStartCheckStatusText(item.status)}
@@ -145,9 +253,10 @@ const Page: FC = () => {
     const [deleteTarget, setDeleteTarget] = useState<ProjectDeleteTarget | undefined>(undefined)
     const [deleteMode, setDeleteMode] = useState<ProjectDeleteMode>(ProjectDeleteMode.仅删除项目)
     const [startCheckOpen, setStartCheckOpen] = useState(false)
-    const [startCheck, setStartCheck] = useState<ProjectStartCheckState>({})
+    const [startCheck, setStartCheck] = useState<ProjectStartCheckState>(defaultProjectStartCheckState)
 
     const router = useRouter()
+    const startCheckRequestId = useRef(0)
 
     const [query, setQuery] = transformState(
         useQueryState({
@@ -259,8 +368,31 @@ const Page: FC = () => {
 
     function onCloseStartCheck() {
         if (isRunPending) return
+        startCheckRequestId.current += 1
         setStartCheckOpen(false)
-        setStartCheck({})
+        setStartCheck(defaultProjectStartCheckState)
+    }
+
+    async function requestStartCheck({ name, mountPathOptions }: RequestStartCheckParams) {
+        const requestId = startCheckRequestId.current + 1
+        startCheckRequestId.current = requestId
+
+        const data = await checkProjectStart({
+            name,
+            mountPathOptions: mountPathOptions.length > 0 ? mountPathOptions : undefined,
+        })
+
+        if (startCheckRequestId.current !== requestId) return
+
+        setStartCheck(prev => {
+            if (prev.name !== name) return prev
+
+            return {
+                name,
+                data,
+                mountPathOptions,
+            } as ProjectStartCheckState
+        })
     }
 
     async function onDeleteConfirm() {
@@ -278,22 +410,24 @@ const Page: FC = () => {
 
     async function onCommand(name: string, command: ProjectCommand) {
         if (command === ProjectCommand.启动) {
+            const mountPathOptions: ProjectStartMountOption[] = []
+
             setStartCheckOpen(true)
 
             setStartCheck({
                 name,
+                mountPathOptions,
             })
 
             try {
-                const data = await checkProjectStart({ name })
-
-                setStartCheck({
+                await requestStartCheck({
                     name,
-                    data,
+                    mountPathOptions,
                 })
             } catch (error) {
+                startCheckRequestId.current += 1
                 setStartCheckOpen(false)
-                setStartCheck({})
+                setStartCheck(defaultProjectStartCheckState)
                 throw error
             }
 
@@ -314,9 +448,68 @@ const Page: FC = () => {
         await runProject({
             name,
             command: ProjectCommand.启动,
+            mountPathOptions: startCheck.mountPathOptions.length > 0 ? startCheck.mountPathOptions : undefined,
         })
 
         onCloseStartCheck()
+    }
+
+    async function onStartCheckMountPathKindChange({ item, pathKind }: StartCheckMountPathKindChangeParams) {
+        const name = startCheck.name?.trim()
+        if (!name || item.exists || !item.canConfigure) return
+
+        const mountPathOptions = getNextMountPathOptions({
+            mountPathOptions: startCheck.mountPathOptions,
+            key: item.key,
+            pathKind,
+            createDirectory: pathKind === ProjectStartMountPathKind.文件夹 ? (item.createDirectory ?? true) : undefined,
+        })
+
+        setStartCheck(prev => ({
+            ...prev,
+            mountPathOptions,
+        }))
+
+        try {
+            await requestStartCheck({
+                name,
+                mountPathOptions,
+            })
+        } catch (error) {
+            message.open({
+                type: "error",
+                content: error instanceof Error ? error.message : "挂载路径预检查失败",
+            })
+        }
+    }
+
+    async function onStartCheckMountPathCreateDirectoryChange({ item, createDirectory }: StartCheckMountPathCreateDirectoryChangeParams) {
+        const name = startCheck.name?.trim()
+        if (!name || item.exists || !item.canConfigure || item.pathKind !== ProjectStartMountPathKind.文件夹) return
+
+        const mountPathOptions = getNextMountPathOptions({
+            mountPathOptions: startCheck.mountPathOptions,
+            key: item.key,
+            pathKind: item.pathKind,
+            createDirectory,
+        })
+
+        setStartCheck(prev => ({
+            ...prev,
+            mountPathOptions,
+        }))
+
+        try {
+            await requestStartCheck({
+                name,
+                mountPathOptions,
+            })
+        } catch (error) {
+            message.open({
+                type: "error",
+                content: error instanceof Error ? error.message : "挂载路径预检查失败",
+            })
+        }
     }
 
     function onDeleteLabel(mode: ProjectDeleteMode, label: string) {
@@ -590,26 +783,36 @@ const Page: FC = () => {
                     onCancel={onCloseStartCheck}
                 >
                     {isCheckProjectStartPending ? (
-                        <div className="py-6 text-sm text-slate-600">正在检查挂载目录...</div>
+                        <div className="py-6 text-sm text-slate-600">正在检查挂载路径...</div>
                     ) : (
                         <div className="space-y-3">
                             <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
-                                <div>已存在目录：{startCheck.data?.existsCount ?? 0}</div>
-                                <div>将自动创建：{startCheck.data?.createCount ?? 0}</div>
+                                <div>已存在路径：{startCheck.data?.existsCount ?? 0}</div>
+                                <div>启动时将创建：{startCheck.data?.createCount ?? 0}</div>
                                 <div className={clsx((startCheck.data?.blockedCount ?? 0) > 0 ? "text-red-600" : "text-slate-700")}>
                                     不可创建：{startCheck.data?.blockedCount ?? 0}
                                 </div>
                             </div>
                             {(startCheck.data?.items.length ?? 0) > 0 ? (
-                                <div className="max-h-80 space-y-2 overflow-auto pr-1">{startCheck.data?.items.map(onRenderMountItem)}</div>
+                                <div className="max-h-80 space-y-2 overflow-auto pr-1">
+                                    {startCheck.data?.items.map(item => (
+                                        <ProjectStartMountItemCard
+                                            key={item.key}
+                                            item={item}
+                                            disabled={isRunPending || isCheckProjectStartPending}
+                                            onPathKindChange={onStartCheckMountPathKindChange}
+                                            onCreateDirectoryChange={onStartCheckMountPathCreateDirectoryChange}
+                                        />
+                                    ))}
+                                </div>
                             ) : (
                                 <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500">
-                                    未检测到需要自动处理的挂载目录
+                                    未检测到需要自动处理的挂载路径
                                 </div>
                             )}
                             {startCheck.data && !startCheck.data.canStart ? (
                                 <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-600">
-                                    存在不可创建的挂载目录，请先修复后再启动项目
+                                    存在不可创建的挂载路径，请先调整后再启动项目
                                 </div>
                             ) : null}
                         </div>

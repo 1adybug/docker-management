@@ -3,7 +3,7 @@ import { prisma } from "@/prisma"
 import { CheckProjectStartResult, checkProjectStartSchema } from "@/schemas/checkProjectStart"
 
 import { createSharedFn } from "@/server/createSharedFn"
-import { checkComposeMountDirectories } from "@/server/ensureComposeMountDirectories"
+import { checkComposeMountPaths } from "@/server/ensureComposeMountPaths"
 import { ensureProjectRoot } from "@/server/ensureProjectRoot"
 import { getProjectDir } from "@/server/getProjectPaths"
 
@@ -13,7 +13,7 @@ import { normalizeComposeProjectContent } from "@/utils/compose"
 export const checkProjectStart = createSharedFn({
     name: "checkProjectStart",
     schema: checkProjectStartSchema,
-})(async function checkProjectStart({ name }) {
+})(async function checkProjectStart({ name, mountPathOptions }) {
     await ensureProjectRoot()
     const project = await prisma.project.findUnique({ where: { name } })
 
@@ -23,9 +23,10 @@ export const checkProjectStart = createSharedFn({
         content: project.content,
     })
 
-    const result = await checkComposeMountDirectories({
+    const result = await checkComposeMountPaths({
         projectDir: getProjectDir(name),
         content,
+        mountPathOptions,
     })
 
     return result as CheckProjectStartResult
