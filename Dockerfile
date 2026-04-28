@@ -39,10 +39,6 @@ RUN npm run build
 FROM base AS runner
 WORKDIR /app
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends -o Acquire::Retries=3 gosu \
-    && rm -rf /var/lib/apt/lists/*
-
 ENV NODE_ENV=production
 # Uncomment the following line in case you want to disable telemetry during runtime.
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -69,8 +65,8 @@ RUN mkdir -p /app/data /app/projects && chown -R nextjs:nodejs /app/data /app/pr
 RUN npm install -g "prisma@$(node -p "require('./prisma-package.json').version")" --registry=https://registry.npmmirror.com \
     && rm ./prisma-package.json
 
-# 创建启动脚本，先以 root 执行 prisma migrate deploy，然后切换用户运行应用
-RUN printf '#!/bin/sh\nset -eu\nmkdir -p /app/data /app/projects\nchown -R nextjs:nodejs /app/data /app/projects\nchmod -R u+rwX,g+rwX /app/data /app/projects\nif [ -S /var/run/docker.sock ]; then\n    docker_gid=$(stat -c "%%g" /var/run/docker.sock)\n    docker_group=$(getent group "${docker_gid}" | cut -d: -f1 || true)\n    if [ -z "${docker_group}" ]; then\n        docker_group=dockerhost\n        groupadd --system --gid "${docker_gid}" "${docker_group}"\n    fi\n    usermod -aG "${docker_group}" nextjs\nfi\nprisma migrate deploy\nchown -R nextjs:nodejs /app/data /app/projects\nchmod -R u+rwX,g+rwX /app/data /app/projects\nexec gosu nextjs node server.js\n' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+# 创建启动脚本，保持 root 运行应用，便于启动项目时修复宿主机挂载目录权限
+RUN printf '#!/bin/sh\nset -eu\nmkdir -p /app/data /app/projects\nchmod -R u+rwX,g+rwX /app/data /app/projects\nprisma migrate deploy\nchmod -R u+rwX,g+rwX /app/data /app/projects\nexec node server.js\n' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
 
 EXPOSE 3000
 
@@ -80,5 +76,5 @@ ENV PORT=3000
 # https://nextjs.org/docs/pages/api-reference/config/next-config-js/output
 ENV HOSTNAME="0.0.0.0"
 
-# 以 root 启动，脚本内部会修复权限并降权
+# 以 root 启动，脚本内部会修复基础目录权限
 CMD ["/app/entrypoint.sh"]
