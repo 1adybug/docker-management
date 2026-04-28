@@ -1,5 +1,5 @@
 import { constants } from "node:fs"
-import { access, mkdir, open, stat } from "node:fs/promises"
+import { access, chmod, chown, lstat, mkdir, open, readdir, stat } from "node:fs/promises"
 import { basename, dirname, extname, isAbsolute, resolve } from "node:path"
 
 import { CheckProjectStartResult, EnsureComposeMountPathsParams, ProjectStartMountItem, ProjectStartMountStatus } from "@/schemas/checkProjectStart"
@@ -27,9 +27,16 @@ export interface ComposeVolumeItem {
     target?: unknown
 }
 
+/** 数字型容器用户 */
+export interface ComposeNumericUser {
+    uid: number
+    gid?: number
+}
+
 /** 带原始挂载数据的服务配置 */
 export interface ComposeServiceWithVolumes {
     volumes?: unknown[]
+    user?: unknown
 }
 
 /** 通用对象 */
@@ -47,6 +54,7 @@ export interface ComposeMountPathCandidate {
     isAbsolutePath: boolean
     isRelativePath: boolean
     defaultPathKind: ProjectStartMountPathKind
+    numericUser?: ComposeNumericUser
 }
 
 /** 已存在的路径信息 */
@@ -77,6 +85,12 @@ export interface CheckMissingDirectoryParams {
 export interface CheckMissingFileParams {
     candidate: ComposeMountPathCandidate
     canConfigure: boolean
+}
+
+/** 挂载路径权限修复项 */
+export interface ComposeMountPathPermissionRepairItem {
+    item: ProjectStartMountItem
+    candidate: ComposeMountPathCandidate
 }
 
 function isNoEntryError(error: unknown) {
@@ -127,8 +141,35 @@ function isProbablyFilePath(path: string) {
     return extname(name) !== ""
 }
 
+function normalizeComparablePath(path: string) {
+    return path.trim().replace(/\\/g, "/").replace(/\/+/g, "/").replace(/\/$/u, "").toLowerCase()
+}
+
 function getMountPathKey(serviceName: string, sourcePath: string, targetPath: string) {
     return JSON.stringify([serviceName, sourcePath, targetPath])
+}
+
+function isValidNumericUserPart(value: string) {
+    return /^\d+$/u.test(value)
+}
+
+function parseComposeNumericUser(user: unknown) {
+    const rawUser = typeof user === "number" ? `${user}` : typeof user === "string" ? user.trim() : ""
+    if (!rawUser) return undefined
+
+    const parts = rawUser.split(":")
+    if (parts.length > 2) return undefined
+
+    const uidText = parts[0]?.trim() ?? ""
+    const gidText = parts[1]?.trim() ?? ""
+
+    if (!isValidNumericUserPart(uidText)) return undefined
+    if (gidText && !isValidNumericUserPart(gidText)) return undefined
+
+    return {
+        uid: Number(uidText),
+        gid: gidText ? Number(gidText) : undefined,
+    } as ComposeNumericUser
 }
 
 function getShortSyntaxVolumePaths(value: string) {
@@ -209,6 +250,44 @@ function buildProjectStartMountItem({ candidate, exists, canConfigure, pathKind,
     } as ProjectStartMountItem
 }
 
+function buildPermissionConflictMessage(first: ComposeMountPathCandidate, second: ComposeMountPathCandidate) {
+    return `挂载路径权限修复冲突：${first.serviceName} 的 ${first.sourcePath} 与 ${second.serviceName} 的 ${second.sourcePath} 需要不同的容器用户，请统一 compose 中的 user 配置`
+}
+
+function isSameNumericUser(first: ComposeNumericUser, second: ComposeNumericUser) {
+    return first.uid === second.uid && first.gid === second.gid
+}
+
+function isComparablePathInside(parentPath: string, childPath: string) {
+    return childPath === parentPath || childPath.startsWith(`${parentPath}/`)
+}
+
+function isOverlappingComparablePath(firstPath: string, secondPath: string) {
+    return isComparablePathInside(firstPath, secondPath) || isComparablePathInside(secondPath, firstPath)
+}
+
+function getMountPathPermissionConflictMap(candidates: ComposeMountPathCandidate[]) {
+    const conflictMap = new Map<string, string>()
+    const relativeCandidates = candidates.filter(candidate => candidate.isRelativePath && candidate.numericUser)
+
+    relativeCandidates.forEach((candidate, index) => {
+        const candidateComparablePath = normalizeComparablePath(candidate.resolvedPath)
+
+        relativeCandidates.slice(index + 1).forEach(otherCandidate => {
+            if (!candidate.numericUser || !otherCandidate.numericUser) return
+            if (isSameNumericUser(candidate.numericUser, otherCandidate.numericUser)) return
+
+            const otherComparablePath = normalizeComparablePath(otherCandidate.resolvedPath)
+            if (!isOverlappingComparablePath(candidateComparablePath, otherComparablePath)) return
+
+            conflictMap.set(candidate.key, buildPermissionConflictMessage(candidate, otherCandidate))
+            conflictMap.set(otherCandidate.key, buildPermissionConflictMessage(otherCandidate, candidate))
+        })
+    })
+
+    return conflictMap
+}
+
 function getPermissionMessage(path: string, isAbsolutePath: boolean) {
     if (isAbsolutePath)
         return `无法创建挂载路径：${path}，请确认当前应用对该绝对路径有写权限；如果应用运行在容器中，请先将对应宿主机目录以可写方式挂载进当前容器`
@@ -265,7 +344,7 @@ function getComposeMountPathCandidates({ projectDir, content }: EnsureComposeMou
         const candidateMap = new Map<string, ComposeMountPathCandidate>()
 
         services.forEach(([serviceName, service]) => {
-            ;
+            const numericUser = parseComposeNumericUser(service.user)
 
             ;(service.volumes ?? []).forEach(item => {
                 const volumePaths = getVolumePaths(item)
@@ -287,6 +366,7 @@ function getComposeMountPathCandidates({ projectDir, content }: EnsureComposeMou
                     isAbsolutePath: isAbsolutePathLike(sourcePath),
                     isRelativePath: isRelativePathValue,
                     defaultPathKind: isProbablyFilePath(sourcePath) ? ProjectStartMountPathKind.文件 : ProjectStartMountPathKind.文件夹,
+                    numericUser,
                 })
             })
         })
@@ -359,14 +439,16 @@ async function checkMissingDirectory({ candidate, canConfigure, createDirectory 
     })
 }
 
-async function checkMountPath(candidate: ComposeMountPathCandidate, optionMap: Map<string, ProjectStartMountOption>) {
+async function checkMountPath(candidate: ComposeMountPathCandidate, optionMap: Map<string, ProjectStartMountOption>, permissionConflictMessage?: string) {
     const pathStat = await getPathStat(candidate.resolvedPath)
+    const option = optionMap.get(candidate.key)
+    const missingPathKind = option?.pathKind ?? candidate.defaultPathKind
 
     if (pathStat) {
         const existingPathKind = getExistingPathKind(pathStat)
 
         if (existingPathKind) {
-            return buildProjectStartMountItem({
+            const item = buildProjectStartMountItem({
                 candidate,
                 exists: true,
                 canConfigure: false,
@@ -375,9 +457,17 @@ async function checkMountPath(candidate: ComposeMountPathCandidate, optionMap: M
                 status: ProjectStartMountStatus.已存在,
                 message: existingPathKind === ProjectStartMountPathKind.文件 ? "文件已存在" : "目录已存在",
             })
+
+            if (!permissionConflictMessage) return item
+
+            return {
+                ...item,
+                status: ProjectStartMountStatus.不可创建,
+                message: permissionConflictMessage,
+            } as ProjectStartMountItem
         }
 
-        return buildProjectStartMountItem({
+        const item = buildProjectStartMountItem({
             candidate,
             exists: true,
             canConfigure: false,
@@ -386,31 +476,59 @@ async function checkMountPath(candidate: ComposeMountPathCandidate, optionMap: M
             status: ProjectStartMountStatus.不可创建,
             message: "目标路径已存在，但既不是文件也不是目录",
         })
+
+        if (!permissionConflictMessage) return item
+
+        return {
+            ...item,
+            message: permissionConflictMessage,
+        } as ProjectStartMountItem
     }
 
     if (!candidate.isRelativePath) {
-        return checkMissingDirectory({
+        const item = await checkMissingDirectory({
             candidate,
             canConfigure: false,
             createDirectory: true,
         })
+
+        if (!permissionConflictMessage) return item
+
+        return {
+            ...item,
+            status: ProjectStartMountStatus.不可创建,
+            message: permissionConflictMessage,
+        } as ProjectStartMountItem
     }
 
-    const option = optionMap.get(candidate.key)
-    const pathKind = option?.pathKind ?? candidate.defaultPathKind
-
-    if (pathKind === ProjectStartMountPathKind.文件) {
-        return checkMissingFile({
+    if (missingPathKind === ProjectStartMountPathKind.文件) {
+        const item = await checkMissingFile({
             candidate,
             canConfigure: true,
         })
+
+        if (!permissionConflictMessage) return item
+
+        return {
+            ...item,
+            status: ProjectStartMountStatus.不可创建,
+            message: permissionConflictMessage,
+        } as ProjectStartMountItem
     }
 
-    return checkMissingDirectory({
+    const item = await checkMissingDirectory({
         candidate,
         canConfigure: true,
         createDirectory: option?.createDirectory ?? true,
     })
+
+    if (!permissionConflictMessage) return item
+
+    return {
+        ...item,
+        status: ProjectStartMountStatus.不可创建,
+        message: permissionConflictMessage,
+    } as ProjectStartMountItem
 }
 
 async function createDirectoryForMountItem(item: ProjectStartMountItem) {
@@ -447,11 +565,82 @@ async function createMountPath(item: ProjectStartMountItem) {
     await createDirectoryForMountItem(item)
 }
 
+function getPermissionRepairItems(items: ProjectStartMountItem[], candidates: ComposeMountPathCandidate[]) {
+    const candidateMap = new Map(candidates.map(candidate => [candidate.key, candidate]))
+
+    return items
+        .map(item => {
+            const candidate = candidateMap.get(item.key)
+            if (!candidate?.isRelativePath) return undefined
+
+            return {
+                item,
+                candidate,
+            } as ComposeMountPathPermissionRepairItem
+        })
+        .filter((item): item is ComposeMountPathPermissionRepairItem => !!item)
+}
+
+function getNextPermissionMode(pathStat: Awaited<ReturnType<typeof stat>>) {
+    const currentMode = Number(pathStat.mode)
+    const addExecute = pathStat.isDirectory() || (currentMode & 0o111) > 0
+    return currentMode | 0o660 | (addExecute ? 0o110 : 0)
+}
+
+async function walkMountPath(path: string, onVisit: (path: string, pathStat: Awaited<ReturnType<typeof stat>>) => Promise<void>) {
+    const pathLStat = await lstat(path)
+
+    // 避免递归修复符号链接指向的宿主机其他位置
+    if (pathLStat.isSymbolicLink()) return
+
+    const pathStat = await stat(path)
+    await onVisit(path, pathStat)
+
+    if (!pathStat.isDirectory()) return
+
+    const entries = await readdir(path, { withFileTypes: true })
+
+    for (const entry of entries) {
+        if (entry.isSymbolicLink()) continue
+        await walkMountPath(resolve(path, entry.name), onVisit)
+    }
+}
+
+async function applyMountPathMode(path: string, pathStat: Awaited<ReturnType<typeof stat>>) {
+    const nextMode = getNextPermissionMode(pathStat)
+    if ((Number(pathStat.mode) & 0o777) === (nextMode & 0o777)) return
+    await chmod(path, nextMode)
+}
+
+async function applyMountPathOwner(path: string, pathStat: Awaited<ReturnType<typeof stat>>, numericUser: ComposeNumericUser) {
+    const currentUid = Number(pathStat.uid)
+    const currentGid = Number(pathStat.gid)
+    const nextGid = numericUser.gid ?? currentGid
+
+    if (currentUid === numericUser.uid && currentGid === nextGid) return
+    await chown(path, numericUser.uid, nextGid)
+}
+
+async function ensureMountPathPermission(item: ComposeMountPathPermissionRepairItem) {
+    try {
+        await walkMountPath(item.item.resolvedPath, async function onVisit(path, pathStat) {
+            if (item.candidate.numericUser) await applyMountPathOwner(path, pathStat, item.candidate.numericUser)
+            await applyMountPathMode(path, pathStat)
+        })
+    } catch (error) {
+        if (isPermissionError(error))
+            throw new ClientError(`无法修复挂载路径权限：${item.item.resolvedPath}，请确认当前应用对该路径有权限，或调整宿主机文件权限后重试`)
+
+        throw error
+    }
+}
+
 /** 检查 compose 挂载路径状态 */
 export async function checkComposeMountPaths(params: EnsureComposeMountPathsParams) {
     const candidates = getComposeMountPathCandidates(params)
     const optionMap = getProjectStartMountOptionMap(params.mountPathOptions)
-    const items = await Promise.all(candidates.map(candidate => checkMountPath(candidate, optionMap)))
+    const permissionConflictMap = getMountPathPermissionConflictMap(candidates)
+    const items = await Promise.all(candidates.map(candidate => checkMountPath(candidate, optionMap, permissionConflictMap.get(candidate.key))))
     const blockedCount = items.filter(item => item.status === ProjectStartMountStatus.不可创建).length
     const createCount = items.filter(item => item.status === ProjectStartMountStatus.将创建).length
     const existsCount = items.filter(item => item.status === ProjectStartMountStatus.已存在).length
@@ -476,4 +665,9 @@ export async function ensureComposeMountPaths(params: EnsureComposeMountPathsPar
         if (item.status !== ProjectStartMountStatus.将创建) continue
         await createMountPath(item)
     }
+
+    const candidates = getComposeMountPathCandidates(params)
+    const permissionRepairItems = getPermissionRepairItems(result.items, candidates)
+
+    for (const item of permissionRepairItems) await ensureMountPathPermission(item)
 }
