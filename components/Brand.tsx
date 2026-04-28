@@ -20,9 +20,9 @@ const Brand: FC<BrandProps> = ({ classNames: { mainWrapper, link, logoWrapper, l
         <Link href="/" className={clsx("flex items-center gap-3", link)}>
             <div className={clsx("flex flex-none", logoWrapper)}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/geshu.svg" alt="logo" width={32} className={clsx("h-8 w-8", logo)} />
+                <img src="/docker.svg" alt="logo" width={32} className={clsx("h-8 w-8", logo)} />
             </div>
-            <div className={clsx("text-lg font-bold", text)}>格数科技项目管理</div>
+            <div className={clsx("text-lg font-bold", text)}>Docker Management</div>
         </Link>
     </h1>
 )
