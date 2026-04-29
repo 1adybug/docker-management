@@ -1,5 +1,5 @@
 import { constants } from "node:fs"
-import { access, chmod, chown, lstat, mkdir, open, readdir, stat } from "node:fs/promises"
+import { access, chmod, chown, lstat, mkdir, open, stat } from "node:fs/promises"
 import { basename, dirname, extname, isAbsolute, resolve } from "node:path"
 
 import { CheckProjectStartResult, EnsureComposeMountPathsParams, ProjectStartMountItem, ProjectStartMountStatus } from "@/schemas/checkProjectStart"
@@ -587,23 +587,14 @@ function getNextPermissionMode(pathStat: Awaited<ReturnType<typeof stat>>) {
     return currentMode | 0o666 | (addExecute ? 0o111 : 0)
 }
 
-async function walkMountPath(path: string, onVisit: (path: string, pathStat: Awaited<ReturnType<typeof stat>>) => Promise<void>) {
+async function applyMountPathPermission(path: string, onVisit: (path: string, pathStat: Awaited<ReturnType<typeof stat>>) => Promise<void>) {
     const pathLStat = await lstat(path)
 
-    // 避免递归修复符号链接指向的宿主机其他位置
+    // 避免修复符号链接指向的宿主机其他位置
     if (pathLStat.isSymbolicLink()) return
 
     const pathStat = await stat(path)
     await onVisit(path, pathStat)
-
-    if (!pathStat.isDirectory()) return
-
-    const entries = await readdir(path, { withFileTypes: true })
-
-    for (const entry of entries) {
-        if (entry.isSymbolicLink()) continue
-        await walkMountPath(resolve(path, entry.name), onVisit)
-    }
 }
 
 async function applyMountPathMode(path: string, pathStat: Awaited<ReturnType<typeof stat>>) {
@@ -623,7 +614,7 @@ async function applyMountPathOwner(path: string, pathStat: Awaited<ReturnType<ty
 
 async function ensureMountPathPermission(item: ComposeMountPathPermissionRepairItem) {
     try {
-        await walkMountPath(item.item.resolvedPath, async function onVisit(path, pathStat) {
+        await applyMountPathPermission(item.item.resolvedPath, async function onVisit(path, pathStat) {
             if (item.candidate.numericUser) await applyMountPathOwner(path, pathStat, item.candidate.numericUser)
             await applyMountPathMode(path, pathStat)
         })
