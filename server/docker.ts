@@ -6,6 +6,7 @@ import { promisify } from "node:util"
 
 import { SystemSettingKey } from "@/constants/systemSettings"
 
+import { getProjectHostRoot, getProjectRoot } from "@/server/getProjectPaths"
 import { getCachedSystemSettingValue } from "@/server/systemSettings"
 
 import { ClientError } from "@/utils/clientError"
@@ -148,6 +149,28 @@ export function getDockerPathMappings() {
     return mappings.sort((first, second) => second.from.length - first.from.length)
 }
 
+/** 读取项目根目录的内置 Docker 路径映射 */
+function getProjectRootDockerPathMappings() {
+    const from = getProjectHostRoot()
+    const to = getProjectRoot()
+
+    if (normalizeComparablePath(from) === normalizeComparablePath(to)) return []
+
+    return [
+        {
+            from,
+            to,
+        } as DockerPathMapping,
+    ]
+}
+
+/** 读取所有可用于当前运行环境的 Docker 路径映射 */
+export function getDockerHostPathMappings() {
+    const mappings = [...getDockerPathMappings(), ...getProjectRootDockerPathMappings()]
+
+    return mappings.sort((first, second) => second.from.length - first.from.length)
+}
+
 /** 将宿主机路径映射到当前运行环境可访问的路径 */
 export function mapDockerHostPath(path: string) {
     const cleanPath = path.trim()
@@ -156,7 +179,7 @@ export function mapDockerHostPath(path: string) {
     const normalizedPath = normalizeTargetPath(cleanPath)
     const comparablePath = normalizeComparablePath(cleanPath)
 
-    for (const mapping of getDockerPathMappings()) {
+    for (const mapping of getDockerHostPathMappings()) {
         const normalizedSourcePath = normalizeTargetPath(mapping.from)
         const normalizedSource = normalizeComparablePath(mapping.from)
 
@@ -199,8 +222,8 @@ export async function resolveComposeFilePath(path: string) {
         return candidatePath
     }
 
-    const hint = getDockerPathMappings().length
-        ? "，请确认宿主机目录挂载和 DOCKER_PATH_MAPPINGS 配置正确"
+    const hint = getDockerHostPathMappings().length
+        ? "，请确认宿主机目录挂载、项目根目录或 Docker 路径映射配置正确"
         : "，如果当前应用运行在容器中，请挂载宿主机目录并配置 DOCKER_PATH_MAPPINGS"
 
     throw new ClientError(`compose 文件不存在：${cleanPath}${hint}`)

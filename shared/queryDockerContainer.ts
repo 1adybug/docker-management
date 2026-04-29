@@ -3,7 +3,7 @@ import { normalize, sep } from "node:path"
 import { prisma } from "@/prisma"
 
 import { createSharedFn } from "@/server/createSharedFn"
-import { getComposeConfigFilesByLabels, getComposeProjectNameByLabels, isCurrentDockerContainerId, runDockerCommand } from "@/server/docker"
+import { getComposeConfigFilesByLabels, getComposeProjectNameByLabels, isCurrentDockerContainerId, mapDockerHostPath, runDockerCommand } from "@/server/docker"
 import { ensureProjectRoot } from "@/server/ensureProjectRoot"
 
 export interface DockerContainerRaw {
@@ -64,7 +64,7 @@ function isComposeFileManaged(files: string[], projectRoot: string) {
     if (files.length === 0) return false
     const normalizedRoot = normalizePath(projectRoot)
     const rootWithSeparator = normalizedRoot.endsWith(sep) ? normalizedRoot : `${normalizedRoot}${sep}`
-    return files.some(file => normalizePath(file).startsWith(rootWithSeparator))
+    return files.some(file => normalizePath(mapDockerHostPath(file)).startsWith(rootWithSeparator))
 }
 
 export const queryDockerContainer = createSharedFn<never>({
