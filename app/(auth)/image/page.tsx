@@ -488,12 +488,7 @@ const Page: FC = () => {
             for (const name of selectedRestartProjectNames) {
                 await runProjectClient({
                     name,
-                    command: ProjectCommand.停止,
-                })
-
-                await runProjectClient({
-                    name,
-                    command: ProjectCommand.启动,
+                    command: ProjectCommand.重启,
                 })
             }
 

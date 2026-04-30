@@ -35,14 +35,40 @@ export interface EnsureProjectComposeFileParams {
     content: string
 }
 
-function getDockerComposeArgs(command: ProjectCommand, composePath: string, projectHostDir: string) {
+/** Docker Compose 命令参数 */
+export interface GetDockerComposeArgsParams {
+    command: ProjectCommand
+    composePath: string
+    projectHostDir: string
+}
+
+/** 执行项目命令参数 */
+export interface RunProjectCommandParams extends GetDockerComposeArgsParams {
+    projectDir: string
+}
+
+function getDockerComposeArgs({ command, composePath, projectHostDir }: GetDockerComposeArgsParams) {
     const args = ["compose", "--project-directory", projectHostDir, "-f", composePath]
 
     if (command === ProjectCommand.启动) return [...args, "up", "-d"]
     if (command === ProjectCommand.停止) return [...args, "down"]
-    if (command === ProjectCommand.重启) return [...args, "restart"]
+    if (command === ProjectCommand.重启) throw new ClientError("重启项目必须走平台停止和启动流程")
     if (command === ProjectCommand.拉取) return [...args, "pull"]
     return [...args, "logs", "--tail", "200"]
+}
+
+async function runProjectCommand({ command, composePath, projectDir, projectHostDir }: RunProjectCommandParams) {
+    const result = await runDockerCommand({
+        args: getDockerComposeArgs({
+            command,
+            composePath,
+            projectHostDir,
+        }),
+        cwd: projectDir,
+        errorMessage: "项目执行失败",
+    })
+
+    return result.stdout.trim()
 }
 
 function isNoEntryError(error: unknown) {
@@ -102,6 +128,32 @@ export const runProject = createSharedFn({
         content,
     })
 
+    if (command === ProjectCommand.重启) {
+        const stopOutput = await runProjectCommand({
+            command: ProjectCommand.停止,
+            composePath,
+            projectDir,
+            projectHostDir,
+        })
+
+        await ensureComposeMountPaths({
+            projectDir,
+            content,
+            mountPathOptions,
+        })
+
+        const startOutput = await runProjectCommand({
+            command: ProjectCommand.启动,
+            composePath,
+            projectDir,
+            projectHostDir,
+        })
+
+        return {
+            output: [stopOutput, startOutput].filter(Boolean).join("\n"),
+        } as RunProjectResult
+    }
+
     if (command === ProjectCommand.启动) {
         await ensureComposeMountPaths({
             projectDir,
@@ -110,13 +162,12 @@ export const runProject = createSharedFn({
         })
     }
 
-    const result = await runDockerCommand({
-        args: getDockerComposeArgs(command, composePath, projectHostDir),
-        cwd: projectDir,
-        errorMessage: "项目执行失败",
-    })
-
     return {
-        output: result.stdout.trim(),
+        output: await runProjectCommand({
+            command,
+            composePath,
+            projectDir,
+            projectHostDir,
+        }),
     } as RunProjectResult
 })
