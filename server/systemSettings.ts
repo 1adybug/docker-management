@@ -163,6 +163,32 @@ export function getDefaultSystemSettingValue(definition: SystemSettingDefinition
     return definition.defaultValue
 }
 
+function getEnvironmentSystemSettingValue(key: SystemSettingKey) {
+    // Docker 运行相关路径保留环境变量兜底，兼容容器部署和旧版本配置。
+    if (key === SystemSettingKey.Docker路径映射) return process.env.DOCKER_PATH_MAPPINGS
+
+    if (key === SystemSettingKey.项目根目录) return process.env.PROJECTS_ROOT
+    if (key === SystemSettingKey.宿主机项目根目录) return process.env.PROJECTS_HOST_ROOT
+    if (key === SystemSettingKey.Docker临时目录) return process.env.DOCKER_TEMP_ROOT
+
+    return undefined
+}
+
+function resolveSystemSettingValue(key: SystemSettingKey, value: string) {
+    if (value.trim()) return value
+
+    const environmentValue = getEnvironmentSystemSettingValue(key)
+    if (environmentValue === undefined) return value
+
+    const definition = getSystemSettingDefinition(key)
+    if (!definition) throw new Error(`未知的系统设置: ${key}`)
+
+    return normalizeSystemSettingValue({
+        definition,
+        value: environmentValue,
+    })
+}
+
 export function getInitialSystemSettingValue(definition: SystemSettingDefinition) {
     return normalizeSystemSettingValue({
         definition,
@@ -232,6 +258,10 @@ export async function getSystemSettingValueMap({ force = false }: GetSystemSetti
         values[record.key] = record.value
     })
 
+    SystemSettingDefinitions.forEach(definition => {
+        values[definition.key] = resolveSystemSettingValue(definition.key, values[definition.key] ?? getDefaultSystemSettingValue(definition))
+    })
+
     globalThis.__SYSTEM_SETTING_VALUES__ = values
 
     return { ...values }
@@ -239,26 +269,26 @@ export async function getSystemSettingValueMap({ force = false }: GetSystemSetti
 
 export function getCachedSystemSettingValue(key: SystemSettingKey) {
     const cachedValue = globalThis.__SYSTEM_SETTING_VALUES__?.[key]
-    if (cachedValue !== undefined) return cachedValue
+    if (cachedValue !== undefined) return resolveSystemSettingValue(key, cachedValue)
 
     const value = getSyncSystemSettingValue(key)
-    if (value !== undefined) return value
+    if (value !== undefined) return resolveSystemSettingValue(key, value)
 
     const definition = getSystemSettingDefinition(key)
     if (!definition) throw new Error(`未知的系统设置: ${key}`)
 
-    return getInitialSystemSettingValue(definition)
+    return resolveSystemSettingValue(key, getInitialSystemSettingValue(definition))
 }
 
 export async function getSystemSettingValue(key: SystemSettingKey) {
     const values = await getSystemSettingValueMap()
     const value = values[key]
-    if (value !== undefined) return value
+    if (value !== undefined) return resolveSystemSettingValue(key, value)
 
     const definition = getSystemSettingDefinition(key)
     if (!definition) throw new Error(`未知的系统设置: ${key}`)
 
-    return getDefaultSystemSettingValue(definition)
+    return resolveSystemSettingValue(key, getDefaultSystemSettingValue(definition))
 }
 
 export async function getBooleanSystemSettingValue(key: SystemSettingKey) {
