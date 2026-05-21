@@ -1,21 +1,11 @@
 # Agent Rules
 
-## Style Rules
-
-- 页面的 CSS 样式你应该尽量通过以下两种方式实现：
-    1. 对于 `Ant Design` 或者 `@heroui/react` 等组件库提供的组件，请在组件库提供的 `ConfigProvider` 等类似的全局配置组件进行修改，如果你需要修改某个组件的全局样式，你可以在 `@/components/Registry.tsx` 中进行修改，它包裹了整个应用，如果你只需要单独修改某个位置的某个组件，请使用 `ConfigProvider` 包裹你需要修改的组件
-    2. 对于一般样式，优先使用组件的 `className` 或者 `classNames` 或其他类名属性 + `tailwindcss` 实现
-    3. 有且仅有以上两种方式无法实现时，请你使用 `style` 属性或者在 css 文件中定义样式
-
-- 当你使用 `flex` 布局时，对于宽度或者高度需要保持固定的子元素设置 `flex-none`
-- 对于 `React` 组件（也就是非 `div` 等 `html` 元素）的样式，请谨慎使用 `!important` 修改样式，请优先使用 `ConfigProvider` 或者组件暴露的属性（比如 `radius` / `shape`等）修改样式，最后再考虑使用 `!important`
-- 请不要使用模板字符串的形式来实现动态样式，例如 ``className={`w-${width}px`}``，如果你想要实现条件类名，请使用 `deepsea-tools` 中导出的 `clsx` 函数，比如 `clsx("text-base", isPrimary ? "text-primary" : "text-secondary")`
-
 ## Base Rules
 
 - 永远使用中文回复
 - 禁止修改 `node_modules` 文件夹中的任何文件
 - 当我让你修复一个问题，而你尝试一次或多次修复失败后，我会在每次失败修复后的问题现象再次反馈给你，在进行下一次修复之前，你必须思考之前所有的修复是否还有必要，是否需要先撤回之前的修复，然后再进行修复
+- 禁止未经允许启动项目的开发服务
 - 尽量使用 `interface` 而不是 `type`，函数类型除外
 - 所有的类型定义都使用 `export` 导出
 - 如果某一个属性的类型是 `[key]: someType | null`，请将它改写为 `[key]?: someType`，尽量不要使用 `null` 类型
@@ -144,6 +134,26 @@
 ## React Rules
 
 ### 规则
+
+- 项目的 `React` 版本为 `19`，请优先使用 `React 19` 中的新特性：
+    - 使用 `Actions` 处理异步数据变更、提交状态、错误处理、乐观更新与表单提交，优先将异步提交函数命名为 `xxxAction`
+    - 表单提交优先使用 `<form action={xxxAction}>`、元素级 `formAction`、`useActionState`、`useFormStatus` 与 `requestFormReset`
+    - 需要乐观 UI 时优先使用 `useOptimistic`
+    - 需要在渲染阶段读取 `Promise` 或条件读取 `Context` 时优先使用 `use`，但不要在渲染期间创建未缓存的 `Promise`
+    - 函数组件需要接收 `ref` 时优先使用 `ref` 作为 `props`，新组件不要再优先使用 `forwardRef`
+    - 新增 `Context` Provider 时优先使用 `<SomeContext value={value}>`，不要优先使用 `<SomeContext.Provider>`
+    - 回调 `ref` 需要清理逻辑时可以返回清理函数；没有清理逻辑时不要使用隐式返回
+    - 需要初始占位值的延迟渲染时优先使用 `useDeferredValue(value, initialValue)`
+    - 页面级元数据优先直接在组件中渲染 `<title>`、`<meta>` 与 `<link>`，让 `React` 自动提升到 `<head>`
+    - 组件依赖样式表时可以渲染 `<link rel="stylesheet" precedence="...">` 或 `<style precedence="...">`，让 `React` 管理顺序、加载与去重
+    - 组件依赖异步脚本时可以直接渲染 `<script async src="...">`，让 `React` 管理提升与去重
+    - 需要优化资源加载时优先使用 `react-dom` 中的 `prefetchDNS`、`preconnect`、`preload` 与 `preinit`
+    - 静态站点生成优先使用 `react-dom/static` 中的 `prerender` 与 `prerenderToNodeStream`
+    - 框架支持时优先考虑 `React Server Components` 与 `Server Actions`，其中 `"use server"` 仅用于 `Server Actions`
+    - 需要保留隐藏页面状态、预渲染下一步界面或降低隐藏内容优先级时，可以使用 `Activity`
+    - `Effect` 中由外部系统触发、但需要读取最新 `props` 或 `state` 的事件逻辑，优先使用 `useEffectEvent`
+    - `React Server Components` 中需要在缓存生命周期结束时中止或清理异步工作，可以使用 `cacheSignal`
+    - 需要 Web Components 时可以直接使用 `Custom Elements`，`React 19` 已支持属性与 SSR 行为
 
 - 生成 `React` 组件时，尽量使用函数式组件，而不是类组件
 
@@ -409,16 +419,10 @@
         import { useMutation, UseMutationOptions } from "@tanstack/react-query"
         import { addUser } from "@/apis/addUser"
 
-        // UseMutationOptions 的泛型参数为 api 函数的返回值类型、错误类型（默认 `Error`）、请求参数类型、上下文类型
-        export interface UseAddUserParams<TOnMutateResult = unknown> extends Omit<
-            UseMutationOptions<Awaited<ReturnType<typeof addUser>>, Error, Parameters<typeof addUser>[0], TOnMutateResult>,
-            "mutationFn"
-        > {}
-
-        export function useAddUser<TOnMutateResult = unknown>({ onMutate, onSuccess, onError, onSettled, ...rest }: UseAddUserParams<TOnMutateResult> = {}) {
+        export const useAddUser = createUseMutation(() => {
             const key = useId()
 
-            return useMutation({
+            return {
                 mutationFn: addUser,
                 onMutate(variables, context) {
                     message.open({
@@ -427,8 +431,6 @@
                         content: "新增用户中...",
                         duration: 0,
                     })
-
-                    return onMutate?.(variables, context) as TOnMutateResult | Promise<TOnMutateResult>
                 },
                 onSuccess(data, variables, onMutateResult, context) {
                     // 成功后刷新 user 相关的 query
@@ -441,21 +443,13 @@
                         type: "success",
                         content: "新增用户成功",
                     })
-
-                    return onSuccess?.(data, variables, onMutateResult, context)
                 },
                 onError(error, variables, onMutateResult, context) {
                     // 失败后关闭 loading
                     message.destroy(key)
-
-                    return onError?.(error, variables, onMutateResult, context)
                 },
-                onSettled(data, error, variables, onMutateResult, context) {
-                    return onSettled?.(data, error, variables, onMutateResult, context)
-                },
-                ...rest,
-            })
-        }
+            }
+        })
         ```
 
 ## Next Rules
@@ -664,3 +658,16 @@ export async function proxy(request: NextRequest) {
 - 你依然需要遵守 `server action` 的规则，核心的实现逻辑与 `server action` 一致，比如 `schema` （负责校验数据）的创建、`shared` 函数（负责核心逻辑）的创建等，这些规则同样适用于 `api route`
 - 所以 `api route` 的创建规则与 `server action` 的创建规则一致，你只需要按照 `server action` 的创建规则创建即可，唯一不同的地方是，你需要将 `api route` 按照 Next.js 的 `api route` 规则创建，而不是 `@/actions` 目录下
 - 当然如果这个功能可以通过 `server action` 实现并且是给内部使用的，你也可以同时按照 `server action` 的创建规则创建一个 `server action`，这样 `server action` 和 `api route` 都可以使用，但是 `server action` 是给内部使用的，而 `api route` 是给外部使用的
+
+## Style Rules
+
+- 页面的 CSS 样式你应该尽量通过以下两种方式实现：
+    1. 对于 `Ant Design` 或者 `@heroui/react` 等组件库提供的组件，请在组件库提供的 `ConfigProvider` 等类似的全局配置组件进行修改，如果你需要修改某个组件的全局样式，你可以在 `@/components/Registry.tsx` 中进行修改，它包裹了整个应用，如果你只需要单独修改某个位置的某个组件，请使用 `ConfigProvider` 包裹你需要修改的组件
+    2. 对于一般样式，优先使用组件的 `className` 或者 `classNames` 或其他类名属性 + `tailwindcss` 实现
+    3. 有且仅有以上两种方式无法实现时，请你使用 `style` 属性或者在 css 文件中定义样式
+
+- 当你使用 `flex` 布局时，对于宽度或者高度需要保持固定的子元素设置 `flex-none`
+- 对于 `React` 组件（也就是非 `div` 等 `html` 元素）的样式，请谨慎使用 `!important` 修改样式，请优先使用 `ConfigProvider` 或者组件暴露的属性（比如 `radius` / `shape`等）修改样式，最后再考虑使用 `!important`
+- 请不要使用模板字符串的形式来实现动态样式，例如 ``className={`w-${width}px`}``，如果你想要实现条件类名，请使用 `deepsea-tools` 中导出的 `clsx` 函数，比如 `clsx("text-base", isPrimary ? "text-primary" : "text-secondary")`
+
+- 如果某个容器在不同状态下有时会出现纵向滚动条，有时不会，导致右侧按钮或内容边界横向抖动。请用 `CSS` 动态 `padding` 解决，不要硬编码滚动条宽度。做法是：先确定内容区域在没有滚动条时的理论宽度，例如整个窗口宽度减去左侧固定侧边栏宽度：`calc(100vw - 84px)`。然后设置左侧 `padding` 为基础值，比如 `28px`；右侧 `padding` 设置为基础值减去“理论宽度和当前容器实际宽度的差值”： `padding-left: 28px; padding-right: calc(28px - ((100vw - 84px) - 100%));` 其中 `100%` 是当前内容容器实际可用宽度。没有滚动条时差值为 `0`；有滚动条时差值等于滚动条占用宽度，从而自动抵消滚动条造成的横向偏移。响应式场景下，如果侧边栏宽度或基础 `padding` 改变，也要在对应断点同步更新这个公式。
