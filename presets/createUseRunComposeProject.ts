@@ -4,7 +4,7 @@ import { withUseMutationDefaults } from "soda-tanstack-query"
 
 import { ComposeProjectCommand, ComposeProjectCommandLabel } from "@/schemas/composeProjectCommand"
 
-import { runComposeProject } from "@/shared/runComposeProject"
+import type { runComposeProject } from "@/shared/runComposeProject"
 
 export const createUseRunComposeProject = withUseMutationDefaults<typeof runComposeProject>(() => {
     const key = useId()

@@ -2,7 +2,7 @@ import { useId } from "react"
 
 import { withUseMutationDefaults } from "soda-tanstack-query"
 
-import { renameDockerImage } from "@/shared/renameDockerImage"
+import type { renameDockerImage } from "@/shared/renameDockerImage"
 
 export const createUseRenameDockerImage = withUseMutationDefaults<typeof renameDockerImage>(() => {
     const key = useId()

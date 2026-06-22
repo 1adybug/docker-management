@@ -2,7 +2,7 @@ import { useId } from "react"
 
 import { withUseMutationDefaults } from "soda-tanstack-query"
 
-import { buildStaticDockerImage } from "@/shared/buildStaticDockerImage"
+import type { buildStaticDockerImage } from "@/shared/buildStaticDockerImage"
 
 export const createUseBuildStaticDockerImage = withUseMutationDefaults<typeof buildStaticDockerImage>(() => {
     const key = useId()

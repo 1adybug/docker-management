@@ -8,7 +8,7 @@ import { promisify } from "node:util"
 import { crc32 } from "node:zlib"
 
 import { decode } from "iconv-lite"
-import yauzl, { Entry, ZipFile } from "yauzl"
+import yauzl, { type Entry, type ZipFile } from "yauzl"
 
 import { SystemSettingKey } from "@/constants/systemSettings"
 

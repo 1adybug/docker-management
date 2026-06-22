@@ -4,7 +4,7 @@ import { withUseMutationDefaults } from "soda-tanstack-query"
 
 import { DockerContainerCommandLabel } from "@/schemas/dockerContainerCommand"
 
-import { runDockerContainer } from "@/shared/runDockerContainer"
+import type { runDockerContainer } from "@/shared/runDockerContainer"
 
 export const createUseRunDockerContainer = withUseMutationDefaults<typeof runDockerContainer>(() => {
     const key = useId()

@@ -1,7 +1,7 @@
 import { createWriteStream } from "node:fs"
 import { Readable } from "node:stream"
 import { pipeline } from "node:stream/promises"
-import { ReadableStream } from "node:stream/web"
+import type { ReadableStream } from "node:stream/web"
 
 export interface WriteWebFileToPathParams {
     /** 上传的文件 */

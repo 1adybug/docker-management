@@ -2,7 +2,7 @@ import { useId } from "react"
 
 import { withUseMutationDefaults } from "soda-tanstack-query"
 
-import { deleteProject } from "@/shared/deleteProject"
+import type { deleteProject } from "@/shared/deleteProject"
 
 /** 删除项目提示文本 */
 export interface DeleteProjectNotice {

@@ -2,7 +2,7 @@ import { useId } from "react"
 
 import { withUseMutationDefaults } from "soda-tanstack-query"
 
-import { addProject } from "@/shared/addProject"
+import type { addProject } from "@/shared/addProject"
 
 export const createUseAddProject = withUseMutationDefaults<typeof addProject>(() => {
     const key = useId()

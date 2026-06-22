@@ -1,7 +1,7 @@
 import { getParser } from "."
 import { z } from "zod/v4"
 
-import { ProjectStartMountPathKind, projectStartMountPathKindSchema } from "./projectStartMountPathKind"
+import { type ProjectStartMountPathKind, projectStartMountPathKindSchema } from "./projectStartMountPathKind"
 
 export interface ProjectStartMountOption {
     key: string

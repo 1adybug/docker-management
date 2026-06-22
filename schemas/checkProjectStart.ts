@@ -4,7 +4,7 @@ import { z } from "zod/v4"
 import { projectNameSchema } from "./projectName"
 import type { ProjectStartMountOption } from "./projectStartMountOption"
 import { projectStartMountOptionsSchema } from "./projectStartMountOptions"
-import { ProjectStartMountPathKind } from "./projectStartMountPathKind"
+import type { ProjectStartMountPathKind } from "./projectStartMountPathKind"
 
 export const checkProjectStartSchema = z.object(
     {

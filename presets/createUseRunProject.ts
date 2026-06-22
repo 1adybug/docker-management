@@ -4,7 +4,7 @@ import { withUseMutationDefaults } from "soda-tanstack-query"
 
 import { ProjectCommand, ProjectCommandLabel } from "@/schemas/projectCommand"
 
-import { runProject } from "@/shared/runProject"
+import type { runProject } from "@/shared/runProject"
 
 export const createUseRunProject = withUseMutationDefaults<typeof runProject>(() => {
     const key = useId()

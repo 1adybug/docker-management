@@ -2,7 +2,7 @@ import { useId } from "react"
 
 import { withUseMutationDefaults } from "soda-tanstack-query"
 
-import { deleteDockerImage } from "@/shared/deleteDockerImage"
+import type { deleteDockerImage } from "@/shared/deleteDockerImage"
 
 export const createUseDeleteDockerImage = withUseMutationDefaults<typeof deleteDockerImage>(() => {
     const key = useId()
