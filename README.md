@@ -27,20 +27,21 @@ git remote set-url --push template no_push://template
 
 ### 变量清单
 
-| 变量名                        | 必填 | 说明                                      | 示例 / 默认值                 |
-| ----------------------------- | ---- | ----------------------------------------- | ----------------------------- |
-| `COOKIE_PREFIX`               | 是   | 登录相关 Cookie 前缀                      | `geshu`                       |
-| `DEFAULT_EMAIL_DOMAIN`        | 是   | 临时邮箱域名（用于手机号生成邮箱）        | `example.com`                 |
-| `BETTER_AUTH_SECRET`          | 是   | Better Auth 签名密钥                      | `your_better_auth_secret`     |
-| `BETTER_AUTH_URL`             | 按需 | 服务端 Better Auth 基础地址               | `https://example.com`         |
-| `NEXT_PUBLIC_BETTER_AUTH_URL` | 按需 | 客户端 Better Auth 基础地址               | `https://example.com`         |
-| `IS_INTRANET`                 | 否   | 是否走内网短信通道                        | `0`（默认关闭）               |
-| `ALIYUN_ACCESS_KEY_ID`        | 按需 | 阿里云短信密钥 ID（公网短信时需要）       | `your_key_id`                 |
-| `ALIYUN_ACCESS_KEY_SECRET`    | 按需 | 阿里云短信密钥 Secret（公网短信时需要）   | `your_key_secret`             |
-| `QJP_SMS_URL`                 | 按需 | 内网短信服务地址（内网短信时需要）        | `http://sms.example.com/send` |
-| `NEXT_OUTPUT`                 | 否   | Next 构建输出模式                         | `standalone` / `export`       |
-| `NEXT_TELEMETRY_DISABLED`     | 否   | 是否关闭 Next 遥测上报                    | `1`                           |
-| `REDIS_URL`                   | 按需 | Redis 地址（仅使用 Redis 限流存储时需要） | `redis://127.0.0.1:6379`      |
+| 变量名                        | 必填 | 说明                                    | 示例 / 默认值                     |
+| ----------------------------- | ---- | --------------------------------------- | --------------------------------- |
+| `COOKIE_PREFIX`               | 是   | 登录相关 Cookie 前缀                    | `geshu`                           |
+| `BETTER_AUTH_SECRET`          | 是   | Better Auth 签名密钥                    | `your_better_auth_secret`         |
+| `BETTER_AUTH_URL`             | 按需 | 服务端 Better Auth 基础地址             | `https://example.com`             |
+| `NEXT_PUBLIC_BETTER_AUTH_URL` | 按需 | 客户端 Better Auth 基础地址             | `https://example.com`             |
+| `NEXT_OUTPUT`                 | 否   | Next 构建输出模式                       | `standalone` / `export`           |
+| `NEXT_TELEMETRY_DISABLED`     | 否   | 是否关闭 Next 遥测上报                  | `1`                               |
+| `REDIS_URL`                   | 按需 | Redis 地址（仅接入 Redis 限流存储时用） | `redis://127.0.0.1:6379`          |
+| `TRUSTED_CLIENT_IP_HEADER`    | 按需 | 指定可信反向代理写入的真实客户端 IP 头  | `x-client-ip` / `x-forwarded-for` |
+| `DEFAULT_EMAIL_DOMAIN`        | 否   | 手机号注册时生成临时邮箱所使用的域名    | `example.com`                     |
+| `IS_INTRANET`                 | 否   | 是否使用内网短信通道                    | `0`                               |
+| `QJP_SMS_URL`                 | 按需 | 内网短信服务地址                        | `http://sms.example.com`          |
+| `ALIYUN_ACCESS_KEY_ID`        | 按需 | 阿里云短信 AccessKey ID                 | `your_access_key_id`              |
+| `ALIYUN_ACCESS_KEY_SECRET`    | 按需 | 阿里云短信 AccessKey Secret             | `your_access_key_secret`          |
 
 ### 推荐的本地 `.env` 示例
 
@@ -68,6 +69,9 @@ NEXT_TELEMETRY_DISABLED="1"
 
 # 可选：仅在你启用 Redis 限流存储时使用
 REDIS_URL="redis://127.0.0.1:6379"
+
+# 可选：不配置时默认读取 x-client-ip 或 x-forwarded-for
+TRUSTED_CLIENT_IP_HEADER=""
 ```
 
 ### 系统设置迁移项
@@ -352,15 +356,14 @@ data/backups/
 核心入口：
 
 - `server/createResponseFn.ts`
-- `server/rateLimit/index.ts`
-- `server/rateLimit/types.ts`
+- `server/createRateLimit.ts`
 
 ### 1. 快速使用
 
 在 `shared` 函数上定义 `rateLimit` 属性即可，推荐使用 `createRateLimit` 获取完整类型提示：
 
 ```ts
-import { createRateLimit } from "@/server/rateLimit"
+import { createRateLimit } from "@/server/createRateLimit"
 
 export async function login(params: LoginParams) {
     // ...
@@ -411,7 +414,7 @@ export const loginAction = createResponseFn(login)
 当你需要按账号、手机号等字段精细限流时，可以提供 `getKey`：
 
 ```ts
-import { createRateLimit, RateLimitContext } from "@/server/rateLimit"
+import { type RateLimitContext, createRateLimit } from "@/server/createRateLimit"
 
 function getLoginRateLimitKey(context: RateLimitContext) {
     const params = context.args[0] as LoginParams | undefined
@@ -446,7 +449,7 @@ someFn.rateLimit = false
 方式二，使用配置对象关闭：
 
 ```ts
-import { createRateLimit } from "@/server/rateLimit"
+import { createRateLimit } from "@/server/createRateLimit"
 
 someFn.rateLimit = createRateLimit({
     enabled: false,
@@ -464,7 +467,7 @@ someFn.rateLimit = createRateLimit({
 你也可以在服务端代码中动态切换：
 
 ```ts
-import { isGlobalRateLimitEnabled, setGlobalRateLimitEnabled } from "@/server/rateLimit"
+import { isGlobalRateLimitEnabled, setGlobalRateLimitEnabled } from "@/server/createRateLimit"
 
 setGlobalRateLimitEnabled(false)
 
@@ -477,7 +480,7 @@ console.log(enabled)
 可以在应用启动时设置全局默认策略：
 
 ```ts
-import { setGlobalRateLimitOptions } from "@/server/rateLimit"
+import { setGlobalRateLimitOptions } from "@/server/createRateLimit"
 
 setGlobalRateLimitOptions({
     limit: 200,
@@ -515,7 +518,8 @@ setGlobalRateLimitOptions({
 
 ```ts
 import { Redis } from "ioredis"
-import { createRedisRateLimitStore, setGlobalRateLimitStore } from "@/server/rateLimit"
+
+import { createRedisRateLimitStore, setGlobalRateLimitStore } from "@/server/createRateLimit"
 
 const redis = new Redis(process.env.REDIS_URL!)
 

@@ -2,10 +2,10 @@ import { SystemSettingKey } from "@/constants/systemSettings"
 
 import { prisma } from "@/prisma"
 
-import { SendCurrentUserPhoneNumberOtpParams, sendCurrentUserPhoneNumberOtpSchema } from "@/schemas/sendCurrentUserPhoneNumberOtp"
+import { type SendCurrentUserPhoneNumberOtpParams, sendCurrentUserPhoneNumberOtpSchema } from "@/schemas/sendCurrentUserPhoneNumberOtp"
 
 import { auth } from "@/server/auth"
-import { createRateLimit, RateLimitContext } from "@/server/createRateLimit"
+import { type RateLimitContext, createRateLimit } from "@/server/createRateLimit"
 import { createSharedFn } from "@/server/createSharedFn"
 import { getCurrentUser } from "@/server/getCurrentUser"
 import { getBooleanSystemSettingValue } from "@/server/systemSettings"

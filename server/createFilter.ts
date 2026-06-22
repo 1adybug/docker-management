@@ -1,4 +1,4 @@
-import { User } from "@/prisma/generated/client"
+import type { User } from "@/prisma/generated/client"
 
 export type FilterResolver = (user: User) => boolean
 

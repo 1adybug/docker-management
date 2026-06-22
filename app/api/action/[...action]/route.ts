@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 
-import { createRouteFn, OriginalResponseFn, RouteBodyType, RouteHandler } from "@/server/createResponseFn"
+import { type OriginalResponseFn, type RouteBodyType, type RouteHandler, createRouteFn } from "@/server/createResponseFn"
 
 import { addProject } from "@/shared/addProject"
 import { addUser } from "@/shared/addUser"

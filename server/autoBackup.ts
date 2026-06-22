@@ -10,7 +10,7 @@ import Database from "better-sqlite3"
 
 import { prisma } from "@/prisma"
 
-import { AutoBackupConfig, AutoBackupSchedule, BackupTier, getAutoBackupConfig, getTierDirectoryPath } from "./autoBackupConfig"
+import { type AutoBackupConfig, type AutoBackupSchedule, BackupTier, getAutoBackupConfig, getTierDirectoryPath } from "./autoBackupConfig"
 import { withFileLock } from "./autoBackupFileLock"
 
 export interface BackupState {

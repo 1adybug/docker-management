@@ -1,15 +1,23 @@
 "use client"
 
-import { ComponentProps, FC, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, ReactNode, useEffect, useState } from "react"
+import {
+    type ComponentProps,
+    type FC,
+    type KeyboardEvent as ReactKeyboardEvent,
+    type MouseEvent as ReactMouseEvent,
+    type ReactNode,
+    useEffect,
+    useState,
+} from "react"
 
 import { IconCheck, IconPencil } from "@tabler/icons-react"
 import { Button, Card, Input } from "antd"
-import { clsx, formatTime, getEnumKey, StrictOmit } from "deepsea-tools"
+import { type StrictOmit, clsx, formatTime, getEnumKey } from "deepsea-tools"
 import { useRouter } from "next/navigation"
 
 import { useUpdateCurrentUserProfile } from "@/hooks/useUpdateCurrentUserProfile"
 
-import { User } from "@/prisma/generated/client"
+import type { User } from "@/prisma/generated/client"
 
 import { nicknameParser } from "@/schemas/nickname"
 import { UserRole } from "@/schemas/userRole"

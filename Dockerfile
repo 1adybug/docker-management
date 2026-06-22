@@ -15,7 +15,7 @@ WORKDIR /app
 
 # Install dependencies based on the preferred package manager
 COPY package.json ./
-RUN npm install --registry=https://registry.npmmirror.com
+RUN npm install
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -62,7 +62,7 @@ COPY --from=deps /app/node_modules/prisma/package.json ./prisma-package.json
 RUN find /app/node_modules/7zip-bin -type f -name 7za -exec chmod +x {} \;
 RUN mkdir -p /app/data /app/projects && chown -R nextjs:nodejs /app/data /app/projects
 
-RUN npm install -g "prisma@$(node -p "require('./prisma-package.json').version")" --registry=https://registry.npmmirror.com \
+RUN npm install -g "prisma@$(node -p "require('./prisma-package.json').version")" \
     && rm ./prisma-package.json
 
 # 创建启动脚本，保持 root 运行应用，便于启动项目时修复宿主机挂载目录权限

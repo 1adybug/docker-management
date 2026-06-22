@@ -2,7 +2,7 @@ import { headers } from "next/headers"
 
 import { prisma } from "@/prisma"
 
-import { User } from "@/prisma/generated/client"
+import type { User } from "@/prisma/generated/client"
 
 import { auth } from "./auth"
 

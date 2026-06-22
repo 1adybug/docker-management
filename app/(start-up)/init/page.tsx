@@ -1,6 +1,6 @@
 "use client"
 
-import { FC } from "react"
+import type { FC } from "react"
 
 import { Button, Form, Input } from "antd"
 import { useForm } from "antd/es/form/Form"
@@ -10,7 +10,7 @@ import { schemaToRule } from "soda-antd"
 
 import { useCreateFirstUser } from "@/hooks/useCreateFirstUser"
 
-import { CreateFirstUserParams } from "@/schemas/createFirstUser"
+import type { CreateFirstUserParams } from "@/schemas/createFirstUser"
 import { nicknameSchema } from "@/schemas/nickname"
 import { phoneNumberSchema } from "@/schemas/phoneNumber"
 import { usernameSchema } from "@/schemas/username"

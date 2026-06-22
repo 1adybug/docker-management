@@ -1,28 +1,28 @@
 "use client"
 
-import { FC, useEffect, useRef, useState } from "react"
+import { type FC, useEffect, useRef, useState } from "react"
 
-import JsonView from "@uiw/react-json-view"
-import { Button, DatePicker, Form, Input, Modal, ModalProps, Table, TableProps } from "antd"
+import { type ModalProps, type TableProps, Button, DatePicker, Form, Input, Modal, Table } from "antd"
 import { useForm } from "antd/es/form/Form"
 import FormItem from "antd/es/form/FormItem"
 import { formatTime, getEnumKey, isNonNullable, naturalParser, showTotal } from "deepsea-tools"
-import { Columns, getTimeRange, useScroll } from "soda-antd"
+import { type Columns, getTimeRange, useScroll } from "soda-antd"
 import { transformState } from "soda-hooks"
 import { useQueryState } from "soda-next"
 
+import JsonViewer from "@/components/JsonViewer"
 import Userw from "@/components/UserButton"
 
 import { useQueryErrorLog } from "@/hooks/useQueryErrorLog"
 
 import { getParser } from "@/schemas"
-import { ErrorLogSortByParams, errorLogSortBySchema } from "@/schemas/errorLogSortBy"
+import { type ErrorLogSortByParams, errorLogSortBySchema } from "@/schemas/errorLogSortBy"
 import { pageNumParser } from "@/schemas/pageNum"
 import { pageSizeParser } from "@/schemas/pageSize"
-import { SortOrderParams, sortOrderSchema } from "@/schemas/sortOrder"
+import { type SortOrderParams, sortOrderSchema } from "@/schemas/sortOrder"
 import { UserRole } from "@/schemas/userRole"
 
-import { ErrorLog } from "@/shared/queryErrorLog"
+import type { ErrorLog } from "@/shared/queryErrorLog"
 
 import { getSortOrder } from "@/utils/getSortOrder"
 
@@ -194,7 +194,7 @@ const Page: FC = () => {
                             onClick={() =>
                                 setInfo({
                                     title: "错误参数",
-                                    children: <JsonView className="!font-['Source_Han_Sans_SC_VF']" value={parseJson(value)} />,
+                                    children: <JsonViewer value={parseJson(value)} />,
                                 })
                             }
                         >

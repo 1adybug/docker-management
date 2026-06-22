@@ -1,4 +1,4 @@
-import { ComponentProps, FC, useEffect } from "react"
+import { type ComponentProps, type FC, useEffect } from "react"
 
 import { Button, Form, Input, Modal } from "antd"
 import { useForm } from "antd/es/form/Form"
@@ -10,10 +10,10 @@ import { useAddUser } from "@/hooks/useAddUser"
 import { useGetUser } from "@/hooks/useGetUser"
 import { useUpdateUser } from "@/hooks/useUpdateUser"
 
-import { AddUserParams } from "@/schemas/addUser"
+import type { AddUserParams } from "@/schemas/addUser"
 import { nicknameSchema } from "@/schemas/nickname"
 import { phoneNumberSchema } from "@/schemas/phoneNumber"
-import { UpdateUserParams } from "@/schemas/updateUser"
+import type { UpdateUserParams } from "@/schemas/updateUser"
 import { usernameSchema } from "@/schemas/username"
 
 import RoleSelect from "./RoleSelect"

@@ -1,9 +1,9 @@
-import { IsNever } from "deepsea-tools"
-import { $ZodType } from "zod/v4/core"
+import type { IsNever } from "deepsea-tools"
+import type { $ZodType } from "zod/v4/core"
 
-import { FilterConfig } from "./createFilter"
-import { RateLimitConfig } from "./createRateLimit"
-import { defineResponseFnMetadata, OriginalResponseFn, ResponseFnMetadata, RouteBodyType, RouteConfig } from "./createResponseFn"
+import type { FilterConfig } from "./createFilter"
+import type { RateLimitConfig } from "./createRateLimit"
+import { type OriginalResponseFn, type ResponseFnMetadata, type RouteBodyType, type RouteConfig, defineResponseFnMetadata } from "./createResponseFn"
 
 export interface CreateSharedFnParams<TParam = never, TPathname extends string = never, TRouteBodyType extends RouteBodyType = "json"> {
     name: string

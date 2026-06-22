@@ -1,6 +1,6 @@
-import { DefaultArgs } from "@prisma/client/runtime/client"
+import type { DefaultArgs } from "@prisma/client/runtime/client"
 
-import { Prisma } from "./generated/client"
+import type { Prisma } from "./generated/client"
 
 export function getOperationLogWhere<
     T extends Prisma.OperationLogFindManyArgs,

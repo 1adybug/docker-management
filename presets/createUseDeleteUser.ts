@@ -2,7 +2,7 @@ import { useId } from "react"
 
 import { withUseMutationDefaults } from "soda-tanstack-query"
 
-import { deleteUser } from "@/shared/deleteUser"
+import type { deleteUser } from "@/shared/deleteUser"
 
 export const createUseDeleteUser = withUseMutationDefaults<typeof deleteUser>(() => {
     const key = useId()

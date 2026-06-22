@@ -6,7 +6,7 @@ import { uploadDockerImageSchema } from "@/schemas/uploadDockerImage"
 
 import { createSharedFn } from "@/server/createSharedFn"
 import {
-    DockerImageReferenceItem,
+    type DockerImageReferenceItem,
     getReplaceDockerTemporaryName,
     inspectDockerImage,
     queryDockerImageReferenceItems,

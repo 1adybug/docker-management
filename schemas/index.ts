@@ -1,4 +1,4 @@
-import { $ZodType, flattenError, output, safeParse } from "zod/v4/core"
+import { type $ZodType, type output, flattenError, safeParse } from "zod/v4/core"
 
 import { ClientError } from "@/utils/clientError"
 

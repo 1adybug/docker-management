@@ -2,7 +2,7 @@ import { useId } from "react"
 
 import { withUseMutationDefaults } from "soda-tanstack-query"
 
-import { unbanUser } from "@/shared/unbanUser"
+import type { unbanUser } from "@/shared/unbanUser"
 
 export const createUseUnbanUser = withUseMutationDefaults<typeof unbanUser>(() => {
     const key = useId()

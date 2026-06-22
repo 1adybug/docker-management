@@ -3,7 +3,7 @@ import { createUseQuery } from "soda-tanstack-query"
 
 import { getUserAction } from "@/actions/getUser"
 
-import { UserIdParams } from "@/schemas/userId"
+import type { UserIdParams } from "@/schemas/userId"
 
 export const getUserClient = createRequestFn(getUserAction)
 

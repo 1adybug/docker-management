@@ -3,7 +3,7 @@ import { getPagination } from "deepsea-tools"
 import { prisma } from "@/prisma"
 import { getErrorLogWhere } from "@/prisma/getErrorLogWhere"
 
-import { ErrorLogOrderByWithRelationInput } from "@/prisma/generated/internal/prismaNamespace"
+import type { ErrorLogOrderByWithRelationInput } from "@/prisma/generated/internal/prismaNamespace"
 
 import { defaultPageNum } from "@/schemas/pageNum"
 import { defaultPageSize } from "@/schemas/pageSize"

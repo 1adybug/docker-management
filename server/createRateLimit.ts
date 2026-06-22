@@ -1,6 +1,6 @@
 import { SystemSettingKey } from "@/constants/systemSettings"
 
-import { User } from "@/prisma/generated/client"
+import type { User } from "@/prisma/generated/client"
 
 import { getBooleanSystemSettingValue } from "@/server/systemSettings"
 

@@ -1,6 +1,6 @@
-import { ComponentProps, FC } from "react"
+import type { ComponentProps, FC } from "react"
 
-import { clsx, StrictOmit } from "deepsea-tools"
+import { type StrictOmit, clsx } from "deepsea-tools"
 import Link from "next/link"
 
 export interface BrandClassNames {

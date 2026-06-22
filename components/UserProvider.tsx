@@ -1,8 +1,8 @@
 "use client"
 
-import { createContext, FC, ReactNode, useContext } from "react"
+import { type FC, type ReactNode, createContext, useContext } from "react"
 
-import { User } from "@/prisma/generated/client"
+import type { User } from "@/prisma/generated/client"
 
 export const UserContext = createContext<User | undefined>(undefined)
 

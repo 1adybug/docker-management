@@ -1,4 +1,4 @@
-import { SortOrderParams } from "@/schemas/sortOrder"
+import type { SortOrderParams } from "@/schemas/sortOrder"
 
 export interface QueryBase<SortBy extends string> {
     sortBy?: SortBy

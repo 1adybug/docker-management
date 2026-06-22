@@ -1,4 +1,4 @@
-import { ComponentProps, FC } from "react"
+import type { ComponentProps, FC } from "react"
 
 import { Button } from "antd"
 import Link from "next/link"

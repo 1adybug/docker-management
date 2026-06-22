@@ -5,10 +5,10 @@ import Database from "better-sqlite3"
 import { z } from "zod/v4"
 
 import {
+    type PublicSystemSetting,
+    type PublicSystemSettingGroup,
+    type SystemSettingDefinition,
     getSystemSettingDefinition,
-    PublicSystemSetting,
-    PublicSystemSettingGroup,
-    SystemSettingDefinition,
     SystemSettingDefinitions,
     SystemSettingGroups,
     SystemSettingKey,

@@ -1,16 +1,15 @@
 "use client"
 
-import { ComponentProps, FC, useId, useState } from "react"
+import { type ComponentProps, type FC, useId, useState } from "react"
 
 import { Button } from "antd"
-import { clsx, getErrorMessage, StrictOmit } from "deepsea-tools"
+import { type StrictOmit, clsx, getErrorMessage } from "deepsea-tools"
 import { usePathname, useRouter } from "next/navigation"
 
-import { User } from "@/prisma/generated/client"
-
-import { isAdmin } from "@/server/isAdmin"
+import type { User } from "@/prisma/generated/client"
 
 import { authClient } from "@/utils/authClient"
+import { isAdmin } from "@/utils/isAdmin"
 
 import Brand from "./Brand"
 import { useUser } from "./UserProvider"

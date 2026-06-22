@@ -4,7 +4,7 @@ import { SystemSettingKey } from "@/constants/systemSettings"
 
 import { DatabaseUrl } from "@/prisma/databaseUrl"
 
-import { getSystemSettingValueMap, normalizeBooleanValue, SystemSettingValueMap } from "./systemSettings"
+import { type SystemSettingValueMap, getSystemSettingValueMap, normalizeBooleanValue } from "./systemSettings"
 
 export const BackupTier = {
     小时: "hourly",

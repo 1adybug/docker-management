@@ -2,7 +2,7 @@ import { getParser } from "."
 import { z } from "zod/v4"
 
 import { projectNameSchema } from "./projectName"
-import { ProjectStartMountOption } from "./projectStartMountOption"
+import type { ProjectStartMountOption } from "./projectStartMountOption"
 import { projectStartMountOptionsSchema } from "./projectStartMountOptions"
 import { ProjectStartMountPathKind } from "./projectStartMountPathKind"
 

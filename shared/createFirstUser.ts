@@ -4,7 +4,7 @@ import { createFirstUserSchema } from "@/schemas/createFirstUser"
 import { UserRole } from "@/schemas/userRole"
 
 import { auth } from "@/server/auth"
-import { createRateLimit, RateLimitContext } from "@/server/createRateLimit"
+import { type RateLimitContext, createRateLimit } from "@/server/createRateLimit"
 import { createSharedFn } from "@/server/createSharedFn"
 import { getRandomPassword } from "@/server/getRandomPassword"
 import { getTempEmail } from "@/server/getTempEmail"

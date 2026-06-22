@@ -4,7 +4,7 @@ import { prisma } from "@/prisma"
 import { defaultUserSelect } from "@/prisma/getUserSelect"
 import { getUserWhere } from "@/prisma/getUserWhere"
 
-import { UserOrderByWithRelationInput } from "@/prisma/generated/internal/prismaNamespace"
+import type { UserOrderByWithRelationInput } from "@/prisma/generated/internal/prismaNamespace"
 
 import { defaultPageNum } from "@/schemas/pageNum"
 import { defaultPageSize } from "@/schemas/pageSize"

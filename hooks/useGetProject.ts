@@ -3,7 +3,7 @@ import { createUseQuery } from "soda-tanstack-query"
 
 import { getProjectAction } from "@/actions/getProject"
 
-import { GetProjectParams, getProjectSchema } from "@/schemas/getProject"
+import { type GetProjectParams, getProjectSchema } from "@/schemas/getProject"
 
 export const getProjectClient = createRequestFn({
     fn: getProjectAction,

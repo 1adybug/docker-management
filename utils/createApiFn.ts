@@ -1,7 +1,7 @@
-import { IsNever, IsParamRequired } from "deepsea-tools"
+import type { IsNever, IsParamRequired } from "deepsea-tools"
 import { parse } from "zod"
 
-import { ExtendedResponseData, OriginalResponseFn } from "@/server/createResponseFn"
+import type { ExtendedResponseData, OriginalResponseFn } from "@/server/createResponseFn"
 
 export type GetPathname<TPathname extends string> = `/${TPathname extends `/${infer WithoutFront}`
     ? WithoutFront extends `${infer WithoutEnd}/`

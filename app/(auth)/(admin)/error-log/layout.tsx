@@ -1,6 +1,6 @@
-import { FC, ReactNode } from "react"
+import type { FC, ReactNode } from "react"
 
-import { Metadata } from "next"
+import type { Metadata } from "next"
 
 export const metadata: Metadata = {
     title: "错误日志",

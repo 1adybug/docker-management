@@ -2,8 +2,13 @@ import { constants } from "node:fs"
 import { access, chmod, chown, lstat, mkdir, open, stat } from "node:fs/promises"
 import { basename, dirname, extname, isAbsolute, resolve } from "node:path"
 
-import { CheckProjectStartResult, EnsureComposeMountPathsParams, ProjectStartMountItem, ProjectStartMountStatus } from "@/schemas/checkProjectStart"
-import { ProjectStartMountOption } from "@/schemas/projectStartMountOption"
+import {
+    type CheckProjectStartResult,
+    type EnsureComposeMountPathsParams,
+    type ProjectStartMountItem,
+    ProjectStartMountStatus,
+} from "@/schemas/checkProjectStart"
+import type { ProjectStartMountOption } from "@/schemas/projectStartMountOption"
 import { ProjectStartMountPathKind } from "@/schemas/projectStartMountPathKind"
 
 import { ClientError } from "@/utils/clientError"

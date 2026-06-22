@@ -1,4 +1,4 @@
-import { RateLimitState, RateLimitStore, SetRateLimitStateParams } from "./createRateLimit"
+import type { RateLimitState, RateLimitStore, SetRateLimitStateParams } from "./createRateLimit"
 
 export interface RedisSetValueParams {
     key: string

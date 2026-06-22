@@ -1,6 +1,6 @@
-import { FC } from "react"
+import type { FC } from "react"
 
-import { Metadata } from "next"
+import type { Metadata } from "next"
 
 import SystemSettingForm from "@/components/SystemSettingForm"
 

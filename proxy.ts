@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 
 export async function proxy(request: NextRequest) {
     // const method = request.method?.toUpperCase()

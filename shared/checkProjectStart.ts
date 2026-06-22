@@ -1,6 +1,6 @@
 import { prisma } from "@/prisma"
 
-import { CheckProjectStartResult, checkProjectStartSchema } from "@/schemas/checkProjectStart"
+import { type CheckProjectStartResult, checkProjectStartSchema } from "@/schemas/checkProjectStart"
 
 import { createSharedFn } from "@/server/createSharedFn"
 import { checkComposeMountPaths } from "@/server/ensureComposeMountPaths"

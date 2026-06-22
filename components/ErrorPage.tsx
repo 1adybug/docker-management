@@ -1,4 +1,4 @@
-import { ComponentProps, FC } from "react"
+import type { ComponentProps, FC } from "react"
 
 import { IconArrowLeft } from "@tabler/icons-react"
 import { clsx } from "deepsea-tools"

@@ -1,10 +1,10 @@
 import { prisma } from "@/prisma"
 
-import { LoginParams, loginSchema } from "@/schemas/login"
+import { type LoginParams, loginSchema } from "@/schemas/login"
 import { phoneNumberRegex } from "@/schemas/phoneNumber"
 
 import { auth } from "@/server/auth"
-import { createRateLimit, RateLimitContext } from "@/server/createRateLimit"
+import { type RateLimitContext, createRateLimit } from "@/server/createRateLimit"
 import { createSharedFn } from "@/server/createSharedFn"
 
 import { ClientError } from "@/utils/clientError"

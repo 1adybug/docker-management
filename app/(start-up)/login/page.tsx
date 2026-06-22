@@ -1,6 +1,6 @@
 "use client"
 
-import { FC, useEffect, useState } from "react"
+import { type FC, useEffect, useState } from "react"
 
 import { Button, Form, Input } from "antd"
 import { useForm } from "antd/es/form/Form"
@@ -12,7 +12,7 @@ import { useLogin } from "@/hooks/useLogin"
 import { useSendPhoneNumberOtp } from "@/hooks/useSendPhoneNumberOtp"
 
 import { accountSchema } from "@/schemas/account"
-import { LoginParams } from "@/schemas/login"
+import type { LoginParams } from "@/schemas/login"
 import { otpSchema } from "@/schemas/otp"
 
 const Page: FC = () => {

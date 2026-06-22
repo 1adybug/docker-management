@@ -2,7 +2,7 @@ import { useId } from "react"
 
 import { withUseMutationDefaults } from "soda-tanstack-query"
 
-import { updateUser } from "@/shared/updateUser"
+import type { updateUser } from "@/shared/updateUser"
 
 export const createUseUpdateUser = withUseMutationDefaults<typeof updateUser>(() => {
     const key = useId()

@@ -1,7 +1,7 @@
-import { ComponentProps, FC } from "react"
+import type { ComponentProps, FC } from "react"
 
 import { Drawer, Empty } from "antd"
-import { clsx, StrictOmit } from "deepsea-tools"
+import { type StrictOmit, clsx } from "deepsea-tools"
 
 import { ansiToHtml } from "@/utils/ansi"
 

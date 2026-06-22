@@ -1,17 +1,17 @@
 "use client"
 
-import { FC, useEffect, useMemo, useRef, useState } from "react"
+import { type FC, useEffect, useMemo, useRef, useState } from "react"
 
 import { IconBrandDocker, IconBrandReact, IconCoffee, IconCopy, IconPencil, IconTrash } from "@tabler/icons-react"
 import { useQueryClient } from "@tanstack/react-query"
-import { Button, Checkbox, Form, Input, message, Modal, Popconfirm, Select, Table, TableProps, Tag } from "antd"
+import { type TableProps, Button, Checkbox, Form, Input, message, Modal, Popconfirm, Select, Table, Tag } from "antd"
 import { useForm } from "antd/es/form/Form"
 import FormItem from "antd/es/form/FormItem"
 import { InputFileButton } from "deepsea-components"
 import { formatTime, showTotal } from "deepsea-tools"
 import { ArrowDownToLine, RotateCw } from "lucide-react"
 import Link from "next/link"
-import { Columns, schemaToRule, useScroll } from "soda-antd"
+import { type Columns, schemaToRule, useScroll } from "soda-antd"
 import { useQueryState } from "soda-next"
 
 import { useBuildJarDockerImage } from "@/hooks/useBuildJarDockerImage"
@@ -26,15 +26,15 @@ import { useUploadDockerImage } from "@/hooks/useUploadDockerImage"
 
 import { getParser } from "@/schemas"
 import { dockerImageNameSchema } from "@/schemas/dockerImageName"
-import { DockerImageSortByParams, dockerImageSortBySchema } from "@/schemas/dockerImageSortBy"
+import { type DockerImageSortByParams, dockerImageSortBySchema } from "@/schemas/dockerImageSortBy"
 import { dockerImageTagSchema } from "@/schemas/dockerImageTag"
 import { dockerStartCommandSchema } from "@/schemas/dockerStartCommand"
 import { pageNumParser } from "@/schemas/pageNum"
 import { pageSizeParser } from "@/schemas/pageSize"
 import { ProjectCommand } from "@/schemas/projectCommand"
-import { SortOrderParams, sortOrderSchema } from "@/schemas/sortOrder"
+import { type SortOrderParams, sortOrderSchema } from "@/schemas/sortOrder"
 
-import { DockerImageContainerItem, DockerImageItem, DockerImageProjectItem } from "@/shared/queryDockerImageDetail"
+import type { DockerImageContainerItem, DockerImageItem, DockerImageProjectItem } from "@/shared/queryDockerImageDetail"
 
 import { getSortOrder } from "@/utils/getSortOrder"
 

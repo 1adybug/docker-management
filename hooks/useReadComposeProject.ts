@@ -1,4 +1,4 @@
-import { useMutation, UseMutationOptions } from "@tanstack/react-query"
+import { type UseMutationOptions, useMutation } from "@tanstack/react-query"
 import { createRequestFn } from "deepsea-tools"
 
 import { readComposeProjectAction } from "@/actions/readComposeProject"

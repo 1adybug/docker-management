@@ -1,6 +1,6 @@
-import { FC, ReactNode } from "react"
+import type { FC, ReactNode } from "react"
 
-import { Metadata } from "next"
+import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 
 import { prisma } from "@/prisma"

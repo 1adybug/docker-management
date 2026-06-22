@@ -1,13 +1,13 @@
 "use client"
 
-import { ComponentProps, FC, useEffect } from "react"
+import { type ComponentProps, type FC, useEffect } from "react"
 
 import { Button, Form, Input, InputNumber, Select, Skeleton, Switch } from "antd"
 import { useForm } from "antd/es/form/Form"
 import FormItem from "antd/es/form/FormItem"
-import { clsx, StrictOmit } from "deepsea-tools"
+import { type StrictOmit, clsx } from "deepsea-tools"
 
-import { PublicSystemSetting, PublicSystemSettingGroup, SystemSettingValueKind } from "@/constants/systemSettings"
+import { type PublicSystemSetting, type PublicSystemSettingGroup, SystemSettingValueKind } from "@/constants/systemSettings"
 
 import { useQuerySystemSettings } from "@/hooks/useQuerySystemSettings"
 import { useUpdateSystemSettings } from "@/hooks/useUpdateSystemSettings"

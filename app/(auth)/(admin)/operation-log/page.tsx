@@ -1,28 +1,28 @@
 "use client"
 
-import { FC, useEffect, useRef, useState } from "react"
+import { type FC, useEffect, useRef, useState } from "react"
 
-import JsonView from "@uiw/react-json-view"
-import { Button, DatePicker, Form, Input, Modal, ModalProps, Table, TableProps } from "antd"
+import { type ModalProps, type TableProps, Button, DatePicker, Form, Input, Modal, Table } from "antd"
 import { useForm } from "antd/es/form/Form"
 import FormItem from "antd/es/form/FormItem"
 import { formatTime, getEnumKey, isNonNullable, naturalParser, showTotal } from "deepsea-tools"
-import { Columns, getTimeRange, useScroll } from "soda-antd"
+import { type Columns, getTimeRange, useScroll } from "soda-antd"
 import { transformState } from "soda-hooks"
 import { useQueryState } from "soda-next"
 
+import JsonViewer from "@/components/JsonViewer"
 import UserButton from "@/components/UserButton"
 
 import { useQueryOperationLog } from "@/hooks/useQueryOperationLog"
 
 import { getParser } from "@/schemas"
-import { OperationLogSortByParams, operationLogSortBySchema } from "@/schemas/operationLogSortBy"
+import { type OperationLogSortByParams, operationLogSortBySchema } from "@/schemas/operationLogSortBy"
 import { pageNumParser } from "@/schemas/pageNum"
 import { pageSizeParser } from "@/schemas/pageSize"
-import { SortOrderParams, sortOrderSchema } from "@/schemas/sortOrder"
+import { type SortOrderParams, sortOrderSchema } from "@/schemas/sortOrder"
 import { UserRole } from "@/schemas/userRole"
 
-import { OperationLog } from "@/shared/queryOperationLog"
+import type { OperationLog } from "@/shared/queryOperationLog"
 
 import { getSortOrder } from "@/utils/getSortOrder"
 
@@ -156,7 +156,7 @@ const Page: FC = () => {
                             onClick={() =>
                                 setInfo({
                                     title: "操作参数",
-                                    children: <JsonView className="!font-['Source_Han_Sans_SC_VF']" value={parseJson(value)} />,
+                                    children: <JsonViewer value={parseJson(value)} />,
                                 })
                             }
                         >

@@ -2,7 +2,7 @@ import { useId } from "react"
 
 import { withUseMutationDefaults } from "soda-tanstack-query"
 
-import { sendCurrentUserPhoneNumberOtp } from "@/shared/sendCurrentUserPhoneNumberOtp"
+import type { sendCurrentUserPhoneNumberOtp } from "@/shared/sendCurrentUserPhoneNumberOtp"
 
 export const createUseSendCurrentUserPhoneNumberOtp = withUseMutationDefaults<typeof sendCurrentUserPhoneNumberOtp>(() => {
     const key = useId()

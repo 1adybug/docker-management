@@ -2,13 +2,13 @@ import { getPagination } from "deepsea-tools"
 
 import { prisma } from "@/prisma"
 
-import { ProjectOrderByWithRelationInput, ProjectWhereInput } from "@/prisma/generated/internal/prismaNamespace"
+import type { ProjectOrderByWithRelationInput, ProjectWhereInput } from "@/prisma/generated/internal/prismaNamespace"
 
 import { defaultPageNum } from "@/schemas/pageNum"
 import { defaultPageSize } from "@/schemas/pageSize"
-import { ProjectSortByParams } from "@/schemas/projectSortBy"
+import type { ProjectSortByParams } from "@/schemas/projectSortBy"
 import { queryProjectSchema } from "@/schemas/queryProject"
-import { SortOrderParams } from "@/schemas/sortOrder"
+import type { SortOrderParams } from "@/schemas/sortOrder"
 
 import { createSharedFn } from "@/server/createSharedFn"
 

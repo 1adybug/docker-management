@@ -1,12 +1,12 @@
 "use client"
 
-import { FC, useEffect, useRef, useState } from "react"
+import { type FC, useEffect, useRef, useState } from "react"
 
-import { Button, DatePicker, Form, Input, Popconfirm, Table, TableProps } from "antd"
+import { type TableProps, Button, DatePicker, Form, Input, Popconfirm, Table } from "antd"
 import { useForm } from "antd/es/form/Form"
 import FormItem from "antd/es/form/FormItem"
 import { formatTime, getEnumKey, isNonNullable, naturalParser, showTotal } from "deepsea-tools"
-import { Columns, getTimeRange, useScroll } from "soda-antd"
+import { type Columns, getTimeRange, useScroll } from "soda-antd"
 import { transformState } from "soda-hooks"
 import { useQueryState } from "soda-next"
 
@@ -17,14 +17,14 @@ import { useDeleteUser } from "@/hooks/useDeleteUser"
 import { useQueryUser } from "@/hooks/useQueryUser"
 import { useUnbanUser } from "@/hooks/useUnbanUser"
 
-import { User } from "@/prisma/generated/client"
+import type { User } from "@/prisma/generated/client"
 
 import { getParser } from "@/schemas"
 import { pageNumParser } from "@/schemas/pageNum"
 import { pageSizeParser } from "@/schemas/pageSize"
-import { SortOrderParams, sortOrderSchema } from "@/schemas/sortOrder"
+import { type SortOrderParams, sortOrderSchema } from "@/schemas/sortOrder"
 import { UserRole } from "@/schemas/userRole"
-import { UserSortByParams, userSortBySchema } from "@/schemas/userSortBy"
+import { type UserSortByParams, userSortBySchema } from "@/schemas/userSortBy"
 
 import { getSortOrder } from "@/utils/getSortOrder"
 
@@ -228,8 +228,6 @@ const Page: FC = () => {
         pageSize,
         ...rest,
     })
-
-    console.log(data)
 
     const { mutateAsync: unbanUserAsync, isPending: isUnbanUserPending } = useUnbanUser()
     const { mutateAsync: deleteUserAsync, isPending: isDeleteUserPending } = useDeleteUser()

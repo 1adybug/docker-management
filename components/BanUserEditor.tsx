@@ -1,9 +1,9 @@
-import { ComponentProps, FC } from "react"
+import type { ComponentProps, FC } from "react"
 
 import { Button, DatePicker, Form, Input, Modal } from "antd"
 import { useForm } from "antd/es/form/Form"
 import FormItem from "antd/es/form/FormItem"
-import dayjs, { Dayjs } from "dayjs"
+import dayjs, { type Dayjs } from "dayjs"
 
 import { useBanUser } from "@/hooks/useBanUser"
 import { useGetUser } from "@/hooks/useGetUser"

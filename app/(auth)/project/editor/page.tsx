@@ -1,6 +1,6 @@
 "use client"
 
-import { FC, useEffect, useMemo, useState } from "react"
+import { type FC, useEffect, useMemo, useState } from "react"
 
 import Editor, { loader } from "@monaco-editor/react"
 import { AutoComplete, Button, Form, Input, Select, Tag } from "antd"
@@ -31,7 +31,8 @@ import { useUpdateProject } from "@/hooks/useUpdateProject"
 import { projectNameSchema } from "@/schemas/projectName"
 
 import {
-    ComposeFile,
+    type ComposeFile,
+    type ProjectFormData,
     ComposeRestartPolicy,
     composeToFormData,
     defaultComposeContent,
@@ -39,7 +40,6 @@ import {
     formDataToYaml,
     parseComposeYaml,
     ProjectFormCommandMode,
-    ProjectFormData,
 } from "@/utils/compose"
 
 let isMonacoConfigured = false
