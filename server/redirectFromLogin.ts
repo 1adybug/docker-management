@@ -9,7 +9,7 @@ import { getPathnameAndSearchParams } from "@/utils/getPathnameAndSearchParams"
 export async function redirectFromLogin() {
     const url = await getUrl()
     const { pathname, searchParams } = getPathnameAndSearchParams(url)
-    if (pathname !== LoginPathname) return redirect(pathname)
+    if (pathname !== LoginPathname) return redirect("/")
     const from = searchParams.get("from")?.trim()
     if (!from) return redirect("/")
     const { pathname: fromPathname, searchParams: fromSearchParams } = getPathnameAndSearchParams(from)

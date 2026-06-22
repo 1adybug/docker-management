@@ -38,22 +38,22 @@ const navs: NavItem[] = [
         name: "个人中心",
     },
     {
-        href: "/user",
+        href: "/admin/user",
         name: "用户管理",
         filter: isAdmin,
     },
     {
-        href: "/operation-log",
+        href: "/admin/operation-log",
         name: "操作日志",
         filter: isAdmin,
     },
     {
-        href: "/error-log",
+        href: "/admin/error-log",
         name: "错误日志",
         filter: isAdmin,
     },
     {
-        href: "/system-setting",
+        href: "/admin/system-setting",
         name: "系统设置",
         filter: isAdmin,
     },
@@ -70,7 +70,7 @@ const Header: FC<HeaderProps> = ({ className, ...rest }) => {
     const key = useId()
     const router = useRouter()
     const pathname = usePathname()
-    const user = useUser()
+    const user = useUser()!
     const [isSignOutPending, setIsSignOutPending] = useState(false)
 
     async function onSignOut() {

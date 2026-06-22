@@ -1,9 +1,6 @@
 import type { FC, ReactNode } from "react"
 
-import { LoginPathname } from "@/constants"
-
 import { getCurrentUser } from "@/server/getCurrentUser"
-import { getUrl } from "@/server/getUrl"
 import { redirectFromLogin } from "@/server/redirectFromLogin"
 import { redirectToLogin } from "@/server/redirectToLogin"
 
@@ -11,17 +8,23 @@ import UserProvider from "./UserProvider"
 
 export interface AuthProps {
     children?: ReactNode
+    mode: "auth" | "guest" | "public"
 }
 
-const Auth: FC<AuthProps> = async ({ children }) => {
+const Auth: FC<AuthProps> = async ({ children, mode }) => {
     const user = await getCurrentUser()
-    const url = await getUrl()
-    const { pathname } = new URL(url)
-    const isLogin = pathname === LoginPathname
-    if (isLogin && !user) return children
-    if (!isLogin && user) return <UserProvider value={user}>{children}</UserProvider>
-    if (isLogin) await redirectFromLogin()
-    await redirectToLogin()
+
+    if (mode === "guest") {
+        if (!user) return children
+        await redirectFromLogin()
+    }
+
+    if (mode === "auth") {
+        if (user) return <UserProvider value={user}>{children}</UserProvider>
+        await redirectToLogin()
+    }
+
+    return <UserProvider value={user}>{children}</UserProvider>
 }
 
 export default Auth

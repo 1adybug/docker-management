@@ -6,6 +6,6 @@ export interface LayoutProps {
     children?: ReactNode
 }
 
-const Layout: FC<LayoutProps> = ({ children }) => <Auth mode="auth">{children}</Auth>
+const Layout: FC<LayoutProps> = ({ children }) => <Auth mode="public">{children}</Auth>
 
 export default Layout
