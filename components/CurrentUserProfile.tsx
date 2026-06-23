@@ -36,9 +36,9 @@ export const ProfileDetailItem: FC<ProfileDetailItemProps> = ({ className, icon,
         <div className="flex size-9 flex-none items-center justify-center rounded-lg bg-neutral-100 text-neutral-500">{icon}</div>
         <div className="min-w-0 flex-auto">
             <div className="text-sm font-medium text-neutral-500">{label}</div>
-            <div className="mt-1 flex min-h-9 items-center justify-between gap-3 text-base text-neutral-900">
+            <div className="mt-1 flex min-h-9 min-w-0 items-center justify-between gap-2 text-base text-neutral-900 sm:gap-3">
                 <div className="min-w-0 flex-auto break-words">{children}</div>
-                {valueExtra}
+                {valueExtra ? <div className="flex flex-none items-center">{valueExtra}</div> : null}
             </div>
         </div>
     </div>
@@ -156,15 +156,15 @@ export const CurrentUserProfile: FC<CurrentUserProfileProps> = ({ className, dat
 
     return (
         <div className={clsx("h-full overflow-auto bg-neutral-50", className)} {...rest}>
-            <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 md:px-6">
-                <section className="rounded-lg border border-neutral-200 bg-white px-5 py-5 shadow-sm md:px-6">
-                    <div className="flex min-w-0 items-center gap-4">
+            <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-3 py-4 sm:gap-6 sm:px-4 sm:py-6 md:px-6">
+                <section className="rounded-lg border border-neutral-200 bg-white px-4 py-4 shadow-sm sm:px-5 sm:py-5 md:px-6">
+                    <div className="flex min-w-0 items-start gap-3 sm:items-center sm:gap-4">
                         <Avatar className="size-16 flex-none bg-blue-600 text-2xl font-semibold" size={64}>
                             {getAvatarText(currentUser)}
                         </Avatar>
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-auto">
                             <div className="flex flex-wrap items-center gap-2">
-                                <h1 className="m-0 truncate text-2xl font-semibold text-neutral-950">{currentUser.nickname}</h1>
+                                <h1 className="m-0 max-w-full truncate text-xl font-semibold text-neutral-950 sm:text-2xl">{currentUser.nickname}</h1>
                                 <Tag className="m-0" color={currentUser.role === UserRole.管理员 ? "blue" : "default"}>
                                     {roleName}
                                 </Tag>
@@ -183,7 +183,10 @@ export const CurrentUserProfile: FC<CurrentUserProfileProps> = ({ className, dat
                     </div>
                 </section>
 
-                <Card className="overflow-hidden" title="基础资料">
+                <Card
+                    className="overflow-hidden [&_.ant-card-body]:p-4 sm:[&_.ant-card-body]:p-6 [&_.ant-card-head]:px-4 sm:[&_.ant-card-head]:px-6"
+                    title="基础资料"
+                >
                     <ProfileDetailItem
                         icon={<IconUserCircle size={20} />}
                         label="昵称"

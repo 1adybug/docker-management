@@ -210,7 +210,7 @@ const CurrentUserPhoneNumberEditor: FC<CurrentUserPhoneNumberEditorProps> = ({
                     修改手机号时，需要分别校验当前手机号和新手机号的验证码。
                 </div>
                 <div className="grid gap-4">
-                    <div className="flex gap-3">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
                         <FormItem<CurrentUserPhoneNumberEditorFormData>
                             className="mb-0 flex-auto"
                             name="oldOtp"
@@ -220,7 +220,7 @@ const CurrentUserPhoneNumberEditor: FC<CurrentUserPhoneNumberEditorProps> = ({
                             <Input autoComplete="off" allowClear />
                         </FormItem>
                         <Button
-                            className="mt-[30px] min-w-[148px] flex-none"
+                            className="w-full flex-none sm:mt-[30px] sm:w-auto sm:min-w-[148px]"
                             htmlType="button"
                             loading={isSendOldPhoneNumberOtpPending}
                             disabled={oldOtpLeft > 0 || isSendingOtp || isSubmitting}
@@ -229,7 +229,7 @@ const CurrentUserPhoneNumberEditor: FC<CurrentUserPhoneNumberEditorProps> = ({
                             {oldOtpLeft > 0 ? `${oldOtpLeft} 秒后重试` : "发送原手机号验证码"}
                         </Button>
                     </div>
-                    <div className="flex gap-3">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
                         <FormItem<CurrentUserPhoneNumberEditorFormData>
                             className="mb-0 flex-auto"
                             name="newOtp"
@@ -239,7 +239,7 @@ const CurrentUserPhoneNumberEditor: FC<CurrentUserPhoneNumberEditorProps> = ({
                             <Input autoComplete="off" allowClear />
                         </FormItem>
                         <Button
-                            className="mt-[30px] min-w-[148px] flex-none"
+                            className="w-full flex-none sm:mt-[30px] sm:w-auto sm:min-w-[148px]"
                             htmlType="button"
                             loading={isSendNewPhoneNumberOtpPending}
                             disabled={newOtpLeft > 0 || isSendingOtp || isSubmitting}

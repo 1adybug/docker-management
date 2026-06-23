@@ -1,4 +1,4 @@
-import { type FC, type ReactNode, Fragment } from "react"
+import type { FC, ReactNode } from "react"
 
 import Header from "@/components/Header"
 
@@ -7,10 +7,12 @@ export interface LayoutProps {
 }
 
 const Layout: FC<LayoutProps> = ({ children }) => (
-    <Fragment>
+    <div className="flex h-dvh min-h-0 flex-col overflow-hidden">
         <Header />
-        <main className="h-[calc(100vh_-_64px)]">{children}</main>
-    </Fragment>
+        <main className="min-h-0 flex-auto overflow-auto">
+            <div className="h-full min-w-0">{children}</div>
+        </main>
+    </div>
 )
 
 export default Layout
