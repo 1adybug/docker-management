@@ -1,17 +1,17 @@
 "use client"
 
-import { type ComponentProps, type FC, useId, useState } from "react"
+import type { ComponentProps, FC } from "react"
 
 import { Button } from "antd"
-import { type StrictOmit, clsx, getErrorMessage } from "deepsea-tools"
-import { usePathname, useRouter } from "next/navigation"
+import { type StrictOmit, clsx } from "deepsea-tools"
+import { usePathname } from "next/navigation"
 
 import type { User } from "@/prisma/generated/client"
 
-import { authClient } from "@/utils/authClient"
 import { isAdmin } from "@/utils/isAdmin"
 
 import Brand from "./Brand"
+import Logout from "./Logout"
 import { useUser } from "./UserProvider"
 
 export interface NavItem {
@@ -67,46 +67,8 @@ function isNavActive(pathname: string, href: string) {
 }
 
 const Header: FC<HeaderProps> = ({ className, ...rest }) => {
-    const key = useId()
-    const router = useRouter()
     const pathname = usePathname()
     const user = useUser()!
-    const [isSignOutPending, setIsSignOutPending] = useState(false)
-
-    async function onSignOut() {
-        if (isSignOutPending) return
-
-        setIsSignOutPending(true)
-
-        message.open({
-            key,
-            type: "loading",
-            content: "注销中...",
-            duration: 0,
-        })
-
-        try {
-            const response = await authClient.signOut({})
-
-            if (response.error) throw new Error(response.error.message || "注销失败")
-
-            message.open({
-                key,
-                type: "success",
-                content: "已注销",
-            })
-
-            router.refresh()
-        } catch (error) {
-            message.open({
-                key,
-                type: "error",
-                content: getErrorMessage(error),
-            })
-        } finally {
-            setIsSignOutPending(false)
-        }
-    }
 
     return (
         <header className={clsx("flex h-16 items-center gap-2 px-4", className)} {...rest}>
@@ -124,9 +86,9 @@ const Header: FC<HeaderProps> = ({ className, ...rest }) => {
             <div className="flex items-center gap-4">
                 <div>{user?.nickname}</div>
                 <div className="text-slate-500">{user?.name}</div>
-                <Button size="small" color="orange" variant="filled" loading={isSignOutPending} onClick={onSignOut}>
+                <Logout size="small" color="orange" variant="filled">
                     注销
-                </Button>
+                </Logout>
             </div>
         </header>
     )
