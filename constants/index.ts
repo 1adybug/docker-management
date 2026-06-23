@@ -18,6 +18,8 @@ export const BetterAuthUrl = process.env.BETTER_AUTH_URL
 
 export const NextPublicBetterAuthUrl = process.env.NEXT_PUBLIC_BETTER_AUTH_URL
 
+export const NextPublicTimeZone = process.env.NEXT_PUBLIC_TIME_ZONE
+
 export const PublicApiUrl = process.env.NEXT_PUBLIC_API_URL || process.env.PUBLIC_API_URL
 
 export const DockerContainerStatus = {

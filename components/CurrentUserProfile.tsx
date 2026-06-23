@@ -12,7 +12,7 @@ import {
 
 import { IconAt, IconCalendarPlus, IconCheck, IconClockEdit, IconId, IconPencil, IconPhone, IconShieldCheck, IconUserCircle } from "@tabler/icons-react"
 import { Avatar, Button, Card, Tag, Tooltip } from "antd"
-import { type StrictOmit, clsx, formatTime, getEnumKey } from "deepsea-tools"
+import { type StrictOmit, clsx, getEnumKey } from "deepsea-tools"
 import { useRouter } from "next/navigation"
 
 import { useUpdateCurrentUserProfile } from "@/hooks/useUpdateCurrentUserProfile"
@@ -21,6 +21,8 @@ import type { User } from "@/prisma/generated/client"
 
 import { nicknameParser } from "@/schemas/nickname"
 import { UserRole } from "@/schemas/userRole"
+
+import { formatDateTime } from "@/utils/formatDateTime"
 
 import CurrentUserPhoneNumberEditor from "./CurrentUserPhoneNumberEditor"
 
@@ -254,10 +256,10 @@ export const CurrentUserProfile: FC<CurrentUserProfileProps> = ({ className, dat
                         {currentUser.id}
                     </ProfileDetailItem>
                     <ProfileDetailItem icon={<IconCalendarPlus size={20} />} label="注册时间">
-                        {formatTime(currentUser.createdAt)}
+                        {formatDateTime(currentUser.createdAt)}
                     </ProfileDetailItem>
                     <ProfileDetailItem icon={<IconClockEdit size={20} />} label="最近更新">
-                        {formatTime(currentUser.updatedAt)}
+                        {formatDateTime(currentUser.updatedAt)}
                     </ProfileDetailItem>
                 </Card>
             </div>

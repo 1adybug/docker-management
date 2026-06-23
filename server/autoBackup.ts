@@ -10,6 +10,8 @@ import Database from "better-sqlite3"
 
 import { prisma } from "@/prisma"
 
+import { formatDateTime, getDateTime } from "@/utils/formatDateTime"
+
 import { type AutoBackupConfig, type AutoBackupSchedule, BackupTier, getAutoBackupConfig, getTierDirectoryPath } from "./autoBackupConfig"
 import { withFileLock } from "./autoBackupFileLock"
 
@@ -391,10 +393,11 @@ export function getDueBackupTiers({ now, state, schedule }: GetDueBackupTiersPar
 }
 
 export function getWindowId({ tier, date }: GetWindowIdParams) {
-    const year = date.getFullYear()
-    const month = padNumber(date.getMonth() + 1)
-    const day = padNumber(date.getDate())
-    const hour = padNumber(date.getHours())
+    const dateTime = getDateTime(date)
+    const year = dateTime.year()
+    const month = padNumber(dateTime.month() + 1)
+    const day = padNumber(dateTime.date())
+    const hour = padNumber(dateTime.hour())
 
     if (tier === BackupTier.小时) return `${year}-${month}-${day}-${hour}`
     if (tier === BackupTier.每日) return `${year}-${month}-${day}`
@@ -405,15 +408,14 @@ export function getWindowId({ tier, date }: GetWindowIdParams) {
 }
 
 export function getIsoWeek(date: Date) {
-    const target = new Date(date)
-    target.setHours(0, 0, 0, 0)
-    target.setDate(target.getDate() + 4 - (target.getDay() || 7))
+    const dateTime = getDateTime(date).startOf("day")
+    const target = dateTime.add(4 - (dateTime.day() || 7), "day")
 
-    const yearStart = new Date(target.getFullYear(), 0, 1)
-    const week = Math.ceil(((target.getTime() - yearStart.getTime()) / 86400000 + 1) / 7)
+    const yearStart = target.startOf("year")
+    const week = Math.ceil(target.diff(yearStart, "day") / 7 + 1)
 
     const info: IsoWeekInfo = {
-        year: target.getFullYear(),
+        year: target.year(),
         week,
     }
 
@@ -423,13 +425,15 @@ export function getIsoWeek(date: Date) {
 export function isDueBySchedule({ tier, date, every }: IsDueByScheduleParams) {
     if (every <= 1) return true
 
+    const dateTime = getDateTime(date)
+
     if (tier === BackupTier.小时) {
-        const serial = Math.floor(date.getTime() / (60 * 60 * 1000))
+        const serial = Math.floor(Date.UTC(dateTime.year(), dateTime.month(), dateTime.date(), dateTime.hour()) / (60 * 60 * 1000))
         return serial % every === 0
     }
 
     if (tier === BackupTier.每日) {
-        const serial = Math.floor(new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime() / (24 * 60 * 60 * 1000))
+        const serial = Math.floor(Date.UTC(dateTime.year(), dateTime.month(), dateTime.date()) / (24 * 60 * 60 * 1000))
         return serial % every === 0
     }
 
@@ -439,7 +443,7 @@ export function isDueBySchedule({ tier, date, every }: IsDueByScheduleParams) {
         return serial % every === 0
     }
 
-    const serial = date.getFullYear() * 12 + date.getMonth()
+    const serial = dateTime.year() * 12 + dateTime.month()
     return serial % every === 0
 }
 
@@ -554,7 +558,7 @@ export async function uploadBackupToS3IfNeeded({ config, backupFileInfo }: Uploa
 
 export function getS3ObjectKey({ config, backupFileInfo }: GetS3ObjectKeyParams) {
     const prefix = config.s3?.prefix?.replace(/^\/+|\/+$/g, "")
-    const date = backupFileInfo.createdAt.slice(0, 10)
+    const date = formatDateTime(backupFileInfo.createdAt, "YYYY-MM-DD")
     const parts = [prefix, backupFileInfo.tier, date, `${backupFileInfo.fileName}.gz`].filter(Boolean)
     return parts.join("/")
 }

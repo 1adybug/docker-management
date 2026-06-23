@@ -5,7 +5,7 @@ import { type FC, useEffect, useRef, useState } from "react"
 import { type TableProps, Button, DatePicker, Form, Input, Popconfirm, Table } from "antd"
 import { useForm } from "antd/es/form/Form"
 import FormItem from "antd/es/form/FormItem"
-import { formatTime, getEnumKey, isNonNullable, naturalParser, showTotal } from "deepsea-tools"
+import { getEnumKey, isNonNullable, naturalParser, showTotal } from "deepsea-tools"
 import { type Columns, getTimeRange, useScroll } from "soda-antd"
 import { transformState } from "soda-hooks"
 import { useQueryState } from "soda-next"
@@ -26,6 +26,7 @@ import { type SortOrderParams, sortOrderSchema } from "@/schemas/sortOrder"
 import { UserRole } from "@/schemas/userRole"
 import { type UserSortByParams, userSortBySchema } from "@/schemas/userSortBy"
 
+import { formatDateTime } from "@/utils/formatDateTime"
 import { getSortOrder } from "@/utils/getSortOrder"
 
 const Page: FC = () => {
@@ -144,7 +145,7 @@ const Page: FC = () => {
             dataIndex: "banExpires",
             align: "center",
             render(value, record) {
-                return value ? formatTime(value) : record.banned ? "永久" : "未封禁"
+                return value ? formatDateTime(value) : record.banned ? "永久" : "未封禁"
             },
         },
         {
@@ -154,7 +155,7 @@ const Page: FC = () => {
             sorter: true,
             sortOrder: getSortOrder(query, "createdAt"),
             render(value) {
-                return formatTime(value)
+                return formatDateTime(value)
             },
         },
         {
@@ -164,7 +165,7 @@ const Page: FC = () => {
             sorter: true,
             sortOrder: getSortOrder(query, "updatedAt"),
             render(value) {
-                return formatTime(value)
+                return formatDateTime(value)
             },
         },
         {

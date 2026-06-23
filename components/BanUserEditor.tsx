@@ -3,10 +3,12 @@ import type { ComponentProps, FC } from "react"
 import { Button, DatePicker, Form, Input, Modal } from "antd"
 import { useForm } from "antd/es/form/Form"
 import FormItem from "antd/es/form/FormItem"
-import dayjs, { type Dayjs } from "dayjs"
+import type { Dayjs } from "dayjs"
 
 import { useBanUser } from "@/hooks/useBanUser"
 import { useGetUser } from "@/hooks/useGetUser"
+
+import { getDateTime } from "@/utils/formatDateTime"
 
 export interface BanUserEditorProps extends Omit<ComponentProps<typeof Modal>, "children" | "onOk" | "onCancel"> {
     id?: string
@@ -44,7 +46,7 @@ const BanUserEditor: FC<BanUserEditorProps> = ({
 
     function onFinish({ banReason, banDate }: BanUserFormData) {
         if (!id) return
-        const banExpiresIn = banDate ? banDate.diff(dayjs(), "second") : undefined
+        const banExpiresIn = banDate ? banDate.diff(getDateTime(), "second") : undefined
         if (!!banExpiresIn && banExpiresIn <= 0) return message.warning("封禁时间必须大于当前时间")
         banUserAsync({ userId: id, banReason, banExpiresIn })
     }
@@ -66,19 +68,19 @@ const BanUserEditor: FC<BanUserEditorProps> = ({
                 </FormItem>
                 <div className="flex gap-2">
                     <FormItem<BanUserFormData> name="banDate" label="封禁时间">
-                        <DatePicker showTime disabledDate={date => date.valueOf() < dayjs().startOf("day").valueOf()} />
+                        <DatePicker showTime disabledDate={date => date.valueOf() < getDateTime().startOf("day").valueOf()} />
                     </FormItem>
                     <div className="flex h-8 flex-none items-center">
-                        <Button type="text" size="small" onClick={() => form.setFieldsValue({ banDate: dayjs().add(1, "day") })}>
+                        <Button type="text" size="small" onClick={() => form.setFieldsValue({ banDate: getDateTime().add(1, "day") })}>
                             1天
                         </Button>
-                        <Button type="text" size="small" onClick={() => form.setFieldsValue({ banDate: dayjs().add(1, "week") })}>
+                        <Button type="text" size="small" onClick={() => form.setFieldsValue({ banDate: getDateTime().add(1, "week") })}>
                             1周
                         </Button>
-                        <Button type="text" size="small" onClick={() => form.setFieldsValue({ banDate: dayjs().add(1, "month") })}>
+                        <Button type="text" size="small" onClick={() => form.setFieldsValue({ banDate: getDateTime().add(1, "month") })}>
                             1月
                         </Button>
-                        <Button type="text" size="small" onClick={() => form.setFieldsValue({ banDate: dayjs().add(1, "year") })}>
+                        <Button type="text" size="small" onClick={() => form.setFieldsValue({ banDate: getDateTime().add(1, "year") })}>
                             1年
                         </Button>
                         <Button type="text" size="small" onClick={() => form.setFieldsValue({ banDate: undefined })}>
