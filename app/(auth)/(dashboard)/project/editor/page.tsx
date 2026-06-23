@@ -183,6 +183,32 @@ function getComposeFormData(compose: ComposeFile, name?: string) {
     } as ProjectFormData
 }
 
+function getCleanValue(value?: string) {
+    const nextValue = value?.trim()
+    return nextValue ? nextValue : undefined
+}
+
+export interface NormalizeProjectSaveValuesParams {
+    values: ProjectFormData
+    otherValues?: ProjectFormData
+}
+
+export interface SyncAndSaveProjectParams extends NormalizeProjectSaveValuesParams {
+    original?: ComposeFile
+}
+
+function normalizeProjectSaveValues({ values, otherValues }: NormalizeProjectSaveValuesParams) {
+    const name =
+        getCleanValue(values.name) ?? getCleanValue(otherValues?.name) ?? getServiceNames(values.services).at(0) ?? getServiceNames(otherValues?.services).at(0)
+    const xName = getCleanValue(values.xName) ?? getCleanValue(otherValues?.xName) ?? name
+
+    return {
+        ...values,
+        name,
+        xName,
+    } as ProjectFormData
+}
+
 const Page: FC = () => {
     const router = useRouter()
     const searchParams = useSearchParams()
@@ -279,6 +305,37 @@ const Page: FC = () => {
         return form.getFieldsValue(true) as ProjectFormData
     }
 
+    function getCurrentYamlFormData() {
+        try {
+            const compose = parseComposeYaml(yamlValue)
+
+            return {
+                compose,
+                values: composeToFormData(compose),
+            }
+        } catch {
+            return undefined
+        }
+    }
+
+    async function syncAndSaveProject({ values, otherValues, original }: SyncAndSaveProjectParams) {
+        const nextValues = normalizeProjectSaveValues({ values, otherValues })
+        const content = formDataToYaml(nextValues, original)
+        const nextCompose = formDataToCompose(nextValues, original)
+
+        form.setFieldsValue(nextValues)
+        setComposeData(nextCompose)
+        setYamlValue(content)
+
+        await form.validateFields()
+
+        const projectName = isUpdate ? searchName : nextValues.name
+        if (!projectName) return
+
+        if (isUpdate) await updateProject({ name: projectName, content })
+        else await addProject({ name: projectName, content })
+    }
+
     async function onSyncYamlToForm() {
         try {
             const compose = parseComposeYaml(yamlValue)
@@ -302,54 +359,36 @@ const Page: FC = () => {
 
     async function onSaveForm() {
         try {
-            const values = await getValidatedFormData()
-            const projectName = isUpdate ? searchName : values.name
-            if (!projectName) return
-
-            const content = formDataToYaml(values, composeData)
-            setYamlValue(content)
-            setComposeData(formDataToCompose(values, composeData))
-
-            if (isUpdate) await updateProject({ name: projectName, content })
-            else await addProject({ name: projectName, content })
+            const values = form.getFieldsValue(true) as ProjectFormData
+            const yamlData = getCurrentYamlFormData()
+            await syncAndSaveProject({
+                values,
+                otherValues: yamlData?.values,
+                original: yamlData?.compose ?? composeData,
+            })
         } catch {}
     }
 
     async function onSaveYaml() {
+        let compose: ComposeFile
+
         try {
-            const compose = parseComposeYaml(yamlValue)
-            const composeValues = composeToFormData(compose)
-            const projectName = isUpdate ? searchName : (form.getFieldValue("name") ?? composeValues.name)
-
-            if (!projectName) {
-                form.validateFields(["name"])
-                return
-            }
-
-            if (!composeValues.xName) {
-                form.setFields([
-                    {
-                        name: "xName",
-                        errors: ["请输入显示名称"],
-                    },
-                ])
-
-                return
-            }
-
-            const nextValues = getComposeFormData(compose, projectName)
-            const content = formDataToYaml(nextValues, compose)
-            const nextCompose = formDataToCompose(nextValues, compose)
-
-            setComposeData(nextCompose)
-            setYamlValue(content)
-            form.setFieldsValue(nextValues)
-
-            if (isUpdate) await updateProject({ name: projectName, content })
-            else await addProject({ name: projectName, content })
+            compose = parseComposeYaml(yamlValue)
         } catch {
             message.open({ type: "error", content: "YAML 解析失败，请检查内容" })
+            return
         }
+
+        try {
+            const composeValues = composeToFormData(compose)
+            const formValues = form.getFieldsValue(true) as ProjectFormData
+
+            await syncAndSaveProject({
+                values: composeValues,
+                otherValues: formValues,
+                original: compose,
+            })
+        } catch {}
     }
 
     function onYamlChange(value?: string) {
