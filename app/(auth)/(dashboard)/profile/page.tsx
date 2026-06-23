@@ -2,7 +2,7 @@ import type { FC } from "react"
 
 import type { Metadata } from "next"
 
-import CurrentUserProfile from "@/components/CurrentUserProfile"
+import { CurrentUserProfile } from "@/components/CurrentUserProfile"
 
 import { SystemSettingKey } from "@/constants/systemSettings"
 

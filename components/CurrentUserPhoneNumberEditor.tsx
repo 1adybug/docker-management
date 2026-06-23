@@ -220,7 +220,7 @@ const CurrentUserPhoneNumberEditor: FC<CurrentUserPhoneNumberEditorProps> = ({
                             <Input autoComplete="off" allowClear />
                         </FormItem>
                         <Button
-                            className="mt-[30px] h-10 min-w-[148px] flex-none"
+                            className="mt-[30px] min-w-[148px] flex-none"
                             htmlType="button"
                             loading={isSendOldPhoneNumberOtpPending}
                             disabled={oldOtpLeft > 0 || isSendingOtp || isSubmitting}
@@ -239,7 +239,7 @@ const CurrentUserPhoneNumberEditor: FC<CurrentUserPhoneNumberEditorProps> = ({
                             <Input autoComplete="off" allowClear />
                         </FormItem>
                         <Button
-                            className="mt-[30px] h-10 min-w-[148px] flex-none"
+                            className="mt-[30px] min-w-[148px] flex-none"
                             htmlType="button"
                             loading={isSendNewPhoneNumberOtpPending}
                             disabled={newOtpLeft > 0 || isSendingOtp || isSubmitting}
