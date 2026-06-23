@@ -2,9 +2,10 @@ import { betterAuth } from "better-auth"
 import { prismaAdapter } from "better-auth/adapters/prisma"
 import { nextCookies } from "better-auth/next-js"
 import { admin } from "better-auth/plugins"
+import { genericOAuth } from "better-auth/plugins/generic-oauth"
 import { phoneNumber } from "better-auth/plugins/phone-number"
 
-import { BetterAuthSecret, BetterAuthUrl, CookiePrefix, IsDevelopment } from "@/constants"
+import { BetterAuthSecret, BetterAuthUrl, CookiePrefix, GeshuOAuthProviderId, IsDevelopment } from "@/constants"
 import { SystemSettingKey } from "@/constants/systemSettings"
 
 import { prisma } from "@/prisma"
@@ -12,6 +13,7 @@ import { prisma } from "@/prisma"
 import { phoneNumberRegex } from "@/schemas/phoneNumber"
 
 import { setDevOtp } from "@/server/devOtpStore"
+import { getGeshuOAuthConfig } from "@/server/geshuOAuth"
 import { getTempEmail } from "@/server/getTempEmail"
 import { getCachedSystemSettingValue, normalizeBooleanValue } from "@/server/systemSettings"
 
@@ -55,6 +57,7 @@ function printAuthOtp({ phoneNumber, code }: PrintAuthOtpParams) {
 
 const authBaseUrl = getAuthBaseUrl()
 const authSecret = getAuthSecret()
+const geshuOAuthConfig = getGeshuOAuthConfig()
 
 export const auth = betterAuth({
     secret: authSecret,
@@ -74,8 +77,18 @@ export const auth = betterAuth({
     emailAndPassword: {
         enabled: false,
     },
+    account: {
+        accountLinking: {
+            trustedProviders: [GeshuOAuthProviderId],
+            requireLocalEmailVerified: false,
+            updateUserInfoOnLink: true,
+        },
+    },
     plugins: [
         admin(),
+        genericOAuth({
+            config: geshuOAuthConfig,
+        }),
         phoneNumber({
             otpLength: 4,
             verifyOTP: IsDevelopment

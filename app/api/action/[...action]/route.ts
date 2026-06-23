@@ -21,6 +21,7 @@ import { queryDockerContainer } from "@/shared/queryDockerContainer"
 import { queryDockerImage } from "@/shared/queryDockerImage"
 import { queryDockerImageDetail } from "@/shared/queryDockerImageDetail"
 import { queryErrorLog } from "@/shared/queryErrorLog"
+import { queryGeshuOAuthLoginStatus } from "@/shared/queryGeshuOAuthLoginStatus"
 import { queryOperationLog } from "@/shared/queryOperationLog"
 import { queryProject } from "@/shared/queryProject"
 import { querySystemSettings } from "@/shared/querySystemSettings"
@@ -69,6 +70,7 @@ registerRoute(queryDockerContainer)
 registerRoute(queryDockerImage)
 registerRoute(queryDockerImageDetail)
 registerRoute(queryErrorLog)
+registerRoute(queryGeshuOAuthLoginStatus)
 registerRoute(queryOperationLog)
 registerRoute(queryProject)
 registerRoute(querySystemSettings)
