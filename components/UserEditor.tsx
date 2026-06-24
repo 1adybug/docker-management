@@ -15,6 +15,7 @@ import { nicknameSchema } from "@/schemas/nickname"
 import { phoneNumberSchema } from "@/schemas/phoneNumber"
 import type { UpdateUserParams } from "@/schemas/updateUser"
 import { usernameSchema } from "@/schemas/username"
+import { UserRole } from "@/schemas/userRole"
 
 import RoleSelect from "./RoleSelect"
 
@@ -50,8 +51,10 @@ const UserEditor: FC<UserEditorProps> = ({
     })
 
     useEffect(() => {
-        if (!open || !data) return
-        form.setFieldsValue(data as AddUserParams)
+        if (!open) return
+
+        if (data) form.setFieldsValue(data as AddUserParams)
+        else form.resetFields()
     }, [open, data, form])
 
     useEffect(() => {
@@ -78,7 +81,14 @@ const UserEditor: FC<UserEditorProps> = ({
             onCancel={() => onClose?.()}
             {...rest}
         >
-            <Form<AddUserParams> name="user-editor" form={form} disabled={isRequesting} labelCol={{ flex: "56px" }} onFinish={onFinish}>
+            <Form<AddUserParams>
+                name="user-editor"
+                form={form}
+                disabled={isRequesting}
+                labelCol={{ flex: "56px" }}
+                initialValues={{ role: UserRole.用户 }}
+                onFinish={onFinish}
+            >
                 <FormItem<AddUserParams> name="name" label="用户名" rules={[schemaToRule(usernameSchema)]}>
                     <Input autoComplete="off" allowClear />
                 </FormItem>

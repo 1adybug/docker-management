@@ -126,8 +126,8 @@ const Header: FC<HeaderProps> = ({ className, ...rest }) => {
                 />
             </header>
             <Drawer title={<Brand />} className="md:hidden" placement="left" size={280} open={isMenuOpen} closable={false} onClose={onCloseMenu}>
-                <div className="flex h-full flex-col">
-                    <Menu className="flex-auto border-none" mode="inline" selectedKeys={selectedNav ? [selectedNav.href] : []} items={menuItems} />
+                <div className="flex min-h-full flex-col">
+                    <Menu className="border-none" mode="inline" selectedKeys={selectedNav ? [selectedNav.href] : []} items={menuItems} />
                     <div className="flex-none border-t border-slate-100 px-2 pt-4">
                         <div className="truncate px-2 text-sm font-medium">{user?.nickname}</div>
                         <div className="mt-1 truncate px-2 text-sm text-slate-500">{user?.name}</div>

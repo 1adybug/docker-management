@@ -13,8 +13,11 @@ import { createFirstUser } from "@/shared/createFirstUser"
 import { deleteDockerImage } from "@/shared/deleteDockerImage"
 import { deleteProject } from "@/shared/deleteProject"
 import { deleteUser } from "@/shared/deleteUser"
+import { exportUser } from "@/shared/exportUser"
 import { getProject } from "@/shared/getProject"
 import { getUser } from "@/shared/getUser"
+import { getUserImportTemplate } from "@/shared/getUserImportTemplate"
+import { importUser } from "@/shared/importUser"
 import { login } from "@/shared/login"
 import { pullDockerImage } from "@/shared/pullDockerImage"
 import { queryDockerContainer } from "@/shared/queryDockerContainer"
@@ -62,8 +65,11 @@ registerRoute(createFirstUser)
 registerRoute(deleteDockerImage)
 registerRoute(deleteProject)
 registerRoute(deleteUser)
+registerRoute(exportUser)
 registerRoute(getProject)
 registerRoute(getUser)
+registerRoute(getUserImportTemplate)
+registerRoute(importUser)
 registerRoute(login)
 registerRoute(pullDockerImage)
 registerRoute(queryDockerContainer)

@@ -107,6 +107,9 @@ importers:
       source-han-sans-sc-vf:
         specifier: ^0.0.1
         version: 0.0.1
+      xlsx:
+        specifier: https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz
+        version: https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz
       yaml:
         specifier: ^2.8.2
         version: 2.8.2

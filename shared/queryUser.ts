@@ -8,16 +8,12 @@ import type { UserOrderByWithRelationInput } from "@/prisma/generated/internal/p
 
 import { defaultPageNum } from "@/schemas/pageNum"
 import { defaultPageSize } from "@/schemas/pageSize"
-import { queryUserSchema } from "@/schemas/queryUser"
+import { type QueryUserParams, queryUserSchema } from "@/schemas/queryUser"
 
 import { createSharedFn } from "@/server/createSharedFn"
 import { isAdmin } from "@/server/isAdmin"
 
-export const queryUser = createSharedFn({
-    name: "queryUser",
-    schema: queryUserSchema,
-    filter: isAdmin,
-})(async function queryUser({
+export function getQueryUserWhere({
     id,
     name = "",
     nickname = "",
@@ -27,17 +23,13 @@ export const queryUser = createSharedFn({
     createdBefore,
     updatedAfter,
     updatedBefore,
-    pageNum = defaultPageNum,
-    pageSize = defaultPageSize,
-    sortBy = "createdAt",
-    sortOrder = "asc",
-}) {
+}: QueryUserParams = {}) {
     const phoneNumberItems = phoneNumber.split(/\s+/).filter(Boolean)
     const nameItems = name.split(/\s+/).filter(Boolean)
     const nicknameItems = nickname.split(/\s+/).filter(Boolean)
     const emailItems = email.split(/\s+/).filter(Boolean)
 
-    const where = id
+    return id
         ? { id }
         : getUserWhere({
               createdAt: {
@@ -71,7 +63,9 @@ export const queryUser = createSharedFn({
                   })),
               ],
           })
+}
 
+export function getQueryUserOrderBy({ sortBy = "createdAt", sortOrder = "asc" }: Pick<QueryUserParams, "sortBy" | "sortOrder"> = {}) {
     const orderBy: UserOrderByWithRelationInput[] = [
         {
             createdAt: sortBy === "createdAt" ? sortOrder : "asc",
@@ -93,6 +87,17 @@ export const queryUser = createSharedFn({
             })
         }
     }
+
+    return orderBy
+}
+
+export const queryUser = createSharedFn({
+    name: "queryUser",
+    schema: queryUserSchema,
+    filter: isAdmin,
+})(async function queryUser({ pageNum = defaultPageNum, pageSize = defaultPageSize, ...params }) {
+    const where = getQueryUserWhere(params)
+    const orderBy = getQueryUserOrderBy(params)
 
     const data = await prisma.user.findMany({
         where,
