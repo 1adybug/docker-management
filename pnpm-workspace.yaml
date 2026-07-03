@@ -1,7 +1,18 @@
-onlyBuiltDependencies:
-    - "@alicloud/openapi-core"
-    - "@prisma/engines"
-    - better-sqlite3
-    - prisma
-    - sharp
-    - unrs-resolver
+allowBuilds:
+    "@alicloud/openapi-core": true
+    "@prisma/engines": true
+    better-sqlite3: true
+    prisma: true
+    sharp: true
+    unrs-resolver: true
+
+minimumReleaseAgeExclude:
+    - deepsea-tools
+    - sdnext
+    - soda-antd
+    - soda-hooks
+    - soda-next
+    - soda-tailwind
+    - soda-tanstack-query
+    - soda-react
+    - deepsea-components@5.18.10
