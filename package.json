@@ -5,7 +5,7 @@
     "scripts": {
         "dev": "sdnext dev next dev --turbopack --hostname 0.0.0.0",
         "build": "sdnext build next build",
-        "build:docker": "node -e \"const { spawnSync } = require('node:child_process'); const { name } = require('./package.json'); const date = new Date(); const tag = [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join(''); const image = ['luzixu', name].join('/'); const latestImage = [image, 'latest'].join(':'); const datedImage = [image, tag].join(':'); function run(args) { const result = spawnSync('docker', args, { stdio: 'inherit' }); if (result.status !== 0) process.exit(result.status ?? 1); } run(['build', '-t', latestImage, '-t', datedImage, '.']); run(['push', latestImage]); run(['push', datedImage]);\"",
+        "build:docker": "node ./scripts/buildDocker.mjs",
         "start": "next start",
         "auth:secret": "node -e \"console.log(require('node:crypto').randomBytes(32).toString('hex'))\"",
         "lint": "eslint .",
