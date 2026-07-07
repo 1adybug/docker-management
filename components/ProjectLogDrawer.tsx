@@ -13,7 +13,7 @@ export interface ProjectLogDrawerProps extends StrictOmit<ComponentProps<typeof 
     onClose?: () => void
 }
 
-const ProjectLogDrawer: FC<ProjectLogDrawerProps> = ({
+export const ProjectLogDrawer: FC<ProjectLogDrawerProps> = ({
     name,
     content,
     open,
@@ -41,5 +41,3 @@ const ProjectLogDrawer: FC<ProjectLogDrawerProps> = ({
         )}
     </Drawer>
 )
-
-export default ProjectLogDrawer

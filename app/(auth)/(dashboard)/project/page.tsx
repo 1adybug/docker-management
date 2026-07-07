@@ -12,7 +12,7 @@ import { type Columns, getTimeRange, useScroll } from "soda-antd"
 import { transformState } from "soda-hooks"
 import { useQueryState } from "soda-next"
 
-import ProjectLogDrawer from "@/components/ProjectLogDrawer"
+import { ProjectLogDrawer } from "@/components/ProjectLogDrawer"
 
 import { DockerContainerStatus } from "@/constants"
 

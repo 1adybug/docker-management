@@ -22,8 +22,8 @@ import Link from "next/link"
 import { type Columns, useScroll } from "soda-antd"
 import { useQueryState } from "soda-next"
 
-import DockerContainerStatusSelect from "@/components/DockerContainerStatusSelect"
-import ProjectLogDrawer from "@/components/ProjectLogDrawer"
+import { DockerContainerStatusSelect } from "@/components/DockerContainerStatusSelect"
+import { ProjectLogDrawer } from "@/components/ProjectLogDrawer"
 
 import { DockerContainerStatus } from "@/constants"
 
