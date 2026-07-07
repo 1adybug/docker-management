@@ -1,4 +1,4 @@
-import { type WorkBook, read, utils, write } from "xlsx"
+import { type WorkBook, read, utils, write } from "@1adybug/xlsx"
 
 import { type AddUserParams, addUserParser } from "@/schemas/addUser"
 import { UserRole } from "@/schemas/userRole"
