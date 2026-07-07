@@ -26,7 +26,7 @@ export interface CurrentUserPhoneNumberEditorFormData {
     newOtp?: string
 }
 
-const CurrentUserPhoneNumberEditor: FC<CurrentUserPhoneNumberEditorProps> = ({
+export const CurrentUserPhoneNumberEditor: FC<CurrentUserPhoneNumberEditorProps> = ({
     data,
     open,
     onClose,
@@ -256,5 +256,3 @@ const CurrentUserPhoneNumberEditor: FC<CurrentUserPhoneNumberEditorProps> = ({
         </Modal>
     )
 }
-
-export default CurrentUserPhoneNumberEditor

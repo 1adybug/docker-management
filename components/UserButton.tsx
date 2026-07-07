@@ -12,12 +12,10 @@ export interface UserProps extends Omit<ComponentProps<typeof Link>, "children" 
     data: UserData
 }
 
-const UserButton: FC<UserProps> = ({ data: { id, name }, ...rest }) => (
+export const UserButton: FC<UserProps> = ({ data: { id, name }, ...rest }) => (
     <Link href={`/admin/user?id=${id}`} {...rest}>
         <Button color="primary" variant="text" className="h-6 min-w-[none] [&:not(:last-child)]:mr-2" size="small">
             {name}
         </Button>
     </Link>
 )
-
-export default UserButton

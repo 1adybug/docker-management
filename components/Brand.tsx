@@ -15,7 +15,7 @@ export interface BrandProps extends StrictOmit<ComponentProps<"h1">, "children">
     classNames?: BrandClassNames
 }
 
-const Brand: FC<BrandProps> = ({ classNames: { mainWrapper, link, logoWrapper, logo, text } = {}, className, ...rest }) => (
+export const Brand: FC<BrandProps> = ({ classNames: { mainWrapper, link, logoWrapper, logo, text } = {}, className, ...rest }) => (
     <h1 className={clsx(mainWrapper, className)} {...rest}>
         <Link href="/" className={clsx("flex items-center gap-3", link)}>
             <div className={clsx("flex flex-none", logoWrapper)}>
@@ -26,5 +26,3 @@ const Brand: FC<BrandProps> = ({ classNames: { mainWrapper, link, logoWrapper, l
         </Link>
     </h1>
 )
-
-export default Brand

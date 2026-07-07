@@ -10,8 +10,8 @@ import { type Columns, getTimeRange, useScroll } from "soda-antd"
 import { transformState } from "soda-hooks"
 import { useQueryState } from "soda-next"
 
-import JsonViewer from "@/components/JsonViewer"
-import UserButton from "@/components/UserButton"
+import { JsonViewer } from "@/components/JsonViewer"
+import { UserButton } from "@/components/UserButton"
 
 import { useQueryOperationLog } from "@/hooks/useQueryOperationLog"
 

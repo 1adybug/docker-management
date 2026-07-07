@@ -1,6 +1,6 @@
 import type { FC, ReactNode } from "react"
 
-import Auth from "@/components/Auth"
+import { Auth } from "@/components/Auth"
 
 export interface LayoutProps {
     children?: ReactNode

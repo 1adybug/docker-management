@@ -2,7 +2,7 @@
 
 import { type FC, Fragment } from "react"
 
-import ErrorPage from "@/components/ErrorPage"
+import { ErrorPage } from "@/components/ErrorPage"
 
 const Error: FC = () => (
     <Fragment>

@@ -2,7 +2,7 @@ import type { FC } from "react"
 
 import type { Metadata } from "next"
 
-import ErrorPage from "@/components/ErrorPage"
+import { ErrorPage } from "@/components/ErrorPage"
 
 export const metadata: Metadata = {
     title: "页面未找到",

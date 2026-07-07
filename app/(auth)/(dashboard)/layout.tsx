@@ -1,6 +1,6 @@
 import type { FC, ReactNode } from "react"
 
-import Header from "@/components/Header"
+import { Header } from "@/components/Header"
 
 export interface LayoutProps {
     children?: ReactNode

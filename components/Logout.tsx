@@ -10,7 +10,7 @@ import { authClient } from "@/utils/authClient"
 
 export interface LogoutProps extends ComponentProps<typeof Button> {}
 
-const Logout: FC<LogoutProps> = ({ loading, onClick: _onClick, ...rest }) => {
+export const Logout: FC<LogoutProps> = ({ loading, onClick: _onClick, ...rest }) => {
     const key = useId()
     const router = useRouter()
     const [isSignOutPending, setIsSignOutPending] = useState(false)
@@ -57,5 +57,3 @@ const Logout: FC<LogoutProps> = ({ loading, onClick: _onClick, ...rest }) => {
 
     return <Button loading={loading || isSignOutPending} onClick={onClick} {...rest} />
 }
-
-export default Logout

@@ -10,8 +10,8 @@ import { type Columns, getTimeRange, useScroll } from "soda-antd"
 import { transformState } from "soda-hooks"
 import { useQueryState } from "soda-next"
 
-import JsonViewer from "@/components/JsonViewer"
-import Userw from "@/components/UserButton"
+import { JsonViewer } from "@/components/JsonViewer"
+import { UserButton } from "@/components/UserButton"
 
 import { useQueryErrorLog } from "@/hooks/useQueryErrorLog"
 
@@ -114,7 +114,7 @@ const Page: FC = () => {
             sorter: true,
             sortOrder: getSortOrder(query, "name"),
             render(value, record) {
-                return !!record.userId && !!value && <Userw data={{ id: record.userId, name: value }} />
+                return !!record.userId && !!value && <UserButton data={{ id: record.userId, name: value }} />
             },
         },
         {

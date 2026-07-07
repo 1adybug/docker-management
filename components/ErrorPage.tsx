@@ -4,7 +4,7 @@ import { IconArrowLeft } from "@tabler/icons-react"
 import { clsx } from "deepsea-tools"
 import Link from "next/link"
 
-import Brand from "@/components/Brand"
+import { Brand } from "@/components/Brand"
 
 export interface ErrorPageProps extends ComponentProps<"div"> {
     code: number | string
@@ -15,7 +15,7 @@ export interface ErrorPageProps extends ComponentProps<"div"> {
     image: string
 }
 
-const ErrorPage: FC<ErrorPageProps> = ({ code, title, description, href, link, image, className, ...rest }) => (
+export const ErrorPage: FC<ErrorPageProps> = ({ code, title, description, href, link, image, className, ...rest }) => (
     <div className={clsx("grid h-full grid-cols-1 sm:grid-cols-2", className)} {...rest}>
         <div className="relative p-8">
             <Brand />
@@ -33,5 +33,3 @@ const ErrorPage: FC<ErrorPageProps> = ({ code, title, description, href, link, i
         <div className="hidden bg-cover bg-bottom sm:block" style={{ backgroundImage: `url(${image})` }} />
     </div>
 )
-
-export default ErrorPage

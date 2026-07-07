@@ -1,6 +1,6 @@
 import type { FC, ReactNode } from "react"
 
-import Brand from "@/components/Brand"
+import { Brand } from "@/components/Brand"
 
 export interface LayoutProps {
     children?: ReactNode

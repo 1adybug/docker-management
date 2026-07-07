@@ -2,7 +2,7 @@ import type { FC, ReactNode } from "react"
 
 import type { Metadata } from "next"
 
-import Registry from "@/components/Registry"
+import { Registry } from "@/components/Registry"
 
 import "source-han-sans-sc-vf"
 

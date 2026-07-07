@@ -17,14 +17,14 @@ import type { UpdateUserParams } from "@/schemas/updateUser"
 import { usernameSchema } from "@/schemas/username"
 import { UserRole } from "@/schemas/userRole"
 
-import RoleSelect from "./RoleSelect"
+import { RoleSelect } from "./RoleSelect"
 
 export interface UserEditorProps extends Omit<ComponentProps<typeof Modal>, "title" | "children" | "onOk" | "onClose"> {
     id?: string
     onClose?: () => void
 }
 
-const UserEditor: FC<UserEditorProps> = ({
+export const UserEditor: FC<UserEditorProps> = ({
     id,
     open,
     mask = { enabled: true, closable: true, blur: true },
@@ -110,5 +110,3 @@ const UserEditor: FC<UserEditorProps> = ({
         </Modal>
     )
 }
-
-export default UserEditor

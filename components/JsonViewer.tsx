@@ -21,7 +21,7 @@ function renderArrow({ children, className, style, ...props }: JsonViewerArrowPr
     )
 }
 
-const JsonViewer: FC<JsonViewerProps> = ({ className, ...rest }) => (
+export const JsonViewer: FC<JsonViewerProps> = ({ className, ...rest }) => (
     <JsonView className={clsx("!font-['Source_Han_Sans_SC_VF']", className)} displayDataTypes={false} {...rest}>
         <JsonView.Arrow render={renderArrow} />
         <JsonView.Quote render={() => <span />} />
@@ -35,5 +35,3 @@ const JsonViewer: FC<JsonViewerProps> = ({ className, ...rest }) => (
         />
     </JsonView>
 )
-
-export default JsonViewer

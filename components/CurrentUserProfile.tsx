@@ -24,7 +24,7 @@ import { UserRole } from "@/schemas/userRole"
 
 import { formatDateTime } from "@/utils/formatDateTime"
 
-import CurrentUserPhoneNumberEditor from "./CurrentUserPhoneNumberEditor"
+import { CurrentUserPhoneNumberEditor } from "./CurrentUserPhoneNumberEditor"
 
 export interface ProfileDetailItemProps extends StrictOmit<ComponentProps<"div">, "children"> {
     icon?: ReactNode

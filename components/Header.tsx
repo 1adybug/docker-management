@@ -12,8 +12,8 @@ import type { User } from "@/prisma/generated/client"
 
 import { isAdmin } from "@/utils/isAdmin"
 
-import Brand from "./Brand"
-import Logout from "./Logout"
+import { Brand } from "./Brand"
+import { Logout } from "./Logout"
 import { useUser } from "./UserProvider"
 
 export interface NavItem {
@@ -68,7 +68,7 @@ function isNavActive(pathname: string, href: string) {
     return pathname === href || pathname.startsWith(`${href}/`)
 }
 
-const Header: FC<HeaderProps> = ({ className, ...rest }) => {
+export const Header: FC<HeaderProps> = ({ className, ...rest }) => {
     const pathname = usePathname()
     const user = useUser()!
     const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -140,5 +140,3 @@ const Header: FC<HeaderProps> = ({ className, ...rest }) => {
         </Fragment>
     )
 }
-
-export default Header

@@ -4,14 +4,14 @@ import { getCurrentUser } from "@/server/getCurrentUser"
 import { redirectFromLogin } from "@/server/redirectFromLogin"
 import { redirectToLogin } from "@/server/redirectToLogin"
 
-import UserProvider from "./UserProvider"
+import { UserProvider } from "./UserProvider"
 
 export interface AuthProps {
     children?: ReactNode
     mode: "auth" | "guest" | "public"
 }
 
-const Auth: FC<AuthProps> = async ({ children, mode }) => {
+export const Auth: FC<AuthProps> = async ({ children, mode }) => {
     const user = await getCurrentUser()
 
     if (mode === "guest") {
@@ -26,5 +26,3 @@ const Auth: FC<AuthProps> = async ({ children, mode }) => {
 
     return <UserProvider value={user}>{children}</UserProvider>
 }
-
-export default Auth

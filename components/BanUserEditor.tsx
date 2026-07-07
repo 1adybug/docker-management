@@ -20,7 +20,7 @@ interface BanUserFormData {
     banDate?: Dayjs
 }
 
-const BanUserEditor: FC<BanUserEditorProps> = ({
+export const BanUserEditor: FC<BanUserEditorProps> = ({
     id,
     open,
     mask = { enabled: true, closable: true, blur: true },
@@ -97,5 +97,3 @@ const BanUserEditor: FC<BanUserEditorProps> = ({
         </Modal>
     )
 }
-
-export default BanUserEditor

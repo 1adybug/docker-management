@@ -12,8 +12,8 @@ import { type Columns, getTimeRange, useScroll } from "soda-antd"
 import { transformState } from "soda-hooks"
 import { useQueryState } from "soda-next"
 
-import BanUserEditor from "@/components/BanUserEditor"
-import UserEditor from "@/components/UserEditor"
+import { BanUserEditor } from "@/components/BanUserEditor"
+import { UserEditor } from "@/components/UserEditor"
 
 import { useDeleteUser } from "@/hooks/useDeleteUser"
 import { useQueryUser } from "@/hooks/useQueryUser"

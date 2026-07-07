@@ -16,6 +16,4 @@ export interface UserProviderProps {
     children?: ReactNode
 }
 
-const UserProvider: FC<UserProviderProps> = ({ value, children }) => <UserContext value={value}>{children}</UserContext>
-
-export default UserProvider
+export const UserProvider: FC<UserProviderProps> = ({ value, children }) => <UserContext value={value}>{children}</UserContext>
