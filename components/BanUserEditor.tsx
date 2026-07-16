@@ -31,6 +31,7 @@ export const BanUserEditor: FC<BanUserEditorProps> = ({
 }) => {
     const { enabled, closable, blur } = typeof mask === "boolean" ? { enabled: mask, closable: true, blur: true } : mask
     const [form] = useForm<BanUserFormData>()
+    const selectedBanDate = Form.useWatch("banDate", form)
 
     const { data, isLoading } = useGetUser(id, { enabled: !!open })
 
@@ -83,7 +84,12 @@ export const BanUserEditor: FC<BanUserEditorProps> = ({
                         <Button type="text" size="small" onClick={() => form.setFieldsValue({ banDate: getDateTime().add(1, "year") })}>
                             1年
                         </Button>
-                        <Button type="text" size="small" onClick={() => form.setFieldsValue({ banDate: undefined })}>
+                        <Button
+                            size="small"
+                            color={selectedBanDate ? "default" : "primary"}
+                            variant={selectedBanDate ? "text" : "filled"}
+                            onClick={() => form.setFieldsValue({ banDate: undefined })}
+                        >
                             永久
                         </Button>
                     </div>
