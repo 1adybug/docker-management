@@ -2,15 +2,25 @@
 
 import { type ComponentProps, type FC, useEffect } from "react"
 
-import { Button, Form, Input, InputNumber, Select, Skeleton, Switch } from "antd"
-import { useForm } from "antd/es/form/Form"
-import FormItem from "antd/es/form/FormItem"
+import { useForm } from "@tanstack/react-form"
 import { type StrictOmit, clsx } from "deepsea-tools"
+import { LoaderCircleIcon } from "lucide-react"
+import { z } from "zod"
+
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Switch } from "@/components/ui/switch"
 
 import { type PublicSystemSetting, type PublicSystemSettingGroup, SystemSettingValueKind } from "@/constants/systemSettings"
 
 import { useQuerySystemSettings } from "@/hooks/useQuerySystemSettings"
 import { useUpdateSystemSettings } from "@/hooks/useUpdateSystemSettings"
+
+import { updateSystemSettingsParser } from "@/schemas/updateSystemSettings"
 
 export interface SystemSettingFormData {
     [key: string]: string | number | boolean | undefined
@@ -18,12 +28,14 @@ export interface SystemSettingFormData {
 
 export interface SystemSettingFormProps extends StrictOmit<ComponentProps<"div">, "children"> {}
 
+const systemSettingFormValueSchema = z.union([z.string(), z.number(), z.boolean(), z.undefined()])
+const systemSettingFormSchema = z.record(z.string(), systemSettingFormValueSchema)
+
 export function getSystemSettingFormValue(setting: PublicSystemSetting) {
     if (setting.secret) return ""
     if (setting.kind === SystemSettingValueKind.布尔) return setting.value === "1" || setting.value === "true"
     if (setting.kind === SystemSettingValueKind.正整数) return Number(setting.value)
     if (setting.kind === SystemSettingValueKind.可选布尔) return setting.value ?? ""
-
     return setting.value ?? ""
 }
 
@@ -39,113 +51,162 @@ export function getSystemSettingFormValues(groups: PublicSystemSettingGroup[] = 
     return values
 }
 
-export function renderSystemSettingInput(setting: PublicSystemSetting, disabled: boolean) {
-    if (setting.kind === SystemSettingValueKind.布尔) return <Switch disabled={disabled} />
+interface SystemSettingInputProps {
+    setting: PublicSystemSetting
+    value: string | number | boolean | undefined
+    disabled: boolean
+    invalid: boolean
+    onBlur: () => void
+    onValueChange: (value: string | number | boolean | undefined) => void
+}
+
+const SystemSettingInput: FC<SystemSettingInputProps> = ({ setting, value, disabled, invalid, onBlur, onValueChange }) => {
+    if (setting.kind === SystemSettingValueKind.布尔)
+        return <Switch checked={Boolean(value)} disabled={disabled} aria-invalid={invalid} onBlur={onBlur} onCheckedChange={onValueChange} />
 
     if (setting.kind === SystemSettingValueKind.可选布尔) {
         return (
             <Select
+                value={value === "" || value === undefined ? "default" : `${value}`}
                 disabled={disabled}
-                options={[
-                    {
-                        label: "默认",
-                        value: "",
-                    },
-                    {
-                        label: "开启",
-                        value: "1",
-                    },
-                    {
-                        label: "关闭",
-                        value: "0",
-                    },
-                ]}
+                onValueChange={nextValue => onValueChange(nextValue === "default" ? "" : (nextValue ?? ""))}
+            >
+                <SelectTrigger className="w-full" aria-invalid={invalid} onBlur={onBlur}>
+                    <SelectValue placeholder="默认" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="default">默认</SelectItem>
+                    <SelectItem value="1">开启</SelectItem>
+                    <SelectItem value="0">关闭</SelectItem>
+                </SelectContent>
+            </Select>
+        )
+    }
+
+    if (setting.kind === SystemSettingValueKind.正整数) {
+        return (
+            <Input
+                type="number"
+                min={1}
+                step={1}
+                disabled={disabled}
+                aria-invalid={invalid}
+                value={value === undefined ? "" : `${value}`}
+                onBlur={onBlur}
+                onChange={event => onValueChange(event.target.value ? Number(event.target.value) : undefined)}
             />
         )
     }
 
-    if (setting.kind === SystemSettingValueKind.正整数) return <InputNumber className="w-full" min={1} precision={0} disabled={disabled} />
-
-    if (setting.secret) return <Input.Password autoComplete="new-password" allowClear disabled={disabled} placeholder={setting.placeholder} />
-
-    return <Input autoComplete="off" allowClear disabled={disabled} placeholder={setting.placeholder} />
-}
-
-export function renderSystemSettingFormItem(setting: PublicSystemSetting, disabled: boolean) {
     return (
-        <FormItem<SystemSettingFormData>
-            key={setting.key}
-            name={setting.key}
-            label={setting.label}
-            help={setting.description}
-            valuePropName={setting.kind === SystemSettingValueKind.布尔 ? "checked" : undefined}
-        >
-            {renderSystemSettingInput(setting, disabled)}
-        </FormItem>
+        <Input
+            type={setting.secret ? "password" : "text"}
+            autoComplete={setting.secret ? "new-password" : "off"}
+            disabled={disabled}
+            placeholder={setting.placeholder}
+            aria-invalid={invalid}
+            value={`${value ?? ""}`}
+            onBlur={onBlur}
+            onChange={event => onValueChange(event.target.value)}
+        />
     )
 }
 
 export const SystemSettingForm: FC<SystemSettingFormProps> = ({ className, ...rest }) => {
-    const [form] = useForm<SystemSettingFormData>()
     const { data, isLoading } = useQuerySystemSettings()
+    const { mutateAsync: updateSystemSettings, isPending } = useUpdateSystemSettings()
 
-    const { mutateAsync: updateSystemSettings, isPending } = useUpdateSystemSettings({
-        onSuccess(groups) {
-            form.setFieldsValue(getSystemSettingFormValues(groups))
+    const form = useForm({
+        defaultValues: {} as SystemSettingFormData,
+        validators: {
+            onSubmit: systemSettingFormSchema,
+        },
+        async onSubmit({ value }) {
+            const groups = await updateSystemSettings(updateSystemSettingsParser({ values: value }))
+            form.reset(getSystemSettingFormValues(groups))
         },
     })
 
     useEffect(() => {
-        if (!data) return
-
-        form.setFieldsValue(getSystemSettingFormValues(data))
+        if (data) form.reset(getSystemSettingFormValues(data))
     }, [data, form])
-
-    async function onFinish(values: SystemSettingFormData) {
-        await updateSystemSettings({ values })
-    }
 
     const disabled = isLoading || isPending
 
     return (
-        <div className={clsx("flex h-full flex-col overflow-hidden", className)} {...rest}>
-            <div className="flex-none border-b border-neutral-200 px-4 py-4">
-                <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0 space-y-1">
-                        <h1 className="text-xl font-semibold text-neutral-900">系统设置</h1>
-                        <p className="text-sm text-neutral-500">调整保存后立即生效的运行时配置，密钥字段会保持隐藏。</p>
-                    </div>
-                    <Button type="primary" className="flex-none" loading={isPending} disabled={isLoading} onClick={() => form.submit()}>
-                        保存设置
-                    </Button>
+        <div className={clsx("space-y-6", className)} {...rest}>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                    <h1 className="text-2xl font-semibold tracking-tight">系统设置</h1>
+                    <p className="text-muted-foreground mt-1 text-sm">调整保存后立即生效的运行时配置，密钥字段保持隐藏。</p>
                 </div>
+                <form.Subscribe selector={state => [state.canSubmit, state.isSubmitting, state.isPristine]}>
+                    {([canSubmit, isSubmitting, isPristine]) => (
+                        <Button type="submit" form="system-setting-form" disabled={!canSubmit || disabled || isSubmitting || isPristine}>
+                            {(isPending || isSubmitting) && <LoaderCircleIcon className="animate-spin" />}
+                            保存设置
+                        </Button>
+                    )}
+                </form.Subscribe>
             </div>
-            <div className="overflow-auto px-4 fill-y">
-                {isLoading ? (
-                    <div className="py-6">
-                        <Skeleton active paragraph={{ rows: 16 }} />
-                    </div>
-                ) : (
-                    <Form<SystemSettingFormData> name="system-setting-form" form={form} layout="vertical" disabled={disabled} onFinish={onFinish}>
-                        {data?.map(group => (
-                            <section key={group.key} className="border-b border-neutral-200 py-6 last:border-b-0">
-                                <div className="mb-5 max-w-3xl">
-                                    <h2 className="text-base font-semibold text-neutral-900">{group.label}</h2>
-                                    <p className="mt-1 text-sm text-neutral-500">{group.description}</p>
-                                </div>
-                                <div className="grid grid-cols-1 gap-x-6 gap-y-4 lg:grid-cols-2 xl:grid-cols-3">
-                                    {group.settings.map(setting => renderSystemSettingFormItem(setting, disabled))}
-                                </div>
-                            </section>
-                        ))}
-                        <div className="sticky bottom-0 -mx-4 flex justify-end border-t border-neutral-200 bg-white/95 px-4 py-3 backdrop-blur">
-                            <Button type="primary" loading={isPending} disabled={isLoading} onClick={() => form.submit()}>
-                                保存设置
-                            </Button>
-                        </div>
-                    </Form>
-                )}
-            </div>
+            {isLoading ? (
+                <div className="grid gap-4 lg:grid-cols-2">
+                    {Array.from({ length: 4 }, (_, index) => (
+                        <Skeleton key={index} className="h-64 rounded-2xl" />
+                    ))}
+                </div>
+            ) : (
+                <form
+                    id="system-setting-form"
+                    className="columns-1 gap-4 lg:columns-2"
+                    onSubmit={event => {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        void form.handleSubmit()
+                    }}
+                >
+                    {data?.map(group => (
+                        <Card key={group.key} className="mb-4 break-inside-avoid">
+                            <CardHeader>
+                                <CardTitle>{group.label}</CardTitle>
+                                <CardDescription>{group.description}</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-5">
+                                {group.settings.map(setting => (
+                                    <form.Field key={setting.key} name={setting.key} validators={{ onBlur: systemSettingFormValueSchema }}>
+                                        {field => {
+                                            const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
+
+                                            return (
+                                                <Field
+                                                    orientation={setting.kind === SystemSettingValueKind.布尔 ? "horizontal" : "vertical"}
+                                                    data-invalid={isInvalid}
+                                                >
+                                                    <div className="min-w-0 flex-auto">
+                                                        <FieldLabel htmlFor={setting.key}>{setting.label}</FieldLabel>
+                                                        {setting.description && <FieldDescription>{setting.description}</FieldDescription>}
+                                                    </div>
+                                                    <div className={setting.kind === SystemSettingValueKind.布尔 ? "flex-none" : "w-full"}>
+                                                        <SystemSettingInput
+                                                            setting={setting}
+                                                            value={field.state.value}
+                                                            disabled={disabled}
+                                                            invalid={isInvalid}
+                                                            onBlur={field.handleBlur}
+                                                            onValueChange={field.handleChange}
+                                                        />
+                                                        {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                                                    </div>
+                                                </Field>
+                                            )
+                                        }}
+                                    </form.Field>
+                                ))}
+                            </CardContent>
+                        </Card>
+                    ))}
+                </form>
+            )}
         </div>
     )
 }

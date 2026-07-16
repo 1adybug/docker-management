@@ -1,6 +1,7 @@
 import { useId } from "react"
 
 import { withUseMutationDefaults } from "soda-tanstack-query"
+import { toast } from "sonner"
 
 import type { updateSystemSettings } from "@/shared/updateSystemSettings"
 
@@ -9,24 +10,15 @@ export const createUseUpdateSystemSettings = withUseMutationDefaults<typeof upda
 
     return {
         onMutate(variables, context) {
-            message.open({
-                key,
-                type: "loading",
-                content: "保存系统设置中...",
-                duration: 0,
-            })
+            toast.loading("保存系统设置中...", { id: key, duration: Infinity })
         },
         onSuccess(data, variables, onMutateResult, context) {
             context.client.invalidateQueries({ queryKey: ["query-system-settings"] })
 
-            message.open({
-                key,
-                type: "success",
-                content: "系统设置已保存",
-            })
+            toast.success("系统设置已保存", { id: key })
         },
         onError(error, variables, onMutateResult, context) {
-            message.destroy(key)
+            toast.dismiss(key)
         },
         onSettled(data, error, variables, onMutateResult, context) {},
     }

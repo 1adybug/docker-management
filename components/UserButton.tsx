@@ -1,21 +1,20 @@
 import type { ComponentProps, FC } from "react"
 
-import { Button } from "antd"
 import Link from "next/link"
+
+import { Button } from "@/components/ui/button"
 
 export interface UserData {
     id: string
     name: string
 }
 
-export interface UserProps extends Omit<ComponentProps<typeof Link>, "children" | "href"> {
+export interface UserButtonProps extends Omit<ComponentProps<typeof Button>, "children" | "nativeButton" | "render"> {
     data: UserData
 }
 
-export const UserButton: FC<UserProps> = ({ data: { id, name }, ...rest }) => (
-    <Link href={`/admin/user?id=${id}`} {...rest}>
-        <Button color="primary" variant="text" className="h-6 min-w-[none] [&:not(:last-child)]:mr-2" size="small">
-            {name}
-        </Button>
-    </Link>
+export const UserButton: FC<UserButtonProps> = ({ data: { id, name }, ...rest }) => (
+    <Button render={<Link href={`/admin/user?id=${id}`} />} variant="link" size="xs" nativeButton={false} {...rest}>
+        {name}
+    </Button>
 )

@@ -1,27 +1,16 @@
-import { useId } from "react"
-
 import { withUseMutationDefaults } from "soda-tanstack-query"
+import { toast } from "sonner"
 
 import type { banUser } from "@/shared/banUser"
 
-export const createUseBanUser = withUseMutationDefaults<typeof banUser>(() => {
-    const key = useId()
+export const createUseBanUser = withUseMutationDefaults<typeof banUser>(() => ({
+    onMutate(variables, context) {},
+    onSuccess(data, variables, onMutateResult, context) {
+        context.client.invalidateQueries({ queryKey: ["query-user"] })
+        context.client.invalidateQueries({ queryKey: ["get-user", data.id] })
 
-    return {
-        onMutate(variables, context) {},
-        onSuccess(data, variables, onMutateResult, context) {
-            context.client.invalidateQueries({ queryKey: ["query-user"] })
-            context.client.invalidateQueries({ queryKey: ["get-user", data.id] })
-
-            message.open({
-                key,
-                type: "success",
-                content: `封禁成功`,
-            })
-        },
-        onError(error, variables, onMutateResult, context) {
-            message.destroy(key)
-        },
-        onSettled(data, error, variables, onMutateResult, context) {},
-    }
-})
+        toast.success("封禁成功")
+    },
+    onError(error, variables, onMutateResult, context) {},
+    onSettled(data, error, variables, onMutateResult, context) {},
+}))

@@ -1,4 +1,4 @@
-chrome >= 87
-edge >= 88
-firefox >= 78
-safari >= 14
+chrome >= 111
+edge >= 111
+firefox >= 128
+safari >= 16.4

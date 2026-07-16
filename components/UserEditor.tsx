@@ -1,42 +1,37 @@
-import { type ComponentProps, type FC, useEffect } from "react"
+"use client"
 
-import { Button, Form, Input, Modal } from "antd"
-import { useForm } from "antd/es/form/Form"
-import FormItem from "antd/es/form/FormItem"
-import { isNonNullable } from "deepsea-tools"
-import { schemaToRule } from "soda-antd"
+import { type FC, useEffect } from "react"
+
+import { useForm } from "@tanstack/react-form"
+import { LoaderCircleIcon } from "lucide-react"
+
+import { RoleSelect } from "@/components/RoleSelect"
+
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
 
 import { useAddUser } from "@/hooks/useAddUser"
 import { useGetUser } from "@/hooks/useGetUser"
 import { useUpdateUser } from "@/hooks/useUpdateUser"
 
-import type { AddUserParams } from "@/schemas/addUser"
+import { addUserParser, addUserSchema } from "@/schemas/addUser"
 import { nicknameSchema } from "@/schemas/nickname"
 import { phoneNumberSchema } from "@/schemas/phoneNumber"
-import type { UpdateUserParams } from "@/schemas/updateUser"
+import { updateUserParser } from "@/schemas/updateUser"
 import { usernameSchema } from "@/schemas/username"
-import { UserRole } from "@/schemas/userRole"
+import { type UserRoleParams, UserRole, UserRoleSchema } from "@/schemas/userRole"
 
-import { RoleSelect } from "./RoleSelect"
-
-export interface UserEditorProps extends Omit<ComponentProps<typeof Modal>, "title" | "children" | "onOk" | "onClose"> {
+export interface UserEditorProps {
     id?: string
+    open?: boolean
     onClose?: () => void
 }
 
-export const UserEditor: FC<UserEditorProps> = ({
-    id,
-    open,
-    mask = { enabled: true, closable: true, blur: true },
-    onClose,
-    okButtonProps: { loading: okButtonLoading, ...okButtonProps } = {},
-    cancelButtonProps: { disabled: cancelButtonDisabled, ...cancelButtonProps } = {},
-    ...rest
-}) => {
-    const { enabled, closable, blur } = typeof mask === "boolean" ? { enabled: mask, closable: true, blur: true } : mask
-    const isUpdate = isNonNullable(id)
-    const [form] = useForm<AddUserParams>()
-    const { data, isLoading } = useGetUser(id, { enabled: !!open })
+export const UserEditor: FC<UserEditorProps> = ({ id, open = false, onClose }) => {
+    const isUpdate = !!id
+    const { data, isLoading } = useGetUser(id, { enabled: open })
 
     const { mutateAsync: addUser, isPending: isAddUserPending } = useAddUser({
         onSuccess() {
@@ -50,63 +45,158 @@ export const UserEditor: FC<UserEditorProps> = ({
         },
     })
 
+    const form = useForm({
+        defaultValues: {
+            name: "",
+            nickname: "",
+            phoneNumber: "",
+            role: UserRole.用户 as UserRoleParams,
+        },
+        validators: {
+            onSubmit: addUserSchema,
+        },
+        async onSubmit({ value }) {
+            const values = addUserParser(value)
+
+            if (id) await updateUser(updateUserParser({ id, ...values }))
+            else await addUser(values)
+        },
+    })
+
     useEffect(() => {
-        if (!open) return
+        if (!open) {
+            form.reset({ name: "", nickname: "", phoneNumber: "", role: UserRole.用户 })
+            return
+        }
 
-        if (data) form.setFieldsValue(data as AddUserParams)
-        else form.resetFields()
-    }, [open, data, form])
+        form.reset({
+            name: data?.name ?? "",
+            nickname: data?.nickname ?? "",
+            phoneNumber: data?.phoneNumber ?? "",
+            role: data?.role ?? UserRole.用户,
+        })
+    }, [data, form, open])
 
-    useEffect(() => {
-        if (isNonNullable(id)) return () => form.resetFields()
-    }, [id, form])
+    const isPending = isLoading || isAddUserPending || isUpdateUserPending
 
-    const isPending = isAddUserPending || isUpdateUserPending
-
-    const isRequesting = isLoading || isPending
-
-    function onFinish(values: AddUserParams) {
-        if (isUpdate) updateUser({ id: id!, ...values } as UpdateUserParams)
-        else addUser(values)
+    function onOpenChange(nextOpen: boolean) {
+        if (!nextOpen && !isPending) onClose?.()
     }
 
     return (
-        <Modal
-            title={`${isUpdate ? "修改用户" : "新增用户"}`}
-            open={open}
-            mask={{ enabled, closable: closable && !isPending, blur }}
-            onOk={() => form.submit()}
-            okButtonProps={{ loading: isRequesting || okButtonLoading, ...okButtonProps }}
-            cancelButtonProps={{ disabled: isPending || cancelButtonDisabled, ...cancelButtonProps }}
-            onCancel={() => onClose?.()}
-            {...rest}
-        >
-            <Form<AddUserParams>
-                name="user-editor"
-                form={form}
-                disabled={isRequesting}
-                labelCol={{ flex: "56px" }}
-                initialValues={{ role: UserRole.用户 }}
-                onFinish={onFinish}
-            >
-                <FormItem<AddUserParams> name="name" label="用户名" rules={[schemaToRule(usernameSchema)]}>
-                    <Input autoComplete="off" allowClear />
-                </FormItem>
-                <FormItem<AddUserParams> name="nickname" label="昵称" rules={[schemaToRule(nicknameSchema)]}>
-                    <Input autoComplete="off" allowClear />
-                </FormItem>
-                <FormItem<AddUserParams> name="phoneNumber" label="手机号" rules={[schemaToRule(phoneNumberSchema)]}>
-                    <Input autoComplete="off" allowClear />
-                </FormItem>
-                <FormItem<AddUserParams> name="role" label="角色">
-                    <RoleSelect />
-                </FormItem>
-                <FormItem<AddUserParams> noStyle>
-                    <Button className="!hidden" htmlType="submit">
-                        提交
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent showCloseButton={!isPending}>
+                <DialogHeader>
+                    <DialogTitle>{isUpdate ? "修改用户" : "新增用户"}</DialogTitle>
+                    <DialogDescription>填写用户基础信息并选择系统角色。</DialogDescription>
+                </DialogHeader>
+                <form
+                    id="user-editor-form"
+                    onSubmit={event => {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        void form.handleSubmit()
+                    }}
+                >
+                    <FieldGroup>
+                        <form.Field name="name" validators={{ onBlur: usernameSchema }}>
+                            {field => {
+                                const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
+                                return (
+                                    <Field data-invalid={isInvalid}>
+                                        <FieldLabel htmlFor={field.name}>用户名</FieldLabel>
+                                        <Input
+                                            id={field.name}
+                                            name={field.name}
+                                            autoComplete="off"
+                                            disabled={isPending}
+                                            aria-invalid={isInvalid}
+                                            value={field.state.value}
+                                            onBlur={field.handleBlur}
+                                            onChange={event => field.handleChange(event.target.value)}
+                                        />
+                                        {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                                    </Field>
+                                )
+                            }}
+                        </form.Field>
+                        <form.Field name="nickname" validators={{ onBlur: nicknameSchema }}>
+                            {field => {
+                                const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
+                                return (
+                                    <Field data-invalid={isInvalid}>
+                                        <FieldLabel htmlFor={field.name}>昵称</FieldLabel>
+                                        <Input
+                                            id={field.name}
+                                            name={field.name}
+                                            autoComplete="off"
+                                            disabled={isPending}
+                                            aria-invalid={isInvalid}
+                                            value={field.state.value}
+                                            onBlur={field.handleBlur}
+                                            onChange={event => field.handleChange(event.target.value)}
+                                        />
+                                        {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                                    </Field>
+                                )
+                            }}
+                        </form.Field>
+                        <form.Field name="phoneNumber" validators={{ onBlur: phoneNumberSchema }}>
+                            {field => {
+                                const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
+                                return (
+                                    <Field data-invalid={isInvalid}>
+                                        <FieldLabel htmlFor={field.name}>手机号</FieldLabel>
+                                        <Input
+                                            id={field.name}
+                                            name={field.name}
+                                            autoComplete="tel"
+                                            disabled={isPending}
+                                            aria-invalid={isInvalid}
+                                            value={field.state.value}
+                                            onBlur={field.handleBlur}
+                                            onChange={event => field.handleChange(event.target.value)}
+                                        />
+                                        {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                                    </Field>
+                                )
+                            }}
+                        </form.Field>
+                        <form.Field name="role" validators={{ onBlur: UserRoleSchema }}>
+                            {field => {
+                                const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
+                                return (
+                                    <Field data-invalid={isInvalid}>
+                                        <FieldLabel htmlFor={field.name}>角色</FieldLabel>
+                                        <RoleSelect
+                                            id={field.name}
+                                            value={field.state.value}
+                                            disabled={isPending}
+                                            invalid={isInvalid}
+                                            onBlur={field.handleBlur}
+                                            onValueChange={field.handleChange}
+                                        />
+                                        {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                                    </Field>
+                                )
+                            }}
+                        </form.Field>
+                    </FieldGroup>
+                </form>
+                <DialogFooter>
+                    <Button type="button" variant="outline" disabled={isPending} onClick={onClose}>
+                        取消
                     </Button>
-                </FormItem>
-            </Form>
-        </Modal>
+                    <form.Subscribe selector={state => [state.canSubmit, state.isSubmitting, state.isPristine]}>
+                        {([canSubmit, isSubmitting, isPristine]) => (
+                            <Button type="submit" form="user-editor-form" disabled={!canSubmit || isPending || isSubmitting || isPristine}>
+                                {(isPending || isSubmitting) && <LoaderCircleIcon className="animate-spin" />}
+                                保存
+                            </Button>
+                        )}
+                    </form.Subscribe>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     )
 }

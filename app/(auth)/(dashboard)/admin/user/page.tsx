@@ -1,18 +1,28 @@
 "use client"
 
-import { type ChangeEvent, type FC, useRef, useState } from "react"
+import { type ChangeEvent, type FC, useEffect, useRef, useState } from "react"
 
-import { IconFileExport, IconFileImport, IconFileSpreadsheet, IconPlus } from "@tabler/icons-react"
+import { useForm } from "@tanstack/react-form"
 import { useQueryClient } from "@tanstack/react-query"
-import { type TableProps, Button, DatePicker, Form, Input, Popconfirm, Table } from "antd"
-import FormItem from "antd/es/form/FormItem"
-import { getEnumKey, isNonNullable, naturalParser, showTotal } from "deepsea-tools"
-import { type Columns, getTimeRange, useScroll } from "soda-antd"
-import { transformState } from "soda-hooks"
+import type { ColumnDef, SortingState, Updater } from "@tanstack/react-table"
+import { getEnumKey, naturalParser } from "deepsea-tools"
+import { DownloadIcon, FileSpreadsheetIcon, LoaderCircleIcon, PlusIcon, UploadIcon } from "lucide-react"
+import type { DateRange } from "react-day-picker"
 import { useQueryState } from "soda-next"
+import { toast } from "sonner"
+import { z } from "zod"
 
 import { BanUserEditor } from "@/components/BanUserEditor"
+import { ConfirmButton } from "@/components/ConfirmButton"
+import { DataTable } from "@/components/DataTable"
+import { DateRangePicker } from "@/components/DateRangePicker"
 import { UserEditor } from "@/components/UserEditor"
+
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Field, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
 
 import { useDeleteUser } from "@/hooks/useDeleteUser"
 import { useQueryUser } from "@/hooks/useQueryUser"
@@ -23,14 +33,13 @@ import type { User } from "@/prisma/generated/client"
 import { getParser } from "@/schemas"
 import { pageNumParser } from "@/schemas/pageNum"
 import { pageSizeParser } from "@/schemas/pageSize"
-import { type SortOrderParams, sortOrderSchema } from "@/schemas/sortOrder"
+import { sortOrderSchema } from "@/schemas/sortOrder"
 import { UserRole } from "@/schemas/userRole"
 import { type UserSortByParams, userSortBySchema } from "@/schemas/userSortBy"
 
 import type { ImportUserResult } from "@/shared/importUser"
 
 import { formatDateTime } from "@/utils/formatDateTime"
-import { getSortOrder } from "@/utils/getSortOrder"
 
 interface ActionResponse<T = unknown> {
     success: boolean
@@ -53,6 +62,28 @@ interface DownloadBase64WorkbookParams {
     filename: string
 }
 
+interface UserFilterValues {
+    name: string
+    nickname: string
+    phoneNumber: string
+    createdAt?: DateRange
+    updatedAt?: DateRange
+}
+
+const userFilterSchema = z.object({
+    name: z.string(),
+    nickname: z.string(),
+    phoneNumber: z.string(),
+    createdAt: z.custom<DateRange>().optional(),
+    updatedAt: z.custom<DateRange>().optional(),
+})
+
+const filterFields = [
+    { name: "name", label: "用户名" },
+    { name: "nickname", label: "昵称" },
+    { name: "phoneNumber", label: "手机号" },
+] as const
+
 function getErrorMessage(error: unknown) {
     return error instanceof Error ? error.message : "操作失败"
 }
@@ -60,7 +91,6 @@ function getErrorMessage(error: unknown) {
 function downloadBlob({ blob, filename }: DownloadBlobParams) {
     const url = URL.createObjectURL(blob)
     const link = document.createElement("a")
-
     link.href = url
     link.download = filename
     document.body.append(link)
@@ -82,17 +112,12 @@ async function downloadWorkbookResponse({ response, filename }: DownloadWorkbook
     }
 
     if (!response.ok) throw new Error("下载失败")
-
-    downloadBlob({
-        blob: await response.blob(),
-        filename,
-    })
+    downloadBlob({ blob: await response.blob(), filename })
 }
 
 function downloadBase64Workbook({ base64, filename }: DownloadBase64WorkbookParams) {
     const binary = atob(base64)
     const bytes = new Uint8Array(binary.length)
-
     for (let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index)
 
     downloadBlob({
@@ -106,203 +131,211 @@ function getImportResultMessage(result?: ImportUserResult) {
     return `成功添加 ${result.successCount} 个，与现有库重复 ${result.duplicateCount} 个（用户名），信息错误 ${result.errorCount} 个。`
 }
 
+function toDateRange(after?: number, before?: number): DateRange | undefined {
+    if (!after && !before) return undefined
+    return {
+        from: after ? new Date(after) : undefined,
+        to: before ? new Date(before) : undefined,
+    }
+}
+
 const Page: FC = () => {
     const queryClient = useQueryClient()
 
-    const [query, setQuery] = transformState(
-        useQueryState({
-            keys: ["id", "name", "nickname", "email", "phoneNumber"],
-            parse: {
-                createdBefore: naturalParser,
-                createdAfter: naturalParser,
-                updatedBefore: naturalParser,
-                updatedAfter: naturalParser,
-                pageNum: pageNumParser,
-                pageSize: pageSizeParser,
-                sortBy: getParser(userSortBySchema.optional().catch(undefined)),
-                sortOrder: getParser(sortOrderSchema.optional().catch(undefined)),
-            },
-        }),
-        {
-            get({ createdAfter, createdBefore, updatedAfter, updatedBefore, ...rest }) {
-                return {
-                    createdAt: getTimeRange(createdAfter, createdBefore),
-                    updatedAt: getTimeRange(updatedAfter, updatedBefore),
-                    ...rest,
-                }
-            },
-            set({ createdAt, updatedAt, ...rest }) {
-                return {
-                    createdAfter: createdAt?.[0].valueOf(),
-                    createdBefore: createdAt?.[1].valueOf(),
-                    updatedAfter: updatedAt?.[0].valueOf(),
-                    updatedBefore: updatedAt?.[1].valueOf(),
-                    ...rest,
-                }
-            },
-            dependOnGet: false,
+    const [query, setQuery] = useQueryState({
+        keys: ["id", "name", "nickname", "email", "phoneNumber"],
+        parse: {
+            createdBefore: naturalParser,
+            createdAfter: naturalParser,
+            updatedBefore: naturalParser,
+            updatedAfter: naturalParser,
+            pageNum: pageNumParser,
+            pageSize: pageSizeParser,
+            sortBy: getParser(userSortBySchema.optional().catch(undefined)),
+            sortOrder: getParser(sortOrderSchema.optional().catch(undefined)),
         },
-    )
+    })
 
-    type FormParams = typeof query
-
-    const [editId, setEditId] = useState<string | undefined>(undefined)
-    const [banId, setBanId] = useState<string | undefined>(undefined)
+    const [editId, setEditId] = useState<string>()
+    const [banId, setBanId] = useState<string>()
     const [showEditor, setShowEditor] = useState(false)
     const [isTemplateDownloading, setIsTemplateDownloading] = useState(false)
     const [isExporting, setIsExporting] = useState(false)
     const [isImporting, setIsImporting] = useState(false)
-    const container = useRef<HTMLDivElement>(null)
     const importInput = useRef<HTMLInputElement>(null)
-    const { y } = useScroll(container, { paginationMargin: 32 })
-    const { createdAt, updatedAt, pageNum, pageSize, ...rest } = query
 
-    const columns: Columns<User> = [
+    const form = useForm({
+        defaultValues: {
+            name: query.name ?? "",
+            nickname: query.nickname ?? "",
+            phoneNumber: query.phoneNumber ?? "",
+            createdAt: toDateRange(query.createdAfter, query.createdBefore),
+            updatedAt: toDateRange(query.updatedAfter, query.updatedBefore),
+        } as UserFilterValues,
+        validators: {
+            onSubmit: userFilterSchema,
+        },
+        onSubmit({ value }) {
+            setQuery(previous => ({
+                ...previous,
+                name: value.name.trim() || undefined,
+                nickname: value.nickname.trim() || undefined,
+                phoneNumber: value.phoneNumber.trim() || undefined,
+                createdAfter: value.createdAt?.from?.getTime(),
+                createdBefore: value.createdAt?.to?.getTime(),
+                updatedAfter: value.updatedAt?.from?.getTime(),
+                updatedBefore: value.updatedAt?.to?.getTime(),
+                pageNum: 1,
+            }))
+        },
+    })
+
+    const { data, isLoading } = useQueryUser({
+        id: query.id,
+        name: query.name,
+        nickname: query.nickname,
+        email: query.email,
+        phoneNumber: query.phoneNumber,
+        createdAfter: query.createdAfter ? new Date(query.createdAfter) : undefined,
+        createdBefore: query.createdBefore ? new Date(query.createdBefore) : undefined,
+        updatedAfter: query.updatedAfter ? new Date(query.updatedAfter) : undefined,
+        updatedBefore: query.updatedBefore ? new Date(query.updatedBefore) : undefined,
+        pageNum: query.pageNum,
+        pageSize: query.pageSize,
+        sortBy: query.sortBy,
+        sortOrder: query.sortOrder,
+    })
+
+    const { mutateAsync: unbanUser, isPending: isUnbanUserPending } = useUnbanUser()
+    const { mutateAsync: deleteUser, isPending: isDeleteUserPending } = useDeleteUser()
+    const isRequesting = isLoading || isUnbanUserPending || isDeleteUserPending || isTemplateDownloading || isExporting || isImporting
+    const sorting: SortingState = query.sortBy ? [{ id: query.sortBy, desc: query.sortOrder === "desc" }] : []
+
+    useEffect(() => {
+        form.reset({
+            name: query.name ?? "",
+            nickname: query.nickname ?? "",
+            phoneNumber: query.phoneNumber ?? "",
+            createdAt: toDateRange(query.createdAfter, query.createdBefore),
+            updatedAt: toDateRange(query.updatedAfter, query.updatedBefore),
+        })
+    }, [form, query.createdAfter, query.createdBefore, query.name, query.nickname, query.phoneNumber, query.updatedAfter, query.updatedBefore])
+
+    const columns: ColumnDef<User>[] = [
         {
-            title: "序号",
-            key: "index",
-            align: "center",
-            render: (value, record, index) => (pageNum - 1) * pageSize + index + 1,
+            id: "index",
+            header: "序号",
+            cell: ({ row }) => (query.pageNum - 1) * query.pageSize + row.index + 1,
+        },
+        { accessorKey: "name", header: "用户名", enableSorting: true },
+        { accessorKey: "nickname", header: "昵称", enableSorting: true },
+        { accessorKey: "phoneNumber", header: "手机号", enableSorting: true },
+        {
+            accessorKey: "role",
+            header: "角色",
+            enableSorting: true,
+            cell: ({ row }) => getEnumKey(UserRole, row.original.role),
         },
         {
-            title: "用户名",
-            dataIndex: "name",
-            align: "center",
-            sorter: true,
-            sortOrder: getSortOrder(query, "name"),
+            accessorKey: "banned",
+            header: "状态",
+            enableSorting: true,
+            cell: ({ row }) => <Badge variant={row.original.banned ? "destructive" : "secondary"}>{row.original.banned ? "已封禁" : "正常"}</Badge>,
+        },
+        { accessorKey: "banReason", header: "封禁原因" },
+        {
+            accessorKey: "banExpires",
+            header: "封禁时间",
+            cell: ({ row }) => (row.original.banExpires ? formatDateTime(row.original.banExpires) : row.original.banned ? "永久" : "未封禁"),
         },
         {
-            title: "昵称",
-            dataIndex: "nickname",
-            align: "center",
-            sorter: true,
-            sortOrder: getSortOrder(query, "nickname"),
+            accessorKey: "createdAt",
+            header: "创建时间",
+            enableSorting: true,
+            cell: ({ row }) => formatDateTime(row.original.createdAt),
         },
         {
-            title: "手机号",
-            dataIndex: "phoneNumber",
-            align: "center",
-            sorter: true,
-            sortOrder: getSortOrder(query, "phoneNumber"),
+            accessorKey: "updatedAt",
+            header: "更新时间",
+            enableSorting: true,
+            cell: ({ row }) => formatDateTime(row.original.updatedAt),
         },
         {
-            title: "角色",
-            dataIndex: "role",
-            align: "center",
-            sorter: true,
-            sortOrder: getSortOrder(query, "role"),
-            render(value) {
-                return getEnumKey(UserRole, value)
-            },
-        },
-        {
-            title: "状态",
-            dataIndex: "banned",
-            align: "center",
-            sorter: true,
-            sortOrder: getSortOrder(query, "banned"),
-            render(value) {
-                return value ? "已封禁" : "正常"
-            },
-        },
-        {
-            title: "封禁原因",
-            dataIndex: "banReason",
-            align: "center",
-        },
-        {
-            title: "封禁时间",
-            dataIndex: "banExpires",
-            align: "center",
-            render(value, record) {
-                return value ? formatDateTime(value) : record.banned ? "永久" : "未封禁"
-            },
-        },
-        {
-            title: "创建时间",
-            dataIndex: "createdAt",
-            align: "center",
-            sorter: true,
-            sortOrder: getSortOrder(query, "createdAt"),
-            render(value) {
-                return formatDateTime(value)
-            },
-        },
-        {
-            title: "更新时间",
-            dataIndex: "updatedAt",
-            align: "center",
-            sorter: true,
-            sortOrder: getSortOrder(query, "updatedAt"),
-            render(value) {
-                return formatDateTime(value)
-            },
-        },
-        {
-            title: "操作",
-            key: "operation",
-            dataIndex: "id",
-            align: "center",
-            render(value, record) {
-                return (
-                    <div className="inline-flex gap-1">
-                        <Button size="small" color="primary" variant="text" disabled={isRequesting} onClick={() => onUpdate(value)}>
-                            编辑
+            id: "actions",
+            header: "操作",
+            cell: ({ row }) => (
+                <div className="flex items-center gap-1">
+                    <Button
+                        size="xs"
+                        variant="ghost"
+                        disabled={isRequesting}
+                        onClick={() => {
+                            setEditId(row.original.id)
+                            setShowEditor(true)
+                        }}
+                    >
+                        编辑
+                    </Button>
+                    {row.original.banned ? (
+                        <ConfirmButton title="确认解封用户" size="xs" variant="ghost" pending={isUnbanUserPending} onConfirm={() => unbanUser(row.original.id)}>
+                            解封
+                        </ConfirmButton>
+                    ) : (
+                        <Button size="xs" variant="ghost" disabled={isRequesting} onClick={() => setBanId(row.original.id)}>
+                            封禁
                         </Button>
-                        {record.banned ? (
-                            <Popconfirm title="确认解封用户" onConfirm={() => unbanUserAsync(value)}>
-                                <Button size="small" color="orange" variant="text" disabled={isRequesting}>
-                                    解封
-                                </Button>
-                            </Popconfirm>
-                        ) : (
-                            <Button size="small" color="orange" variant="text" disabled={isRequesting} onClick={() => onBan(value)}>
-                                封禁
-                            </Button>
-                        )}
-                        <Popconfirm title="确认删除用户" description="请在删除用户前，确保已备份相关数据" onConfirm={() => deleteUserAsync(value)}>
-                            <Button size="small" color="danger" variant="text" disabled={isRequesting}>
-                                删除
-                            </Button>
-                        </Popconfirm>
-                    </div>
-                )
-            },
+                    )}
+                    <ConfirmButton
+                        title="确认删除用户"
+                        description="请在删除用户前确保已备份相关数据，此操作不可撤销。"
+                        size="xs"
+                        variant="destructive"
+                        pending={isDeleteUserPending}
+                        onConfirm={() => deleteUser(row.original.id)}
+                    >
+                        删除
+                    </ConfirmButton>
+                </div>
+            ),
         },
     ]
 
-    function onAdd() {
-        setEditId(undefined)
-        setShowEditor(true)
+    function onSortingChange(updater: Updater<SortingState>) {
+        const nextSorting = typeof updater === "function" ? updater(sorting) : updater
+        const next = nextSorting[0]
+
+        setQuery(previous => ({
+            ...previous,
+            sortBy: next?.id as UserSortByParams | undefined,
+            sortOrder: next ? (next.desc ? "desc" : "asc") : undefined,
+            pageNum: 1,
+        }))
     }
 
-    function onUpdate(id: string) {
-        setEditId(id)
-        setShowEditor(true)
-    }
+    function onReset() {
+        form.reset({ name: "", nickname: "", phoneNumber: "", createdAt: undefined, updatedAt: undefined })
 
-    function onBan(id: string) {
-        setBanId(id)
-    }
-
-    function onClose() {
-        setEditId(undefined)
-        setShowEditor(false)
-    }
-
-    function onImport() {
-        importInput.current?.click()
+        setQuery(previous => ({
+            ...previous,
+            name: undefined,
+            nickname: undefined,
+            phoneNumber: undefined,
+            createdAfter: undefined,
+            createdBefore: undefined,
+            updatedAfter: undefined,
+            updatedBefore: undefined,
+            pageNum: 1,
+        }))
     }
 
     function getExportParams() {
-        const { createdAt, updatedAt, pageNum, pageSize, ...params } = query
-
+        const { pageNum, pageSize, createdAfter, createdBefore, updatedAfter, updatedBefore, ...params } = query
         return {
             ...params,
-            createdAfter: createdAt?.[0].toISOString(),
-            createdBefore: createdAt?.[1].toISOString(),
-            updatedAfter: updatedAt?.[0].toISOString(),
-            updatedBefore: updatedAt?.[1].toISOString(),
+            createdAfter: createdAfter ? new Date(createdAfter).toISOString() : undefined,
+            createdBefore: createdBefore ? new Date(createdBefore).toISOString() : undefined,
+            updatedAfter: updatedAfter ? new Date(updatedAfter).toISOString() : undefined,
+            updatedBefore: updatedBefore ? new Date(updatedBefore).toISOString() : undefined,
         }
     }
 
@@ -310,15 +343,9 @@ const Page: FC = () => {
         setIsTemplateDownloading(true)
 
         try {
-            await downloadWorkbookResponse({
-                response: await fetch("/api/admin/user/template"),
-                filename: "用户导入模板.xlsx",
-            })
+            await downloadWorkbookResponse({ response: await fetch("/api/admin/user/template"), filename: "用户导入模板.xlsx" })
         } catch (error) {
-            message.open({
-                type: "error",
-                content: getErrorMessage(error),
-            })
+            toast.error(getErrorMessage(error))
         } finally {
             setIsTemplateDownloading(false)
         }
@@ -329,17 +356,11 @@ const Page: FC = () => {
 
         try {
             await downloadWorkbookResponse({
-                response: await fetch("/api/admin/user/export", {
-                    method: "POST",
-                    body: JSON.stringify(getExportParams()),
-                }),
+                response: await fetch("/api/admin/user/export", { method: "POST", body: JSON.stringify(getExportParams()) }),
                 filename: "用户列表.xlsx",
             })
         } catch (error) {
-            message.open({
-                type: "error",
-                content: getErrorMessage(error),
-            })
+            toast.error(getErrorMessage(error))
         } finally {
             setIsExporting(false)
         }
@@ -355,13 +376,8 @@ const Page: FC = () => {
         try {
             const formData = new FormData()
             formData.set("file", file)
-
-            const response = await fetch("/api/admin/user/import", {
-                method: "POST",
-                body: formData,
-            })
+            const response = await fetch("/api/admin/user/import", { method: "POST", body: formData })
             const result = await readActionResponse<ImportUserResult>(response)
-
             if (!response.ok || !result.success) throw new Error(result.message || "批量导入失败")
 
             await queryClient.invalidateQueries({ queryKey: ["query-user"] })
@@ -373,47 +389,16 @@ const Page: FC = () => {
                 })
             }
 
-            message.open({
-                type: "success",
-                content: getImportResultMessage(result.data),
-            })
+            toast.success(getImportResultMessage(result.data))
         } catch (error) {
-            message.open({
-                type: "error",
-                content: getErrorMessage(error),
-            })
+            toast.error(getErrorMessage(error))
         } finally {
             setIsImporting(false)
         }
     }
 
-    const { data, isLoading } = useQueryUser({
-        createdAfter: createdAt?.[0].toDate(),
-        createdBefore: createdAt?.[1].toDate(),
-        updatedAfter: updatedAt?.[0].toDate(),
-        updatedBefore: updatedAt?.[1].toDate(),
-        pageNum,
-        pageSize,
-        ...rest,
-    })
-
-    const { mutateAsync: unbanUserAsync, isPending: isUnbanUserPending } = useUnbanUser()
-    const { mutateAsync: deleteUserAsync, isPending: isDeleteUserPending } = useDeleteUser()
-
-    const isRequesting = isLoading || isUnbanUserPending || isDeleteUserPending || isTemplateDownloading || isExporting || isImporting
-
-    const onChange: TableProps<User>["onChange"] = function onChange(pagination, filters, sorter, extra) {
-        if (Array.isArray(sorter)) return
-
-        setQuery(prev => ({
-            ...prev,
-            sortBy: sorter.field as UserSortByParams,
-            sortOrder: (sorter.order ? sorter.order.slice(0, -3) : undefined) as SortOrderParams,
-        }))
-    }
-
     return (
-        <div className="flex h-full flex-col gap-4 pt-4">
+        <div className="space-y-6">
             <input
                 ref={importInput}
                 className="hidden"
@@ -421,77 +406,110 @@ const Page: FC = () => {
                 accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 onChange={onImportFileChange}
             />
-            <div className="flex-none px-4">
-                <Form<FormParams> name="query-user-form" className="gap-y-4" layout="inline" onFinish={setQuery}>
-                    <FormItem<FormParams> name="name" label="用户名">
-                        <Input />
-                    </FormItem>
-                    <FormItem<FormParams> name="nickname" label="昵称">
-                        <Input />
-                    </FormItem>
-                    <FormItem<FormParams> name="phoneNumber" label="手机号">
-                        <Input />
-                    </FormItem>
-                    <FormItem<FormParams> name="createdAt" label="创建时间">
-                        <DatePicker.RangePicker />
-                    </FormItem>
-                    <FormItem<FormParams> name="updatedAt" label="更新时间">
-                        <DatePicker.RangePicker />
-                    </FormItem>
-                    <FormItem<FormParams>>
-                        <Button htmlType="submit" type="primary" disabled={isRequesting}>
-                            查询
-                        </Button>
-                    </FormItem>
-                    <FormItem<FormParams>>
-                        <Button htmlType="button" type="text" disabled={isRequesting} onClick={() => setQuery({} as FormParams)}>
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                <div>
+                    <h1 className="text-2xl font-semibold tracking-tight">用户管理</h1>
+                    <p className="text-muted-foreground mt-1 text-sm">管理用户资料、状态与批量数据。</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" disabled={isRequesting} onClick={() => void onDownloadTemplate()}>
+                        {isTemplateDownloading ? <LoaderCircleIcon className="animate-spin" /> : <FileSpreadsheetIcon />}
+                        下载模板
+                    </Button>
+                    <Button variant="outline" disabled={isRequesting} onClick={() => importInput.current?.click()}>
+                        {isImporting ? <LoaderCircleIcon className="animate-spin" /> : <UploadIcon />}
+                        批量导入
+                    </Button>
+                    <Button variant="outline" disabled={isRequesting} onClick={() => void onExport()}>
+                        {isExporting ? <LoaderCircleIcon className="animate-spin" /> : <DownloadIcon />}
+                        批量导出
+                    </Button>
+                    <Button
+                        disabled={isRequesting}
+                        onClick={() => {
+                            setEditId(undefined)
+                            setShowEditor(true)
+                        }}
+                    >
+                        <PlusIcon />
+                        新增用户
+                    </Button>
+                </div>
+            </div>
+            <Card>
+                <CardContent>
+                    <form
+                        className="flex flex-wrap items-end gap-3"
+                        onSubmit={event => {
+                            event.preventDefault()
+                            event.stopPropagation()
+                            void form.handleSubmit()
+                        }}
+                    >
+                        {filterFields.map(({ name, label }) => (
+                            <form.Field key={name} name={name}>
+                                {field => (
+                                    <Field className="w-full sm:w-44">
+                                        <FieldLabel htmlFor={`user-filter-${name}`}>{label}</FieldLabel>
+                                        <Input
+                                            id={`user-filter-${name}`}
+                                            value={field.state.value}
+                                            onChange={event => field.handleChange(event.target.value)}
+                                        />
+                                    </Field>
+                                )}
+                            </form.Field>
+                        ))}
+                        <form.Field name="createdAt">
+                            {field => (
+                                <Field className="w-full sm:w-auto">
+                                    <FieldLabel>创建时间</FieldLabel>
+                                    <DateRangePicker value={field.state.value} onValueChange={field.handleChange} />
+                                </Field>
+                            )}
+                        </form.Field>
+                        <form.Field name="updatedAt">
+                            {field => (
+                                <Field className="w-full sm:w-auto">
+                                    <FieldLabel>更新时间</FieldLabel>
+                                    <DateRangePicker value={field.state.value} onValueChange={field.handleChange} />
+                                </Field>
+                            )}
+                        </form.Field>
+                        <form.Subscribe selector={state => [state.canSubmit, state.isSubmitting, state.isPristine]}>
+                            {([canSubmit, isSubmitting, isPristine]) => (
+                                <Button type="submit" disabled={!canSubmit || isRequesting || isSubmitting || isPristine}>
+                                    查询
+                                </Button>
+                            )}
+                        </form.Subscribe>
+                        <Button type="button" variant="ghost" disabled={isRequesting} onClick={onReset}>
                             重置
                         </Button>
-                    </FormItem>
-                    <div className="ml-auto flex flex-none flex-wrap gap-2">
-                        <Button
-                            htmlType="button"
-                            icon={<IconFileSpreadsheet size={16} />}
-                            disabled={isRequesting}
-                            loading={isTemplateDownloading}
-                            onClick={onDownloadTemplate}
-                        >
-                            下载模板
-                        </Button>
-                        <Button htmlType="button" icon={<IconFileImport size={16} />} disabled={isRequesting} loading={isImporting} onClick={onImport}>
-                            批量导入
-                        </Button>
-                        <Button htmlType="button" icon={<IconFileExport size={16} />} disabled={isRequesting} loading={isExporting} onClick={onExport}>
-                            批量导出
-                        </Button>
-                        <Button htmlType="button" color="primary" icon={<IconPlus size={16} />} disabled={isRequesting} onClick={onAdd}>
-                            新增
-                        </Button>
-                    </div>
-                </Form>
-            </div>
-            <div ref={container} className="px-4 fill-y">
-                <UserEditor id={editId} open={showEditor} onClose={onClose} />
-                <BanUserEditor id={banId} open={isNonNullable(banId)} onClose={() => setBanId(undefined)} />
-                <Table<User>
-                    columns={columns}
-                    dataSource={data?.list}
-                    loading={isLoading}
-                    rowKey="id"
-                    onChange={onChange}
-                    scroll={{ y }}
-                    pagination={{
-                        current: pageNum,
-                        pageSize,
-                        total: data?.total,
-                        showTotal,
-                        showSizeChanger: true,
-                        onChange(page, pageSize) {
-                            setQuery(prev => ({ ...prev, pageNum: page, pageSize }))
-                        },
-                    }}
-                />
-            </div>
+                    </form>
+                </CardContent>
+            </Card>
+            <DataTable
+                columns={columns}
+                data={data?.list}
+                loading={isLoading}
+                pageNum={query.pageNum}
+                pageSize={query.pageSize}
+                sorting={sorting}
+                total={data?.total}
+                getRowId={user => user.id}
+                onPageChange={(pageNum, pageSize) => setQuery(previous => ({ ...previous, pageNum, pageSize }))}
+                onSortingChange={onSortingChange}
+            />
+            <UserEditor
+                id={editId}
+                open={showEditor}
+                onClose={() => {
+                    setEditId(undefined)
+                    setShowEditor(false)
+                }}
+            />
+            <BanUserEditor id={banId} open={!!banId} onClose={() => setBanId(undefined)} />
         </div>
     )
 }

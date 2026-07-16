@@ -1,6 +1,7 @@
 import { useId } from "react"
 
 import { withUseMutationDefaults } from "soda-tanstack-query"
+import { toast } from "sonner"
 
 import type { login } from "@/shared/login"
 
@@ -9,22 +10,13 @@ export const createUseLogin = withUseMutationDefaults<typeof login>(() => {
 
     return {
         onMutate(variables, context) {
-            message.open({
-                key,
-                type: "loading",
-                content: "登录中...",
-                duration: 0,
-            })
+            toast.loading("登录中...", { id: key, duration: Infinity })
         },
         onSuccess(data, variables, onMutateResult, context) {
-            message.open({
-                key,
-                type: "success",
-                content: "登录成功",
-            })
+            toast.success("登录成功", { id: key })
         },
         onError(error, variables, onMutateResult, context) {
-            message.destroy(key)
+            toast.dismiss(key)
         },
         onSettled(data, error, variables, onMutateResult, context) {},
     }
