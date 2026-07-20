@@ -16,7 +16,7 @@
 
 - Tailwind CSS 使用 `3.4.19`。
 - `tailwind-merge` 使用 `2.6.0`。
-- 浏览器目标从 Shadcn + Tailwind CSS 4 项目的现代浏览器基线切换到当前 Tailwind CSS 3 模板的既有要求：Chrome 87、Edge 88、Firefox 78 和 Safari 14，因此必须兼容 Chrome 102。
+- 浏览器目标统一到当前 Tailwind CSS 3 模板与 `geshu-next-template` 的真实基线：单行 `chrome >= 102`。
 - shadcn CLI 使用执行时最新版，并作为项目开发依赖通过 `pnpm exec shadcn` 执行。
 - `components.json` 使用 `style: new-york`，并让 `tailwind.config` 指向真实的 `tailwind.config.ts`。
 - 底层组件使用 Radix，不保留 Base UI 兼容封装。
@@ -106,17 +106,16 @@ export default config
 
 ### 4. 重新建立浏览器兼容基线
 
-Shadcn + Tailwind CSS 4 源项目按最新浏览器设计，其 `.browserslistrc` 不能直接作为降级后的目标。迁移时应恢复执行时当前 T3 模板的真实 Browserslist；当前基线为：
+Shadcn + Tailwind CSS 4 源项目按最新浏览器设计，其 `.browserslistrc` 不能直接作为降级后的目标。迁移时应统一使用执行时当前 T3 模板的真实 Browserslist，并保持与 `geshu-next-template` 一致；当前基线为：
 
 ```text
-chrome >= 87
-edge >= 88
-firefox >= 78
-safari >= 14
+chrome >= 102
 ```
 
 Browserslist 只控制构建工具已知的静态转换，不能保证所有最新版 shadcn 输出自动兼容 Chrome 102。必须在迁移结果中建立以下兼容层：
 
+- 保留 `scripts/generatePolyfills.mjs` 和 `generated/polyfills.ts`，在开发与构建前根据当前 Browserslist 重新生成所需的 `core-js` 模块。
+- 在 `instrumentation-client.ts` 中只引入一次生成的 JS Polyfill，不手工维护模块清单。
 - 在根客户端 Provider 的最高层动态导入 `css-has-pseudo/browser`，原生支持 `:has()` 时跳过初始化。
 - 使用模块级 Promise 防止 React 严格模式重复初始化。
 - 根据生产 CSS 中每个 `:has()` 条件配置 `observedAttributes`。当前模板至少覆盖 `data-state`、`data-orientation`、`data-slot`、`data-variant`、`data-sidebar`、常见 `aria-*` 状态和 `role`；每次添加新 shadcn 组件后重新审计。

@@ -9,7 +9,7 @@
 固定目标如下：
 
 - Tailwind CSS 使用 `3.4.19`。
-- 浏览器要求沿用迁移前 Ant Design + Tailwind CSS 3 项目的既有基线，不得在 UI 迁移时擅自提高最低版本；本模板当前基线为 Chrome 87、Edge 88、Firefox 78 和 Safari 14，因此必须兼容 Chrome 102。
+- 浏览器要求统一使用当前模板与 `geshu-next-template` 的真实 `.browserslistrc`；当前基线为单行 `chrome >= 102`。
 - shadcn CLI 使用执行时最新版，并通过项目开发依赖中的 `pnpm exec shadcn` 执行。
 - shadcn 使用 `new-york` 风格和 Radix 底层组件。
 - `components.json` 必须让 `tailwind.config` 指向真实的 `tailwind.config.ts`。
@@ -151,12 +151,14 @@ export default config
 
 主题 Token 应以执行时的当前模板为准。不要从旧 Tailwind CSS 4 文档或旧预设服务复制生成快照。
 
-### 5. 保留旧浏览器要求
+### 5. 统一 Chrome 102 兼容基线
 
-Ant Design + Tailwind CSS 3 源项目与当前模板的浏览器要求相同，因此迁移时必须保留迁移前 `.browserslistrc`。如果目标文件缺失，使用当前模板执行时的真实文件作为基线；不能因为 shadcn 文档面向现代浏览器就改成 `last 2 versions`。
+迁移时必须统一使用执行时当前模板的真实 `.browserslistrc`，并保持与 `geshu-next-template` 一致；不能盲目保留源项目旧范围，也不能因为 shadcn 文档面向现代浏览器就改成 `last 2 versions`。当前基线为单行 `chrome >= 102`。
 
 Browserslist 和 Autoprefixer 只能决定可静态转换的声明与前缀，不能完整转换依赖 DOM 关系的 `:has()`，也不能让 Chrome 102 原生理解动态视口单位。迁移时必须同时落实：
 
+- 保留 `scripts/generatePolyfills.mjs` 和 `generated/polyfills.ts`，在开发与构建前根据当前 Browserslist 重新生成所需的 `core-js` 模块。
+- 在 `instrumentation-client.ts` 中只引入一次生成的 JS Polyfill，不手工维护模块清单。
 - 在根客户端 Provider 的最高层初始化 `css-has-pseudo/browser`，并在浏览器原生支持 `:has()` 时跳过下载和初始化。
 - 使用模块级 Promise 防止 React 严格模式重复初始化。
 - 将生成 CSS 中 `:has()` 条件涉及的自定义属性加入 `observedAttributes`。当前模板至少观察 `data-state`、`data-orientation`、`data-slot`、`data-variant`、`data-sidebar`、常见 `aria-*` 状态和 `role`；新增 shadcn 组件后必须重新审计，不能把现有列表当作永久完整清单。
