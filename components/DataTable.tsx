@@ -1,8 +1,18 @@
 "use client"
 
-import type { ReactNode } from "react"
+import type { CSSProperties, ReactNode } from "react"
 
-import { type ColumnDef, type OnChangeFn, type RowData, type SortingState, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table"
+import {
+    type Column,
+    type ColumnDef,
+    type ColumnPinningState,
+    type OnChangeFn,
+    type RowData,
+    type SortingState,
+    flexRender,
+    getCoreRowModel,
+    useReactTable,
+} from "@tanstack/react-table"
 import { ArrowDownIcon, ArrowUpIcon, ChevronLeftIcon, ChevronRightIcon, ChevronsLeftIcon, ChevronsRightIcon, ChevronsUpDownIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -10,8 +20,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
+import { cn } from "@/utils/shadcn"
+
 export interface DataTableProps<TData extends RowData> {
     columns: ColumnDef<TData>[]
+    columnPinning?: ColumnPinningState
     data?: TData[]
     emptyContent?: ReactNode
     loading?: boolean
@@ -24,8 +37,34 @@ export interface DataTableProps<TData extends RowData> {
     onSortingChange: OnChangeFn<SortingState>
 }
 
+function getPinnedColumnStyle<TData extends RowData>(column: Column<TData>): CSSProperties {
+    const pinnedPosition = column.getIsPinned()
+
+    if (!pinnedPosition) return {}
+
+    return {
+        left: pinnedPosition === "left" ? `${column.getStart("left")}px` : undefined,
+        right: pinnedPosition === "right" ? `${column.getAfter("right")}px` : undefined,
+        minWidth: `${column.getSize()}px`,
+        position: "sticky",
+        width: `${column.getSize()}px`,
+        zIndex: 1,
+    }
+}
+
+function getPinnedColumnClassName<TData extends RowData>(column: Column<TData>) {
+    const pinnedPosition = column.getIsPinned()
+
+    return cn(
+        pinnedPosition && "bg-card",
+        pinnedPosition === "left" && column.getIsLastColumn("left") && "border-r",
+        pinnedPosition === "right" && column.getIsFirstColumn("right") && "border-l",
+    )
+}
+
 export function DataTable<TData extends RowData>({
     columns,
+    columnPinning = {},
     data = [],
     emptyContent = "暂无数据",
     loading = false,
@@ -51,6 +90,7 @@ export function DataTable<TData extends RowData>({
         onSortingChange,
         pageCount,
         state: {
+            columnPinning,
             pagination: {
                 pageIndex: pageNum - 1,
                 pageSize,
@@ -76,7 +116,11 @@ export function DataTable<TData extends RowData>({
                                         const sorted = header.column.getIsSorted()
 
                                         return (
-                                            <TableHead key={header.id} className="h-11 whitespace-nowrap text-center">
+                                            <TableHead
+                                                key={header.id}
+                                                className={cn("h-11 whitespace-nowrap text-center", getPinnedColumnClassName(header.column))}
+                                                style={{ ...getPinnedColumnStyle(header.column), zIndex: header.column.getIsPinned() ? 2 : undefined }}
+                                            >
                                                 {header.isPlaceholder ? null : header.column.getCanSort() ? (
                                                     <Button className="mx-auto h-8 px-2" variant="ghost" onClick={header.column.getToggleSortingHandler()}>
                                                         {flexRender(header.column.columnDef.header, header.getContext())}
@@ -95,8 +139,12 @@ export function DataTable<TData extends RowData>({
                             {loading ? (
                                 Array.from({ length: Math.min(pageSize, 10) }, (_, index) => (
                                     <TableRow key={index}>
-                                        {columns.map((column, columnIndex) => (
-                                            <TableCell key={column.id ?? columnIndex} className="text-center">
+                                        {table.getVisibleLeafColumns().map(column => (
+                                            <TableCell
+                                                key={column.id}
+                                                className={cn("text-center", getPinnedColumnClassName(column))}
+                                                style={getPinnedColumnStyle(column)}
+                                            >
                                                 <Skeleton className="h-5 w-full min-w-16" />
                                             </TableCell>
                                         ))}
@@ -106,7 +154,11 @@ export function DataTable<TData extends RowData>({
                                 table.getRowModel().rows.map(row => (
                                     <TableRow key={row.id}>
                                         {row.getVisibleCells().map(cell => (
-                                            <TableCell key={cell.id} className="whitespace-nowrap text-center [&>div]:justify-center">
+                                            <TableCell
+                                                key={cell.id}
+                                                className={cn("whitespace-nowrap text-center [&>div]:justify-center", getPinnedColumnClassName(cell.column))}
+                                                style={getPinnedColumnStyle(cell.column)}
+                                            >
                                                 {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                             </TableCell>
                                         ))}

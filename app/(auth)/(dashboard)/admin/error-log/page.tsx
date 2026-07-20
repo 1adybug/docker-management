@@ -4,13 +4,13 @@ import { type FC, type ReactNode, useEffect, useState } from "react"
 
 import { useForm } from "@tanstack/react-form"
 import type { ColumnDef, SortingState, Updater } from "@tanstack/react-table"
-import { getEnumKey, naturalParser } from "deepsea-tools"
-import type { DateRange } from "react-day-picker"
+import { getEnumKey } from "deepsea-tools"
+import type { StateToQueryFnMap } from "soda-hooks"
 import { useQueryState } from "soda-next"
 import { z } from "zod"
 
 import { DataTable } from "@/components/DataTable"
-import { DateRangePicker } from "@/components/DateRangePicker"
+import { DatePicker } from "@/components/DatePicker"
 import { InfoDialog } from "@/components/InfoDialog"
 import { JsonViewer } from "@/components/JsonViewer"
 import { UserButton } from "@/components/UserButton"
@@ -32,6 +32,7 @@ import { UserRole } from "@/schemas/userRole"
 import type { ErrorLog } from "@/shared/queryErrorLog"
 
 import { formatDateTime } from "@/utils/formatDateTime"
+import { parseQueryDate, stringifyQueryEndDate, stringifyQueryStartDate } from "@/utils/queryDate"
 
 interface ErrorLogFilterValues {
     type: string
@@ -41,7 +42,8 @@ interface ErrorLogFilterValues {
     nickname: string
     ip: string
     userAgent: string
-    createdAt?: DateRange
+    createdAfter?: Date
+    createdBefore?: Date
 }
 
 interface InfoState {
@@ -58,7 +60,8 @@ const errorLogFilterSchema = z.object({
     nickname: z.string(),
     ip: z.string(),
     userAgent: z.string(),
-    createdAt: z.custom<DateRange>().optional(),
+    createdAfter: z.custom<Date>().optional(),
+    createdBefore: z.custom<Date>().optional(),
 })
 
 const filterFields = [
@@ -79,22 +82,25 @@ function parseJson(value: string) {
     }
 }
 
-function toDateRange(after?: number, before?: number): DateRange | undefined {
-    if (!after && !before) return undefined
-    return { from: after ? new Date(after) : undefined, to: before ? new Date(before) : undefined }
+const queryParsers = {
+    createdBefore: parseQueryDate,
+    createdAfter: parseQueryDate,
+    pageNum: pageNumParser,
+    pageSize: pageSizeParser,
+    sortBy: getParser(errorLogSortBySchema.optional().catch(undefined)),
+    sortOrder: getParser(sortOrderSchema.optional().catch(undefined)),
+}
+
+const queryStringifiers: StateToQueryFnMap<typeof queryParsers> = {
+    createdBefore: stringifyQueryEndDate,
+    createdAfter: stringifyQueryStartDate,
 }
 
 const Page: FC = () => {
     const [query, setQuery] = useQueryState({
         keys: ["type", "message", "action", "ip", "userAgent", "name", "nickname"],
-        parse: {
-            createdBefore: naturalParser,
-            createdAfter: naturalParser,
-            pageNum: pageNumParser,
-            pageSize: pageSizeParser,
-            sortBy: getParser(errorLogSortBySchema.optional().catch(undefined)),
-            sortOrder: getParser(sortOrderSchema.optional().catch(undefined)),
-        },
+        parse: queryParsers,
+        stringify: queryStringifiers,
     })
 
     const [info, setInfo] = useState<InfoState>()
@@ -108,7 +114,8 @@ const Page: FC = () => {
             nickname: query.nickname ?? "",
             ip: query.ip ?? "",
             userAgent: query.userAgent ?? "",
-            createdAt: toDateRange(query.createdAfter, query.createdBefore),
+            createdAfter: query.createdAfter,
+            createdBefore: query.createdBefore,
         } as ErrorLogFilterValues,
         validators: {
             onSubmit: errorLogFilterSchema,
@@ -123,8 +130,8 @@ const Page: FC = () => {
                 nickname: value.nickname.trim() || undefined,
                 ip: value.ip.trim() || undefined,
                 userAgent: value.userAgent.trim() || undefined,
-                createdAfter: value.createdAt?.from?.getTime(),
-                createdBefore: value.createdAt?.to?.getTime(),
+                createdAfter: value.createdAfter,
+                createdBefore: value.createdBefore,
                 pageNum: 1,
             }))
         },
@@ -138,8 +145,8 @@ const Page: FC = () => {
         nickname: query.nickname,
         ip: query.ip,
         userAgent: query.userAgent,
-        createdAfter: query.createdAfter ? new Date(query.createdAfter) : undefined,
-        createdBefore: query.createdBefore ? new Date(query.createdBefore) : undefined,
+        createdAfter: query.createdAfter,
+        createdBefore: query.createdBefore,
         pageNum: query.pageNum,
         pageSize: query.pageSize,
         sortBy: query.sortBy,
@@ -157,7 +164,8 @@ const Page: FC = () => {
             nickname: query.nickname ?? "",
             ip: query.ip ?? "",
             userAgent: query.userAgent ?? "",
-            createdAt: toDateRange(query.createdAfter, query.createdBefore),
+            createdAfter: query.createdAfter,
+            createdBefore: query.createdBefore,
         })
     }, [form, query.action, query.createdAfter, query.createdBefore, query.ip, query.message, query.name, query.nickname, query.type, query.userAgent])
 
@@ -165,15 +173,17 @@ const Page: FC = () => {
         {
             id: "index",
             header: "序号",
+            size: 72,
             cell: ({ row }) => (query.pageNum - 1) * query.pageSize + row.index + 1,
         },
         {
             accessorKey: "name",
             header: "用户",
             enableSorting: true,
+            size: 160,
             cell: ({ row }) => (row.original.userId && row.original.name ? <UserButton data={{ id: row.original.userId, name: row.original.name }} /> : "-"),
         },
-        { accessorKey: "nickname", header: "昵称", enableSorting: true },
+        { accessorKey: "nickname", header: "昵称", enableSorting: true, size: 160 },
         { accessorKey: "phoneNumber", header: "手机号" },
         {
             accessorKey: "role",
@@ -213,7 +223,6 @@ const Page: FC = () => {
                     "-"
                 ),
         },
-        { accessorKey: "action", header: "操作", enableSorting: true },
         {
             accessorKey: "params",
             header: "参数",
@@ -256,6 +265,7 @@ const Page: FC = () => {
             enableSorting: true,
             cell: ({ row }) => formatDateTime(row.original.createdAt),
         },
+        { accessorKey: "action", header: "操作", enableSorting: true, size: 160 },
     ]
 
     function onSortingChange(updater: Updater<SortingState>) {
@@ -271,7 +281,17 @@ const Page: FC = () => {
     }
 
     function onReset() {
-        form.reset({ type: "", message: "", action: "", name: "", nickname: "", ip: "", userAgent: "", createdAt: undefined })
+        form.reset({
+            type: "",
+            message: "",
+            action: "",
+            name: "",
+            nickname: "",
+            ip: "",
+            userAgent: "",
+            createdAfter: undefined,
+            createdBefore: undefined,
+        })
 
         setQuery(previous => ({
             ...previous,
@@ -318,11 +338,19 @@ const Page: FC = () => {
                                 )}
                             </form.Field>
                         ))}
-                        <form.Field name="createdAt">
+                        <form.Field name="createdAfter">
                             {field => (
                                 <Field className="w-full sm:w-auto">
-                                    <FieldLabel>创建时间</FieldLabel>
-                                    <DateRangePicker value={field.state.value} onValueChange={field.handleChange} />
+                                    <FieldLabel>创建开始日期</FieldLabel>
+                                    <DatePicker value={field.state.value} onValueChange={field.handleChange} />
+                                </Field>
+                            )}
+                        </form.Field>
+                        <form.Field name="createdBefore">
+                            {field => (
+                                <Field className="w-full sm:w-auto">
+                                    <FieldLabel>创建结束日期</FieldLabel>
+                                    <DatePicker value={field.state.value} onValueChange={field.handleChange} />
                                 </Field>
                             )}
                         </form.Field>
@@ -341,6 +369,7 @@ const Page: FC = () => {
             </Card>
             <DataTable
                 columns={columns}
+                columnPinning={{ left: ["index", "name", "nickname"], right: ["action"] }}
                 data={data?.list}
                 loading={isLoading}
                 pageNum={query.pageNum}
