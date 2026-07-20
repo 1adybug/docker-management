@@ -1,6 +1,8 @@
 import { createRequestFn, flattenZodError, getErrorMessage, isZodError } from "deepsea-tools"
 import { isRedirectError } from "next/dist/client/components/redirect-error"
 
+import "./generated/polyfills"
+
 createRequestFn.use(async (context, next) => {
     try {
         await next()
