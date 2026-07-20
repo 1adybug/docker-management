@@ -25,7 +25,7 @@ export const Toaster: FC = () => (
                 background: "hsl(var(--popover) / 0.95)",
                 border: "1px solid hsl(var(--border) / 0.6)",
                 borderRadius: "calc(var(--radius) * 1.8)",
-                boxShadow: "0 4px 12px color-mix(in oklab, hsl(var(--foreground)) 10%, transparent)",
+                boxShadow: "0 4px 12px hsl(var(--foreground) / 0.1)",
             },
             success: {
                 duration: 3500,

@@ -2,6 +2,8 @@
 
 import type { FC, ReactNode } from "react"
 
+import { clsx } from "deepsea-tools"
+
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
@@ -16,7 +18,12 @@ export interface InfoDialogProps {
 
 export const InfoDialog: FC<InfoDialogProps> = ({ title, description = "查看完整信息。", children, open = false, wide, onClose }) => (
     <Dialog open={open} onOpenChange={nextOpen => !nextOpen && onClose?.()}>
-        <DialogContent className={wide ? "sm:max-w-3xl" : undefined}>
+        <DialogContent
+            className={clsx(
+                "rounded-4xl sm:rounded-4xl [&>button]:inline-flex [&>button]:h-7 [&>button]:w-7 [&>button]:items-center [&>button]:justify-center [&>button]:rounded-2xl",
+                wide && "sm:max-w-3xl",
+            )}
+        >
             <DialogHeader>
                 <DialogTitle>{title}</DialogTitle>
                 <DialogDescription>{description}</DialogDescription>

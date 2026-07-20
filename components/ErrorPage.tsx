@@ -18,7 +18,7 @@ export interface ErrorPageProps extends ComponentProps<"div"> {
 
 export const ErrorPage: FC<ErrorPageProps> = ({ code, title, description, href, link, image, className, ...rest }) => (
     <div className={clsx("grid min-h-full grid-cols-1 bg-background lg:grid-cols-2", className)} {...rest}>
-        <div className="flex min-h-svh flex-col p-6 sm:p-8">
+        <div className="flex min-h-screen flex-col p-6 supports-[min-height:100svh]:min-h-svh sm:p-8">
             <div className="flex items-center justify-between gap-4">
                 <Brand />
                 <ThemeSwitcher variant="outline" />

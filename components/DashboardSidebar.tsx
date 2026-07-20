@@ -91,7 +91,7 @@ const SidebarNavGroup: FC<SidebarNavGroupProps> = ({ label, navs, user }) => {
 
     return (
         <SidebarGroup>
-            <SidebarGroupLabel>{label}</SidebarGroupLabel>
+            <SidebarGroupLabel className="rounded-[var(--radius-xl)]">{label}</SidebarGroupLabel>
             <SidebarGroupContent>
                 <SidebarMenu>
                     {visibleNavs.map(({ href, icon: Icon, name }) => {
@@ -99,7 +99,7 @@ const SidebarNavGroup: FC<SidebarNavGroupProps> = ({ label, navs, user }) => {
 
                         return (
                             <SidebarMenuItem key={href}>
-                                <SidebarMenuButton asChild isActive={isActive}>
+                                <SidebarMenuButton asChild className="rounded-[var(--radius-xl)]" isActive={isActive}>
                                     <Link href={href} onClick={onNavigate}>
                                         <Icon />
                                         <span>{name}</span>

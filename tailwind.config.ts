@@ -66,9 +66,22 @@ const config: Config = {
                 },
             },
             borderRadius: {
-                lg: "var(--radius)",
-                md: "calc(var(--radius) - 2px)",
-                sm: "calc(var(--radius) - 4px)",
+                // New York 使用的等级小于旧 Rhea；在不修改生成组件的前提下映射到原预设的有效圆角。
+                sm: "var(--radius-xl)",
+                md: "var(--radius-2xl)",
+                lg: "var(--radius-2xl)",
+                xl: "var(--radius-4xl)",
+                "2xl": "var(--radius-2xl)",
+                "3xl": "var(--radius-3xl)",
+                "4xl": "var(--radius-4xl)",
+            },
+            height: {
+                // New York 默认控件使用 h-9，旧 Rhea 的同级控件实际为 2rem。
+                9: "2rem",
+            },
+            width: {
+                // 同步图标按钮、分页项与 Switch 的旧预设宽度。
+                9: "2rem",
             },
             fontFamily: {
                 heading: ["var(--font-inter)"],

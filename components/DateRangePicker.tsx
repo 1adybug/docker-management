@@ -51,8 +51,9 @@ export const DateRangePicker: FC<DateRangePickerProps> = ({ value: _value, onVal
                         <span className="truncate">{label}</span>
                     </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto border-border/60 bg-popover/95 p-0 backdrop-blur-md" align="start">
+                <PopoverContent className="w-auto overflow-hidden rounded-3xl border-border/60 bg-popover/95 p-0 backdrop-blur-md" align="start">
                     <Calendar
+                        className="bg-transparent"
                         mode="range"
                         locale={zhCN}
                         weekStartsOn={1}

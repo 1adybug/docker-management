@@ -5,6 +5,9 @@ const config = {
     plugins: {
         tailwindcss: {},
         autoprefixer: {},
+        "css-has-pseudo": {
+            preserve: true,
+        },
     },
 }
 
