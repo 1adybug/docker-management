@@ -295,7 +295,7 @@ const Page: FC = () => {
                 <p className="mt-1 text-sm text-muted-foreground">查询异常消息、调用堆栈与请求上下文。</p>
             </div>
             <Card>
-                <CardContent>
+                <CardContent className="pt-6">
                     <form
                         className="flex flex-wrap items-end gap-3"
                         onSubmit={event => {

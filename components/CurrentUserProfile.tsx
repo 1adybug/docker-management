@@ -142,7 +142,7 @@ export const CurrentUserProfile: FC<CurrentUserProfileProps> = ({ className, dat
                 <p className="mt-1 text-sm text-muted-foreground">查看账户信息并维护个人资料。</p>
             </div>
 
-            <Card className="relative isolate">
+            <Card className="relative isolate overflow-hidden">
                 <div className="absolute inset-0 -z-10 bg-gradient-to-r from-primary/20 via-primary/10 to-primary/5" aria-hidden />
                 <CardContent className="flex flex-col gap-5 pt-8 sm:flex-row sm:items-end">
                     <Avatar className="size-24 flex-none shadow-sm ring-4 ring-card">
@@ -297,7 +297,7 @@ export const CurrentUserProfile: FC<CurrentUserProfileProps> = ({ className, dat
                             {formatDateTime(currentUser.updatedAt)}
                         </ProfileInformationItem>
                     </CardContent>
-                    <CardFooter className="gap-2 border-t text-xs text-muted-foreground">
+                    <CardFooter className="gap-2 border-t pt-6 text-xs text-muted-foreground">
                         <ShieldCheckIcon className="size-4 text-primary" />
                         账户标识和时间记录不可手动修改。
                     </CardFooter>

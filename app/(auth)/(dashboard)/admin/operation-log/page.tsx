@@ -246,7 +246,7 @@ const Page: FC = () => {
                 <p className="mt-1 text-sm text-muted-foreground">查询系统内发生的业务操作与调用参数。</p>
             </div>
             <Card>
-                <CardContent>
+                <CardContent className="pt-6">
                     <form
                         className="flex flex-wrap items-end gap-3"
                         onSubmit={event => {
