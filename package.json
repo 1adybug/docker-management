@@ -65,7 +65,7 @@
         "@1adybug/eslint": "^0.0.12",
         "@1adybug/prettier": "^0.0.31",
         "@types/better-sqlite3": "^7.6.13",
-        "@types/node": "^24.13.3",
+        "@types/node": "^26.1.1",
         "@types/react": "^19.2.17",
         "@types/react-dom": "^19.2.3",
         "@types/yauzl": "^2.10.3",

@@ -1,4 +1,4 @@
-import { constants } from "node:fs"
+import { type Stats, constants } from "node:fs"
 import { access, chmod, chown, lstat, mkdir, open, stat } from "node:fs/promises"
 import { basename, dirname, extname, isAbsolute, resolve } from "node:path"
 
@@ -65,7 +65,7 @@ export interface ComposeMountPathCandidate {
 /** 已存在的路径信息 */
 export interface ExistingPathInfo {
     path: string
-    stat: Awaited<ReturnType<typeof stat>>
+    stat: Stats
 }
 
 /** 构建挂载检查项参数 */
@@ -336,7 +336,7 @@ async function getPathCreateBlockedMessage(path: string, isAbsolutePath: boolean
     return undefined
 }
 
-function getExistingPathKind(pathStat: Awaited<ReturnType<typeof stat>>) {
+function getExistingPathKind(pathStat: Stats) {
     if (pathStat.isFile()) return ProjectStartMountPathKind.文件
     if (pathStat.isDirectory()) return ProjectStartMountPathKind.文件夹
     return undefined
@@ -586,13 +586,13 @@ function getPermissionRepairItems(items: ProjectStartMountItem[], candidates: Co
         .filter((item): item is ComposeMountPathPermissionRepairItem => !!item)
 }
 
-function getNextPermissionMode(pathStat: Awaited<ReturnType<typeof stat>>) {
+function getNextPermissionMode(pathStat: Stats) {
     const currentMode = Number(pathStat.mode)
     const addExecute = pathStat.isDirectory() || (currentMode & 0o111) > 0
     return currentMode | 0o666 | (addExecute ? 0o111 : 0)
 }
 
-async function applyMountPathPermission(path: string, onVisit: (path: string, pathStat: Awaited<ReturnType<typeof stat>>) => Promise<void>) {
+async function applyMountPathPermission(path: string, onVisit: (path: string, pathStat: Stats) => Promise<void>) {
     const pathLStat = await lstat(path)
 
     // 避免修复符号链接指向的宿主机其他位置
@@ -602,13 +602,13 @@ async function applyMountPathPermission(path: string, onVisit: (path: string, pa
     await onVisit(path, pathStat)
 }
 
-async function applyMountPathMode(path: string, pathStat: Awaited<ReturnType<typeof stat>>) {
+async function applyMountPathMode(path: string, pathStat: Stats) {
     const nextMode = getNextPermissionMode(pathStat)
     if ((Number(pathStat.mode) & 0o777) === (nextMode & 0o777)) return
     await chmod(path, nextMode)
 }
 
-async function applyMountPathOwner(path: string, pathStat: Awaited<ReturnType<typeof stat>>, numericUser: ComposeNumericUser) {
+async function applyMountPathOwner(path: string, pathStat: Stats, numericUser: ComposeNumericUser) {
     const currentUid = Number(pathStat.uid)
     const currentGid = Number(pathStat.gid)
     const nextGid = numericUser.gid ?? currentGid
