@@ -34,18 +34,26 @@ export const DatePicker: FC<DatePickerProps> = ({ value: _value, onValueChange: 
     return (
         <div className="flex w-full min-w-0 items-center gap-1 sm:w-auto">
             <Popover>
-                <PopoverTrigger
-                    render={<Button className="min-w-0 flex-auto justify-start font-normal sm:min-w-44" type="button" variant="outline" {...rest} />}
-                >
-                    <CalendarDaysIcon />
-                    <span className="truncate">{value ? formatDateTime(value, "YYYY年M月D日") : "选择日期"}</span>
+                <PopoverTrigger asChild>
+                    <Button className="min-w-0 flex-auto justify-start font-normal sm:min-w-44" type="button" variant="outline" {...rest}>
+                        <CalendarDaysIcon />
+                        <span className="truncate">{value ? formatDateTime(value, "YYYY年M月D日") : "选择日期"}</span>
+                    </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" locale={zhCN} weekStartsOn={1} selected={value} formatters={{ formatWeekdayName }} onSelect={onValueChange} />
+                <PopoverContent className="w-auto overflow-hidden rounded-3xl border-border/60 bg-popover/95 p-0 backdrop-blur-md" align="start">
+                    <Calendar
+                        className="bg-transparent"
+                        mode="single"
+                        locale={zhCN}
+                        weekStartsOn={1}
+                        selected={value}
+                        formatters={{ formatWeekdayName }}
+                        onSelect={onValueChange}
+                    />
                 </PopoverContent>
             </Popover>
             {value && (
-                <Button type="button" variant="ghost" size="icon-sm" aria-label="清除日期" onClick={() => onValueChange(undefined)}>
+                <Button className="h-7 w-7" type="button" variant="ghost" size="icon" aria-label="清除日期" onClick={() => onValueChange(undefined)}>
                     <XIcon />
                 </Button>
             )}
