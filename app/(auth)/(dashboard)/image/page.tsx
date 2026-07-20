@@ -917,6 +917,7 @@ const Page: FC = () => {
     }
 
     const rowSelection: TableProps<DockerImageItem>["rowSelection"] = {
+        fixed: true,
         preserveSelectedRowKeys: true,
         selectedRowKeys: selectedImageReferences,
         onChange(selectedRowKeys) {
@@ -935,6 +936,7 @@ const Page: FC = () => {
             dataIndex: "repository",
             key: "repository",
             align: "left",
+            fixed: "left",
             sorter: true,
             sortOrder: getSortOrder(query, "repository"),
             render(value: string) {
@@ -947,6 +949,7 @@ const Page: FC = () => {
             dataIndex: "tag",
             key: "tag",
             align: "center",
+            fixed: "left",
             sorter: true,
             sortOrder: getSortOrder(query, "tag"),
             render(value: string) {
@@ -1040,6 +1043,7 @@ const Page: FC = () => {
             title: "操作",
             key: "operation",
             align: "center",
+            fixed: "right",
             width: 280,
             render(value, record) {
                 return (
@@ -1226,7 +1230,7 @@ const Page: FC = () => {
                     }}
                     rowKey={({ reference }) => reference}
                     rowSelection={rowSelection}
-                    scroll={{ y }}
+                    scroll={{ x: "max-content", y }}
                 />
             </div>
             <Modal

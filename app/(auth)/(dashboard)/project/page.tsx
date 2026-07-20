@@ -6,10 +6,10 @@ import { IconCopy, IconDownload, IconEdit, IconFileText, IconPlayerPlay, IconPla
 import { type TableProps, Button, Checkbox, DatePicker, Form, Input, Modal, Select, Table, Tabs } from "antd"
 import { useForm } from "antd/es/form/Form"
 import FormItem from "antd/es/form/FormItem"
-import { clsx, formatTime, naturalParser, showTotal } from "deepsea-tools"
+import { clsx, formatTime, showTotal } from "deepsea-tools"
 import { useRouter } from "next/navigation"
-import { type Columns, getTimeRange, useScroll } from "soda-antd"
-import { transformState } from "soda-hooks"
+import { type Columns, useScroll } from "soda-antd"
+import type { StateToQueryFnMap } from "soda-hooks"
 import { useQueryState } from "soda-next"
 
 import { ProjectLogDrawer } from "@/components/ProjectLogDrawer"
@@ -36,6 +36,7 @@ import type { DockerContainerItem } from "@/shared/queryDockerContainer"
 import type { ProjectSummary } from "@/shared/queryProject"
 
 import { getSortOrder } from "@/utils/getSortOrder"
+import { parseQueryDate, stringifyQueryEndDate, stringifyQueryStartDate } from "@/utils/queryDate"
 
 /** 项目删除方式 */
 export const ProjectDeleteMode = {
@@ -245,6 +246,24 @@ const ProjectStartMountItemCard: FC<ProjectStartMountItemCardProps> = ({ item, d
     )
 }
 
+const queryParsers = {
+    createdBefore: parseQueryDate,
+    createdAfter: parseQueryDate,
+    updatedBefore: parseQueryDate,
+    updatedAfter: parseQueryDate,
+    pageNum: pageNumParser,
+    pageSize: pageSizeParser,
+    sortBy: getParser(projectSortBySchema.optional().catch(undefined)),
+    sortOrder: getParser(sortOrderSchema.optional().catch(undefined)),
+}
+
+const queryStringifiers: StateToQueryFnMap<typeof queryParsers> = {
+    createdBefore: stringifyQueryEndDate,
+    createdAfter: stringifyQueryStartDate,
+    updatedBefore: stringifyQueryEndDate,
+    updatedAfter: stringifyQueryStartDate,
+}
+
 const Page: FC = () => {
     const [logOpen, setLogOpen] = useState(false)
     const [logName, setLogName] = useState<string | undefined>(undefined)
@@ -258,40 +277,11 @@ const Page: FC = () => {
     const router = useRouter()
     const startCheckRequestId = useRef(0)
 
-    const [query, setQuery] = transformState(
-        useQueryState({
-            keys: ["name", "xName", "contentKeyword"],
-            parse: {
-                createdBefore: naturalParser,
-                createdAfter: naturalParser,
-                updatedBefore: naturalParser,
-                updatedAfter: naturalParser,
-                pageNum: pageNumParser,
-                pageSize: pageSizeParser,
-                sortBy: getParser(projectSortBySchema.optional().catch(undefined)),
-                sortOrder: getParser(sortOrderSchema.optional().catch(undefined)),
-            },
-        }),
-        {
-            get({ createdAfter, createdBefore, updatedAfter, updatedBefore, ...rest }) {
-                return {
-                    createdAt: getTimeRange(createdAfter, createdBefore),
-                    updatedAt: getTimeRange(updatedAfter, updatedBefore),
-                    ...rest,
-                }
-            },
-            set({ createdAt, updatedAt, ...rest }) {
-                return {
-                    createdAfter: createdAt?.[0].valueOf(),
-                    createdBefore: createdAt?.[1].valueOf(),
-                    updatedAfter: updatedAt?.[0].valueOf(),
-                    updatedBefore: updatedAt?.[1].valueOf(),
-                    ...rest,
-                }
-            },
-            dependOnGet: false,
-        },
-    )
+    const [query, setQuery] = useQueryState({
+        keys: ["name", "xName", "contentKeyword"],
+        parse: queryParsers,
+        stringify: queryStringifiers,
+    })
 
     type FormParams = typeof query
 
@@ -300,13 +290,13 @@ const Page: FC = () => {
     const container = useRef<HTMLDivElement>(null)
     const { y } = useScroll(container, { paginationMargin: 32 })
 
-    const { createdAt, updatedAt, pageNum, pageSize, ...rest } = query
+    const { createdAfter, createdBefore, updatedAfter, updatedBefore, pageNum, pageSize, ...rest } = query
 
     const { data, isLoading } = useQueryProject({
-        createdAfter: createdAt?.[0].toDate(),
-        createdBefore: createdAt?.[1].toDate(),
-        updatedAfter: updatedAt?.[0].toDate(),
-        updatedBefore: updatedAt?.[1].toDate(),
+        createdAfter: createdAfter?.toDate(),
+        createdBefore: createdBefore?.toDate(),
+        updatedAfter: updatedAfter?.toDate(),
+        updatedBefore: updatedBefore?.toDate(),
         pageNum,
         pageSize,
         ...rest,
@@ -327,8 +317,10 @@ const Page: FC = () => {
             name: query.name,
             xName: query.xName,
             contentKeyword: query.contentKeyword,
-            createdAt: query.createdAt,
-            updatedAt: query.updatedAt,
+            createdAfter: query.createdAfter,
+            createdBefore: query.createdBefore,
+            updatedAfter: query.updatedAfter,
+            updatedBefore: query.updatedBefore,
         })
     }, [form, query])
 
@@ -538,6 +530,7 @@ const Page: FC = () => {
             dataIndex: "displayName",
             key: "xName",
             align: "center",
+            fixed: "left",
             sorter: true,
             sortOrder: getSortOrder(query, "xName"),
             render(value, record) {
@@ -549,6 +542,7 @@ const Page: FC = () => {
             dataIndex: "name",
             key: "name",
             align: "center",
+            fixed: "left",
             width: 220,
             ellipsis: true,
             sorter: true,
@@ -604,6 +598,7 @@ const Page: FC = () => {
             title: "操作",
             key: "operation",
             align: "center",
+            fixed: "right",
             render(value, record) {
                 return (
                     <div className="inline-flex flex-wrap gap-1">
@@ -714,11 +709,17 @@ const Page: FC = () => {
                     <FormItem<FormParams> name="contentKeyword" label="内容关键字">
                         <Input allowClear />
                     </FormItem>
-                    <FormItem<FormParams> name="createdAt" label="创建时间">
-                        <DatePicker.RangePicker />
+                    <FormItem<FormParams> name="createdAfter" label="创建开始日期">
+                        <DatePicker />
                     </FormItem>
-                    <FormItem<FormParams> name="updatedAt" label="更新时间">
-                        <DatePicker.RangePicker />
+                    <FormItem<FormParams> name="createdBefore" label="创建结束日期">
+                        <DatePicker />
+                    </FormItem>
+                    <FormItem<FormParams> name="updatedAfter" label="更新开始日期">
+                        <DatePicker />
+                    </FormItem>
+                    <FormItem<FormParams> name="updatedBefore" label="更新结束日期">
+                        <DatePicker />
                     </FormItem>
                     <FormItem<FormParams>>
                         <Button htmlType="submit" type="primary" disabled={isRequesting}>
@@ -830,7 +831,7 @@ const Page: FC = () => {
                         showSizeChanger: true,
                     }}
                     rowKey="name"
-                    scroll={{ y }}
+                    scroll={{ x: "max-content", y }}
                 />
             </div>
         </div>

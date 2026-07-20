@@ -792,6 +792,7 @@ const Page: FC = () => {
             dataIndex: "name",
             key: "name",
             align: "left",
+            fixed: "left",
             sorter: true,
             sortOrder: getSortOrder(query, "name"),
             render(value: string, record) {
@@ -832,6 +833,7 @@ const Page: FC = () => {
             title: "操作",
             key: "operation",
             align: "center",
+            fixed: "right",
             render(value, record) {
                 if (isProjectRow(record)) return renderProjectOperations(record)
                 return renderContainerOperations(record.id, record.name)
@@ -845,6 +847,7 @@ const Page: FC = () => {
             dataIndex: "name",
             key: "name",
             align: "left",
+            fixed: "left",
             sorter: true,
             sortOrder: getSortOrder({ sortBy: query.childSortBy, sortOrder: query.childSortOrder }, "name"),
             render(value: string, record) {
@@ -915,6 +918,7 @@ const Page: FC = () => {
             title: "操作",
             key: "operation",
             align: "center",
+            fixed: "right",
             render(value, record) {
                 return renderContainerOperations(record.id, record.name, record.isCurrentContainer)
             },
@@ -963,7 +967,7 @@ const Page: FC = () => {
                 />
                 <Table<DockerContainerTableRow>
                     rowKey="id"
-                    scroll={{ y }}
+                    scroll={{ x: "max-content", y }}
                     columns={columns}
                     dataSource={pagedData}
                     loading={isLoading}
@@ -1002,6 +1006,7 @@ const Page: FC = () => {
                                         dataSource={containers}
                                         onChange={onContainerTableChange}
                                         pagination={false}
+                                        scroll={{ x: "max-content" }}
                                     />
                                 </div>
                             )
