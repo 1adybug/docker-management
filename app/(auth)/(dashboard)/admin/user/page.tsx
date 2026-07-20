@@ -156,8 +156,10 @@ const Page: FC = () => {
         form.setFieldsValue({
             name: query.name,
             phoneNumber: query.phoneNumber,
-            createdAt: query.createdAt,
-            updatedAt: query.updatedAt,
+            createdAfter: query.createdAfter,
+            createdBefore: query.createdBefore,
+            updatedAfter: query.updatedAfter,
+            updatedBefore: query.updatedBefore,
         })
     }, [form, query])
 

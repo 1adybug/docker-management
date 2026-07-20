@@ -83,7 +83,8 @@ const Page: FC = () => {
             name: query.name,
             ip: query.ip,
             userAgent: query.userAgent,
-            createdAt: query.createdAt,
+            createdAfter: query.createdAfter,
+            createdBefore: query.createdBefore,
         })
     }, [form, query])
 
