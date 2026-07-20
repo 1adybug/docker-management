@@ -5,9 +5,9 @@ import { type FC, useEffect, useRef, useState } from "react"
 import { type ModalProps, type TableProps, Button, DatePicker, Form, Input, Modal, Table } from "antd"
 import { useForm } from "antd/es/form/Form"
 import FormItem from "antd/es/form/FormItem"
-import { getEnumKey, isNonNullable, naturalParser, showTotal } from "deepsea-tools"
-import { type Columns, getTimeRange, useScroll } from "soda-antd"
-import { transformState } from "soda-hooks"
+import { getEnumKey, isNonNullable, showTotal } from "deepsea-tools"
+import { type Columns, useScroll } from "soda-antd"
+import type { StateToQueryFnMap } from "soda-hooks"
 import { useQueryState } from "soda-next"
 
 import { JsonViewer } from "@/components/JsonViewer"
@@ -26,6 +26,7 @@ import type { OperationLog } from "@/shared/queryOperationLog"
 
 import { formatDateTime } from "@/utils/formatDateTime"
 import { getSortOrder } from "@/utils/getSortOrder"
+import { parseQueryDate, stringifyQueryEndDate, stringifyQueryStartDate } from "@/utils/queryDate"
 
 function parseJson(value: string) {
     try {
@@ -35,36 +36,26 @@ function parseJson(value: string) {
     }
 }
 
+const queryParsers = {
+    createdBefore: parseQueryDate,
+    createdAfter: parseQueryDate,
+    pageNum: pageNumParser,
+    pageSize: pageSizeParser,
+    sortBy: getParser(operationLogSortBySchema.optional().catch(undefined)),
+    sortOrder: getParser(sortOrderSchema.optional().catch(undefined)),
+}
+
+const queryStringifiers: StateToQueryFnMap<typeof queryParsers> = {
+    createdBefore: stringifyQueryEndDate,
+    createdAfter: stringifyQueryStartDate,
+}
+
 const Page: FC = () => {
-    const [query, setQuery] = transformState(
-        useQueryState({
-            keys: ["action", "ip", "userAgent", "name", "nickname"],
-            parse: {
-                createdBefore: naturalParser,
-                createdAfter: naturalParser,
-                pageNum: pageNumParser,
-                pageSize: pageSizeParser,
-                sortBy: getParser(operationLogSortBySchema.optional().catch(undefined)),
-                sortOrder: getParser(sortOrderSchema.optional().catch(undefined)),
-            },
-        }),
-        {
-            get({ createdAfter, createdBefore, ...rest }) {
-                return {
-                    createdAt: getTimeRange(createdAfter, createdBefore),
-                    ...rest,
-                }
-            },
-            set({ createdAt, ...rest }) {
-                return {
-                    createdAfter: createdAt?.[0].valueOf(),
-                    createdBefore: createdAt?.[1].valueOf(),
-                    ...rest,
-                }
-            },
-            dependOnGet: false,
-        },
-    )
+    const [query, setQuery] = useQueryState({
+        keys: ["action", "ip", "userAgent", "name", "nickname"],
+        parse: queryParsers,
+        stringify: queryStringifiers,
+    })
 
     type FormParams = typeof query
 
@@ -74,11 +65,11 @@ const Page: FC = () => {
     const container = useRef<HTMLDivElement>(null)
     const { y } = useScroll(container, { paginationMargin: 32 })
 
-    const { createdAt, pageNum, pageSize, ...rest } = query
+    const { createdAfter, createdBefore, pageNum, pageSize, ...rest } = query
 
     const { data, isLoading } = useQueryOperationLog({
-        createdAfter: createdAt?.[0].toDate(),
-        createdBefore: createdAt?.[1].toDate(),
+        createdAfter: createdAfter?.toDate(),
+        createdBefore: createdBefore?.toDate(),
         pageNum,
         pageSize,
         ...rest,
@@ -101,14 +92,16 @@ const Page: FC = () => {
             title: "序号",
             key: "index",
             align: "center",
+            fixed: "left",
             render(value, record, index) {
                 return (pageNum - 1) * pageSize + index + 1
             },
         },
         {
-            title: "用户",
+            title: "用户名",
             dataIndex: "name",
             align: "center",
+            fixed: "left",
             sorter: true,
             sortOrder: getSortOrder(query, "name"),
             render(value, record) {
@@ -119,6 +112,7 @@ const Page: FC = () => {
             title: "昵称",
             dataIndex: "nickname",
             align: "center",
+            fixed: "left",
             sorter: true,
             sortOrder: getSortOrder(query, "nickname"),
         },
@@ -134,13 +128,6 @@ const Page: FC = () => {
             render(value) {
                 return value && getEnumKey(UserRole, value)
             },
-        },
-        {
-            title: "操作",
-            dataIndex: "action",
-            align: "center",
-            sorter: true,
-            sortOrder: getSortOrder(query, "action"),
         },
         {
             title: "参数",
@@ -205,6 +192,14 @@ const Page: FC = () => {
                 return formatDateTime(value)
             },
         },
+        {
+            title: "操作",
+            dataIndex: "action",
+            align: "center",
+            fixed: "right",
+            sorter: true,
+            sortOrder: getSortOrder(query, "action"),
+        },
     ]
 
     const onChange: TableProps<OperationLog>["onChange"] = function onChange(pagination, filters, sorter) {
@@ -243,8 +238,11 @@ const Page: FC = () => {
                     <FormItem<FormParams> name="userAgent" label="UserAgent">
                         <Input allowClear />
                     </FormItem>
-                    <FormItem<FormParams> name="createdAt" label="创建时间">
-                        <DatePicker.RangePicker />
+                    <FormItem<FormParams> name="createdAfter" label="创建开始日期">
+                        <DatePicker />
+                    </FormItem>
+                    <FormItem<FormParams> name="createdBefore" label="创建结束日期">
+                        <DatePicker />
                     </FormItem>
                     <FormItem<FormParams>>
                         <Button htmlType="submit" type="primary" disabled={isRequesting}>
@@ -266,7 +264,7 @@ const Page: FC = () => {
                     loading={isLoading}
                     rowKey="id"
                     onChange={onChange}
-                    scroll={{ y }}
+                    scroll={{ x: "max-content", y }}
                     pagination={{
                         current: pageNum,
                         pageSize,

@@ -7,9 +7,9 @@ import { useQueryClient } from "@tanstack/react-query"
 import { type TableProps, Button, DatePicker, Form, Input, Popconfirm, Table } from "antd"
 import { useForm } from "antd/es/form/Form"
 import FormItem from "antd/es/form/FormItem"
-import { getEnumKey, isNonNullable, naturalParser, showTotal } from "deepsea-tools"
-import { type Columns, getTimeRange, useScroll } from "soda-antd"
-import { transformState } from "soda-hooks"
+import { getEnumKey, isNonNullable, showTotal } from "deepsea-tools"
+import { type Columns, useScroll } from "soda-antd"
+import type { StateToQueryFnMap } from "soda-hooks"
 import { useQueryState } from "soda-next"
 
 import { BanUserEditor } from "@/components/BanUserEditor"
@@ -32,6 +32,7 @@ import type { ImportUserResult } from "@/shared/importUser"
 
 import { formatDateTime } from "@/utils/formatDateTime"
 import { getSortOrder } from "@/utils/getSortOrder"
+import { parseQueryDate, stringifyQueryEndDate, stringifyQueryStartDate } from "@/utils/queryDate"
 
 interface ActionResponse<T = unknown> {
     success: boolean
@@ -107,43 +108,32 @@ function getImportResultMessage(result?: ImportUserResult) {
     return `成功添加 ${result.successCount} 个，与现有库重复 ${result.duplicateCount} 个（用户名），信息错误 ${result.errorCount} 个。`
 }
 
+const queryParsers = {
+    createdBefore: parseQueryDate,
+    createdAfter: parseQueryDate,
+    updatedBefore: parseQueryDate,
+    updatedAfter: parseQueryDate,
+    pageNum: pageNumParser,
+    pageSize: pageSizeParser,
+    sortBy: getParser(userSortBySchema.optional().catch(undefined)),
+    sortOrder: getParser(sortOrderSchema.optional().catch(undefined)),
+}
+
+const queryStringifiers: StateToQueryFnMap<typeof queryParsers> = {
+    createdBefore: stringifyQueryEndDate,
+    createdAfter: stringifyQueryStartDate,
+    updatedBefore: stringifyQueryEndDate,
+    updatedAfter: stringifyQueryStartDate,
+}
+
 const Page: FC = () => {
     const queryClient = useQueryClient()
 
-    const [query, setQuery] = transformState(
-        useQueryState({
-            keys: ["id", "name", "nickname", "email", "phoneNumber"],
-            parse: {
-                createdBefore: naturalParser,
-                createdAfter: naturalParser,
-                updatedBefore: naturalParser,
-                updatedAfter: naturalParser,
-                pageNum: pageNumParser,
-                pageSize: pageSizeParser,
-                sortBy: getParser(userSortBySchema.optional().catch(undefined)),
-                sortOrder: getParser(sortOrderSchema.optional().catch(undefined)),
-            },
-        }),
-        {
-            get({ createdAfter, createdBefore, updatedAfter, updatedBefore, ...rest }) {
-                return {
-                    createdAt: getTimeRange(createdAfter, createdBefore),
-                    updatedAt: getTimeRange(updatedAfter, updatedBefore),
-                    ...rest,
-                }
-            },
-            set({ createdAt, updatedAt, ...rest }) {
-                return {
-                    createdAfter: createdAt?.[0].valueOf(),
-                    createdBefore: createdAt?.[1].valueOf(),
-                    updatedAfter: updatedAt?.[0].valueOf(),
-                    updatedBefore: updatedAt?.[1].valueOf(),
-                    ...rest,
-                }
-            },
-            dependOnGet: false,
-        },
-    )
+    const [query, setQuery] = useQueryState({
+        keys: ["id", "name", "nickname", "email", "phoneNumber"],
+        parse: queryParsers,
+        stringify: queryStringifiers,
+    })
 
     type FormParams = typeof query
 
@@ -158,7 +148,7 @@ const Page: FC = () => {
     const container = useRef<HTMLDivElement>(null)
     const importInput = useRef<HTMLInputElement>(null)
     const { y } = useScroll(container, { paginationMargin: 32 })
-    const { createdAt, updatedAt, pageNum, pageSize, ...rest } = query
+    const { createdAfter, createdBefore, updatedAfter, updatedBefore, pageNum, pageSize, ...rest } = query
 
     useEffect(() => {
         form.resetFields()
@@ -176,12 +166,14 @@ const Page: FC = () => {
             title: "序号",
             key: "index",
             align: "center",
+            fixed: "left",
             render: (value, record, index) => (pageNum - 1) * pageSize + index + 1,
         },
         {
             title: "用户名",
             dataIndex: "name",
             align: "center",
+            fixed: "left",
             sorter: true,
             sortOrder: getSortOrder(query, "name"),
         },
@@ -189,6 +181,7 @@ const Page: FC = () => {
             title: "昵称",
             dataIndex: "nickname",
             align: "center",
+            fixed: "left",
             sorter: true,
             sortOrder: getSortOrder(query, "nickname"),
         },
@@ -257,6 +250,7 @@ const Page: FC = () => {
             key: "operation",
             dataIndex: "id",
             align: "center",
+            fixed: "right",
             render(value, record) {
                 return (
                     <div className="inline-flex gap-1">
@@ -309,14 +303,14 @@ const Page: FC = () => {
     }
 
     function getExportParams() {
-        const { createdAt, updatedAt, pageNum, pageSize, ...params } = query
+        const { createdAfter, createdBefore, updatedAfter, updatedBefore, pageNum, pageSize, ...params } = query
 
         return {
             ...params,
-            createdAfter: createdAt?.[0].toISOString(),
-            createdBefore: createdAt?.[1].toISOString(),
-            updatedAfter: updatedAt?.[0].toISOString(),
-            updatedBefore: updatedAt?.[1].toISOString(),
+            createdAfter: createdAfter?.toISOString(),
+            createdBefore: createdBefore?.toISOString(),
+            updatedAfter: updatedAfter?.toISOString(),
+            updatedBefore: updatedBefore?.toISOString(),
         }
     }
 
@@ -402,10 +396,10 @@ const Page: FC = () => {
     }
 
     const { data, isLoading } = useQueryUser({
-        createdAfter: createdAt?.[0].toDate(),
-        createdBefore: createdAt?.[1].toDate(),
-        updatedAfter: updatedAt?.[0].toDate(),
-        updatedBefore: updatedAt?.[1].toDate(),
+        createdAfter: createdAfter?.toDate(),
+        createdBefore: createdBefore?.toDate(),
+        updatedAfter: updatedAfter?.toDate(),
+        updatedBefore: updatedBefore?.toDate(),
         pageNum,
         pageSize,
         ...rest,
@@ -451,11 +445,17 @@ const Page: FC = () => {
                     <FormItem<FormParams> name="phoneNumber" label="手机号">
                         <Input />
                     </FormItem>
-                    <FormItem<FormParams> name="createdAt" label="创建时间">
-                        <DatePicker.RangePicker />
+                    <FormItem<FormParams> name="createdAfter" label="创建开始日期">
+                        <DatePicker />
                     </FormItem>
-                    <FormItem<FormParams> name="updatedAt" label="更新时间">
-                        <DatePicker.RangePicker />
+                    <FormItem<FormParams> name="createdBefore" label="创建结束日期">
+                        <DatePicker />
+                    </FormItem>
+                    <FormItem<FormParams> name="updatedAfter" label="更新开始日期">
+                        <DatePicker />
+                    </FormItem>
+                    <FormItem<FormParams> name="updatedBefore" label="更新结束日期">
+                        <DatePicker />
                     </FormItem>
                     <FormItem<FormParams>>
                         <Button htmlType="submit" type="primary" disabled={isRequesting}>
@@ -498,7 +498,7 @@ const Page: FC = () => {
                     loading={isLoading}
                     rowKey="id"
                     onChange={onChange}
-                    scroll={{ y }}
+                    scroll={{ x: "max-content", y }}
                     pagination={{
                         current: pageNum,
                         pageSize,
