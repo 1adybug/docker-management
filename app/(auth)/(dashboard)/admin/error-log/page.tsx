@@ -370,6 +370,7 @@ const Page: FC = () => {
             <DataTable
                 columns={columns}
                 columnPinning={{ left: ["index", "name", "nickname"], right: ["action"] }}
+                columnSizingKey="admin-error-log"
                 data={data?.list}
                 loading={isLoading}
                 pageNum={query.pageNum}

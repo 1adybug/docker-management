@@ -8,7 +8,9 @@ import { lightTheme } from "@uiw/react-json-view/light"
 import { type StrictOmit, clsx } from "deepsea-tools"
 import { useTheme } from "next-themes"
 
-export interface JsonViewerProps extends StrictOmit<ComponentProps<typeof JsonView>, "children" | "displayDataTypes"> {}
+export interface JsonViewerProps extends StrictOmit<ComponentProps<typeof JsonView>, "children" | "displayDataTypes" | "value"> {
+    value?: unknown
+}
 
 export interface JsonViewerArrowProps extends ComponentProps<"span"> {}
 
@@ -24,13 +26,22 @@ function renderArrow({ children, className, style, ...props }: JsonViewerArrowPr
     )
 }
 
-export const JsonViewer: FC<JsonViewerProps> = ({ className, style, ...rest }) => {
+export const JsonViewer: FC<JsonViewerProps> = ({ className, style, value, ...rest }) => {
     const { resolvedTheme } = useTheme()
+
+    if (value === null || typeof value !== "object") {
+        return (
+            <div className={clsx("whitespace-pre-wrap break-all !font-sans", className)} style={style}>
+                {String(value)}
+            </div>
+        )
+    }
 
     return (
         <JsonView
             className={clsx("!font-sans", className)}
             style={{ ...(resolvedTheme === "dark" ? darkTheme : lightTheme), ...style }}
+            value={value}
             displayDataTypes={false}
             {...rest}
         >

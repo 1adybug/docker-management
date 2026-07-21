@@ -1,11 +1,12 @@
 "use client"
 
-import type { CSSProperties, ReactNode } from "react"
+import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from "react"
 
 import {
     type Column,
     type ColumnDef,
     type ColumnPinningState,
+    type ColumnSizingState,
     type OnChangeFn,
     type RowData,
     type SortingState,
@@ -20,11 +21,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
+import { getDataTableColumnSizingStorageKey, parseDataTableColumnSizing } from "@/utils/dataTableColumnSizing"
 import { cn } from "@/utils/shadcn"
+
+const DataTableColumnPinningMinWidth = 960
+const DataTableColumnResizingMinWidth = 768
+const DataTableFinePointerMediaQuery = "(hover: hover) and (pointer: fine)"
 
 export interface DataTableProps<TData extends RowData> {
     columns: ColumnDef<TData>[]
     columnPinning?: ColumnPinningState
+    columnSizingKey: string
     data?: TData[]
     emptyContent?: ReactNode
     loading?: boolean
@@ -37,18 +44,64 @@ export interface DataTableProps<TData extends RowData> {
     onSortingChange: OnChangeFn<SortingState>
 }
 
-function getPinnedColumnStyle<TData extends RowData>(column: Column<TData>): CSSProperties {
+function getTableColumnStyle<TData extends RowData>(column: Column<TData>): CSSProperties {
     const pinnedPosition = column.getIsPinned()
-
-    if (!pinnedPosition) return {}
+    const size = `${column.getSize()}px`
 
     return {
+        boxSizing: "border-box",
         left: pinnedPosition === "left" ? `${column.getStart("left")}px` : undefined,
+        maxWidth: size,
+        minWidth: size,
+        position: pinnedPosition ? "sticky" : undefined,
         right: pinnedPosition === "right" ? `${column.getAfter("right")}px` : undefined,
-        minWidth: `${column.getSize()}px`,
-        position: "sticky",
-        width: `${column.getSize()}px`,
-        zIndex: 1,
+        width: size,
+        zIndex: pinnedPosition ? 1 : undefined,
+    }
+}
+
+function getStoredColumnSizing(storageKey: string) {
+    try {
+        return parseDataTableColumnSizing(window.localStorage.getItem(storageKey))
+    } catch {
+        return {}
+    }
+}
+
+function useDataTableInteractionCapabilities() {
+    const tableViewportRef = useRef<HTMLDivElement>(null)
+    const [tableViewportWidth, setTableViewportWidth] = useState(0)
+    const [hasFinePointer, setHasFinePointer] = useState(false)
+
+    useEffect(() => {
+        const mediaQuery = window.matchMedia(DataTableFinePointerMediaQuery)
+
+        function onChange() {
+            setHasFinePointer(mediaQuery.matches)
+        }
+
+        mediaQuery.addEventListener("change", onChange)
+        onChange()
+        return () => mediaQuery.removeEventListener("change", onChange)
+    }, [])
+
+    useEffect(() => {
+        const tableViewport = tableViewportRef.current
+        if (!tableViewport) return
+
+        const observer = new ResizeObserver(entries => {
+            setTableViewportWidth(entries[0]?.contentRect.width ?? 0)
+        })
+
+        observer.observe(tableViewport)
+        return () => observer.disconnect()
+    }, [])
+
+    // 使用表格实际宽度，避免桌面侧边栏挤压后仍错误启用固定列与拖动。
+    return {
+        enableColumnPinning: tableViewportWidth >= DataTableColumnPinningMinWidth,
+        enableColumnResizing: hasFinePointer && tableViewportWidth >= DataTableColumnResizingMinWidth,
+        tableViewportRef,
     }
 }
 
@@ -69,6 +122,7 @@ function getPinnedColumnClassName<TData extends RowData>(column: Column<TData>) 
 export function DataTable<TData extends RowData>({
     columns,
     columnPinning = {},
+    columnSizingKey,
     data = [],
     emptyContent = "暂无数据",
     loading = false,
@@ -80,7 +134,11 @@ export function DataTable<TData extends RowData>({
     onPageChange,
     onSortingChange,
 }: DataTableProps<TData>) {
+    const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({})
+    const [loadedColumnSizingStorageKey, setLoadedColumnSizingStorageKey] = useState<string>()
+    const { enableColumnPinning, enableColumnResizing, tableViewportRef } = useDataTableInteractionCapabilities()
     const pageCount = Math.max(1, Math.ceil(total / pageSize))
+    const columnSizingStorageKey = getDataTableColumnSizingStorageKey(columnSizingKey)
 
     // TanStack Table 返回的实例方法无法由 React Compiler 安全记忆化。
     // eslint-disable-next-line react-hooks/incompatible-library
@@ -89,15 +147,21 @@ export function DataTable<TData extends RowData>({
         data,
         defaultColumn: {
             enableSorting: false,
+            maxSize: 640,
+            minSize: 72,
         },
+        columnResizeMode: "onChange",
+        enableColumnResizing,
         getCoreRowModel: getCoreRowModel(),
         getRowId,
         manualPagination: true,
         manualSorting: true,
+        onColumnSizingChange: setColumnSizing,
         onSortingChange,
         pageCount,
         state: {
-            columnPinning,
+            columnPinning: enableColumnPinning ? columnPinning : {},
+            columnSizing: enableColumnResizing ? columnSizing : {},
             pagination: {
                 pageIndex: pageNum - 1,
                 pageSize,
@@ -105,6 +169,27 @@ export function DataTable<TData extends RowData>({
             sorting,
         },
     })
+
+    useEffect(() => {
+        if (!enableColumnResizing) return
+
+        setColumnSizing(getStoredColumnSizing(columnSizingStorageKey))
+        setLoadedColumnSizingStorageKey(columnSizingStorageKey)
+    }, [columnSizingStorageKey, enableColumnResizing])
+
+    useEffect(() => {
+        if (!enableColumnResizing || loadedColumnSizingStorageKey !== columnSizingStorageKey) return
+
+        const timeout = window.setTimeout(() => {
+            try {
+                window.localStorage.setItem(columnSizingStorageKey, JSON.stringify(columnSizing))
+            } catch {
+                // 本地存储不可用时，当前会话内的列宽调整仍然有效。
+            }
+        }, 150)
+
+        return () => window.clearTimeout(timeout)
+    }, [columnSizing, columnSizingStorageKey, enableColumnResizing, loadedColumnSizingStorageKey])
 
     function onPageSizeChange(value: string | null) {
         if (!value) return
@@ -114,8 +199,8 @@ export function DataTable<TData extends RowData>({
     return (
         <div className="space-y-3">
             <div className="overflow-hidden rounded-2xl border bg-card">
-                <div className="overflow-x-auto">
-                    <Table>
+                <div ref={tableViewportRef} className="overflow-x-auto">
+                    <Table className="table-fixed" style={{ minWidth: "100%", width: `${table.getTotalSize()}px` }}>
                         <TableHeader>
                             {table.getHeaderGroups().map(headerGroup => (
                                 <TableRow key={headerGroup.id}>
@@ -125,8 +210,8 @@ export function DataTable<TData extends RowData>({
                                         return (
                                             <TableHead
                                                 key={header.id}
-                                                className={cn("h-11 whitespace-nowrap text-center", getPinnedColumnClassName(header.column))}
-                                                style={{ ...getPinnedColumnStyle(header.column), zIndex: header.column.getIsPinned() ? 2 : undefined }}
+                                                className={cn("relative h-11 whitespace-nowrap text-center", getPinnedColumnClassName(header.column))}
+                                                style={{ ...getTableColumnStyle(header.column), zIndex: header.column.getIsPinned() ? 2 : undefined }}
                                             >
                                                 {header.isPlaceholder ? null : header.column.getCanSort() ? (
                                                     <Button className="mx-auto h-8 px-2" variant="ghost" onClick={header.column.getToggleSortingHandler()}>
@@ -135,6 +220,20 @@ export function DataTable<TData extends RowData>({
                                                     </Button>
                                                 ) : (
                                                     flexRender(header.column.columnDef.header, header.getContext())
+                                                )}
+                                                {header.column.getCanResize() && (
+                                                    <button
+                                                        className={cn(
+                                                            "absolute inset-y-0 right-0 z-10 w-2 cursor-col-resize touch-none select-none after:absolute after:inset-y-2 after:right-0 after:w-px after:bg-transparent after:transition-colors hover:after:bg-current",
+                                                            header.column.getIsResizing() && "text-primary after:bg-current",
+                                                        )}
+                                                        type="button"
+                                                        aria-label={`调整 ${header.column.id} 列宽`}
+                                                        title="拖动调整列宽，双击恢复默认宽度"
+                                                        onDoubleClick={() => header.column.resetSize()}
+                                                        onMouseDown={header.getResizeHandler()}
+                                                        onTouchStart={header.getResizeHandler()}
+                                                    />
                                                 )}
                                             </TableHead>
                                         )
@@ -150,7 +249,7 @@ export function DataTable<TData extends RowData>({
                                             <TableCell
                                                 key={column.id}
                                                 className={cn("text-center", getPinnedColumnClassName(column))}
-                                                style={getPinnedColumnStyle(column)}
+                                                style={getTableColumnStyle(column)}
                                             >
                                                 <Skeleton className="h-5 w-full min-w-16" />
                                             </TableCell>
@@ -163,8 +262,8 @@ export function DataTable<TData extends RowData>({
                                         {row.getVisibleCells().map(cell => (
                                             <TableCell
                                                 key={cell.id}
-                                                className={cn("whitespace-nowrap text-center [&>div]:justify-center", getPinnedColumnClassName(cell.column))}
-                                                style={getPinnedColumnStyle(cell.column)}
+                                                className={cn("truncate text-center [&>div]:justify-center", getPinnedColumnClassName(cell.column))}
+                                                style={getTableColumnStyle(cell.column)}
                                             >
                                                 {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                             </TableCell>
