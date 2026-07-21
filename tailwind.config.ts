@@ -75,14 +75,6 @@ const config: Config = {
                 "3xl": "var(--radius-3xl)",
                 "4xl": "var(--radius-4xl)",
             },
-            height: {
-                // New York 默认控件使用 h-9，旧 Rhea 的同级控件实际为 2rem。
-                9: "2rem",
-            },
-            width: {
-                // 同步图标按钮、分页项与 Switch 的旧预设宽度。
-                9: "2rem",
-            },
             fontFamily: {
                 heading: ["var(--font-noto-sans-sc)"],
                 sans: ["var(--font-noto-sans-sc)"],

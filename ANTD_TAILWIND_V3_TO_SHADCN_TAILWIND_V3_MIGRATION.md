@@ -125,9 +125,9 @@ export default config
 - `background`、`foreground`、`card`、`popover`、`primary`、`secondary`、`muted`、`accent`、`destructive`、`border`、`input`、`ring`、`chart` 和 `sidebar` 语义色。
 - Inter 对应的 `fontFamily.heading` 与 `fontFamily.sans`。
 - `tailwindcss-animate` 插件和 Radix Accordion 动画。
-- 当前模板用于恢复旧预设圆角和控件密度的兼容映射。
+- 当前模板用于恢复旧预设圆角的 Token，以及限定到 shadcn 组件完整结构的控件密度规则。
 
-不要照搬目标项目原来的空 `theme.extend`。也不要通过全局修改常用的 `h-8`、`w-8` 等尺度解决组件差异，否则会连带破坏 Sidebar 和业务布局。
+不要照搬目标项目原来的空 `theme.extend`。也不要通过全局修改常用的 `h-8`、`w-8`、`h-9`、`w-9` 等尺度解决组件差异，否则会连带破坏 Sidebar 和业务布局。
 
 ### 4. 全局 CSS
 
@@ -301,7 +301,7 @@ Radix Select 的值使用非空字符串：
 - Dialog 右上角关闭按钮是否具有 28px 的点击区域。
 - 圆角是否由主题层统一映射，而不是逐个组件硬编码。
 
-本模板在 `tailwind.config.ts` 和 `app/globals.css` 中维护这层兼容规则。迁移目标若要求与本模板一致，应以当前文件为准合并，不得修改 CLI 生成组件。
+本模板在 `tailwind.config.ts` 中维护圆角 Token，在 `app/globals.css` 中通过完整组件结构选择器维护控件密度。迁移目标若要求与本模板一致，应以当前文件为准合并，不得修改 CLI 生成组件，也不得用通用 Tailwind 类组合匹配所有业务元素。
 
 还必须检查以下 New York 结构差异：
 
