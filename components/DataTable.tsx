@@ -57,8 +57,12 @@ function getPinnedColumnClassName<TData extends RowData>(column: Column<TData>) 
 
     return cn(
         pinnedPosition && "bg-card",
-        pinnedPosition === "left" && column.getIsLastColumn("left") && "border-r",
-        pinnedPosition === "right" && column.getIsFirstColumn("right") && "border-l",
+        pinnedPosition === "left" &&
+            column.getIsLastColumn("left") &&
+            "after:bg-border after:pointer-events-none after:absolute after:inset-y-0 after:right-0 after:w-px after:content-['']",
+        pinnedPosition === "right" &&
+            column.getIsFirstColumn("right") &&
+            "before:bg-border before:pointer-events-none before:absolute before:inset-y-0 before:left-0 before:w-px before:content-['']",
     )
 }
 
