@@ -431,7 +431,7 @@ const Page: FC = () => {
         <div className="space-y-6">
             <input
                 ref={importInput}
-                className="hidden"
+                hidden
                 type="file"
                 accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 onChange={onImportFileChange}
