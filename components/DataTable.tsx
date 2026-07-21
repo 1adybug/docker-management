@@ -1,6 +1,6 @@
 "use client"
 
-import { type CSSProperties, type ReactNode, useEffect, useState } from "react"
+import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from "react"
 
 import {
     type Column,
@@ -23,6 +23,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 import { getDataTableColumnSizingStorageKey, parseDataTableColumnSizing } from "@/utils/dataTableColumnSizing"
 import { cn } from "@/utils/shadcn"
+
+const DataTableColumnPinningMinWidth = 960
+const DataTableColumnResizingMinWidth = 768
+const DataTableFinePointerMediaQuery = "(hover: hover) and (pointer: fine)"
 
 export interface DataTableProps<TData extends RowData> {
     columns: ColumnDef<TData>[]
@@ -64,6 +68,43 @@ function getStoredColumnSizing(storageKey: string) {
     }
 }
 
+function useDataTableInteractionCapabilities() {
+    const tableViewportRef = useRef<HTMLDivElement>(null)
+    const [tableViewportWidth, setTableViewportWidth] = useState(0)
+    const [hasFinePointer, setHasFinePointer] = useState(false)
+
+    useEffect(() => {
+        const mediaQuery = window.matchMedia(DataTableFinePointerMediaQuery)
+
+        function onChange() {
+            setHasFinePointer(mediaQuery.matches)
+        }
+
+        mediaQuery.addEventListener("change", onChange)
+        onChange()
+        return () => mediaQuery.removeEventListener("change", onChange)
+    }, [])
+
+    useEffect(() => {
+        const tableViewport = tableViewportRef.current
+        if (!tableViewport) return
+
+        const observer = new ResizeObserver(entries => {
+            setTableViewportWidth(entries[0]?.contentRect.width ?? 0)
+        })
+
+        observer.observe(tableViewport)
+        return () => observer.disconnect()
+    }, [])
+
+    // 使用表格实际宽度，避免桌面侧边栏挤压后仍错误启用固定列与拖动。
+    return {
+        enableColumnPinning: tableViewportWidth >= DataTableColumnPinningMinWidth,
+        enableColumnResizing: hasFinePointer && tableViewportWidth >= DataTableColumnResizingMinWidth,
+        tableViewportRef,
+    }
+}
+
 function getPinnedColumnClassName<TData extends RowData>(column: Column<TData>) {
     const pinnedPosition = column.getIsPinned()
 
@@ -95,6 +136,7 @@ export function DataTable<TData extends RowData>({
 }: DataTableProps<TData>) {
     const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({})
     const [loadedColumnSizingStorageKey, setLoadedColumnSizingStorageKey] = useState<string>()
+    const { enableColumnPinning, enableColumnResizing, tableViewportRef } = useDataTableInteractionCapabilities()
     const pageCount = Math.max(1, Math.ceil(total / pageSize))
     const columnSizingStorageKey = getDataTableColumnSizingStorageKey(columnSizingKey)
 
@@ -108,6 +150,7 @@ export function DataTable<TData extends RowData>({
             minSize: 72,
         },
         columnResizeMode: "onChange",
+        enableColumnResizing,
         getCoreRowModel: getCoreRowModel(),
         getRowId,
         manualPagination: true,
@@ -116,8 +159,8 @@ export function DataTable<TData extends RowData>({
         onSortingChange,
         pageCount,
         state: {
-            columnPinning,
-            columnSizing,
+            columnPinning: enableColumnPinning ? columnPinning : {},
+            columnSizing: enableColumnResizing ? columnSizing : {},
             pagination: {
                 pageIndex: pageNum - 1,
                 pageSize,
@@ -127,12 +170,14 @@ export function DataTable<TData extends RowData>({
     })
 
     useEffect(() => {
+        if (!enableColumnResizing) return
+
         setColumnSizing(getStoredColumnSizing(columnSizingStorageKey))
         setLoadedColumnSizingStorageKey(columnSizingStorageKey)
-    }, [columnSizingStorageKey])
+    }, [columnSizingStorageKey, enableColumnResizing])
 
     useEffect(() => {
-        if (loadedColumnSizingStorageKey !== columnSizingStorageKey) return
+        if (!enableColumnResizing || loadedColumnSizingStorageKey !== columnSizingStorageKey) return
 
         const timeout = window.setTimeout(() => {
             try {
@@ -143,7 +188,7 @@ export function DataTable<TData extends RowData>({
         }, 150)
 
         return () => window.clearTimeout(timeout)
-    }, [columnSizing, columnSizingStorageKey, loadedColumnSizingStorageKey])
+    }, [columnSizing, columnSizingStorageKey, enableColumnResizing, loadedColumnSizingStorageKey])
 
     function onPageSizeChange(value: string | null) {
         if (!value) return
@@ -153,7 +198,7 @@ export function DataTable<TData extends RowData>({
     return (
         <div className="space-y-3">
             <div className="bg-card overflow-hidden rounded-2xl border">
-                <div className="overflow-x-auto">
+                <div ref={tableViewportRef} className="overflow-x-auto">
                     <Table className="table-fixed" style={{ minWidth: "100%", width: `${table.getTotalSize()}px` }}>
                         <TableHeader>
                             {table.getHeaderGroups().map(headerGroup => (
