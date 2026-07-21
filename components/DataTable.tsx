@@ -87,6 +87,9 @@ export function DataTable<TData extends RowData>({
     const table = useReactTable({
         columns,
         data,
+        defaultColumn: {
+            enableSorting: false,
+        },
         getCoreRowModel: getCoreRowModel(),
         getRowId,
         manualPagination: true,
