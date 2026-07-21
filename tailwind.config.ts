@@ -84,8 +84,8 @@ const config: Config = {
                 9: "2rem",
             },
             fontFamily: {
-                heading: ["var(--font-inter)"],
-                sans: ["var(--font-inter)"],
+                heading: ["var(--font-noto-sans-sc)"],
+                sans: ["var(--font-noto-sans-sc)"],
             },
             keyframes: {
                 "accordion-down": {

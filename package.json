@@ -27,7 +27,7 @@
         "@alicloud/openapi-client": "^0.4.15",
         "@alicloud/tea-util": "^1.4.11",
         "@aws-sdk/client-s3": "^3.1086.0",
-        "@fontsource-variable/inter": "^5.2.8",
+        "@fontsource-variable/noto-sans-sc": "^5.3.0",
         "@prisma/adapter-better-sqlite3": "^7.8.0",
         "@prisma/client": "^7.8.0",
         "@radix-ui/react-alert-dialog": "^1.1.19",

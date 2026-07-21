@@ -4,7 +4,7 @@ import type { Metadata } from "next"
 
 import { Registry } from "@/components/Registry"
 
-import "@fontsource-variable/inter/index.css"
+import "@fontsource-variable/noto-sans-sc/wght.css"
 
 import "./globals.css"
 
