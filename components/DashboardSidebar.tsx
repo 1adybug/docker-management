@@ -135,7 +135,7 @@ export const DashboardSidebar: FC = () => {
                         <div className="truncate text-sm font-medium">{user.nickname}</div>
                         <div className="truncate text-xs text-muted-foreground">{user.name}</div>
                     </div>
-                    <ThemeSwitcher className="h-7 w-7 flex-none" size="icon" />
+                    <ThemeSwitcher className="flex-none" size="icon-sm" />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                     <Link href="/" className="inline-flex h-8 items-center justify-center gap-1.5 rounded-2xl border bg-background px-3 text-sm hover:bg-muted">

@@ -279,8 +279,7 @@ const Page: FC = () => {
             cell: ({ row }) => (
                 <div className="flex items-center gap-1">
                     <Button
-                        className="h-6 px-2.5"
-                        size="sm"
+                        size="xs"
                         variant="ghost"
                         disabled={isRequesting}
                         onClick={() => {
@@ -291,26 +290,18 @@ const Page: FC = () => {
                         编辑
                     </Button>
                     {row.original.banned ? (
-                        <ConfirmButton
-                            className="h-6 px-2.5"
-                            title="确认解封用户"
-                            size="sm"
-                            variant="ghost"
-                            pending={isUnbanUserPending}
-                            onConfirm={() => unbanUser(row.original.id)}
-                        >
+                        <ConfirmButton title="确认解封用户" size="xs" variant="ghost" pending={isUnbanUserPending} onConfirm={() => unbanUser(row.original.id)}>
                             解封
                         </ConfirmButton>
                     ) : (
-                        <Button className="h-6 px-2.5" size="sm" variant="ghost" disabled={isRequesting} onClick={() => setBanId(row.original.id)}>
+                        <Button size="xs" variant="ghost" disabled={isRequesting} onClick={() => setBanId(row.original.id)}>
                             封禁
                         </Button>
                     )}
                     <ConfirmButton
-                        className="h-6 px-2.5"
                         title="确认删除用户"
                         description="请在删除用户前确保已备份相关数据，此操作不可撤销。"
-                        size="sm"
+                        size="xs"
                         variant="destructive"
                         pending={isDeleteUserPending}
                         onConfirm={() => deleteUser(row.original.id)}

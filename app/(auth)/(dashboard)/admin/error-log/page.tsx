@@ -197,9 +197,9 @@ const Page: FC = () => {
             enableSorting: true,
             cell: ({ row }) => (
                 <Button
-                    className="h-6 max-w-48 justify-start truncate px-0"
+                    className="max-w-48 justify-start truncate px-0"
                     variant="link"
-                    size="sm"
+                    size="xs"
                     onClick={() => setInfo({ title: "错误消息", content: row.original.message })}
                 >
                     {row.original.message}
@@ -212,9 +212,9 @@ const Page: FC = () => {
             cell: ({ row }) =>
                 row.original.stack ? (
                     <Button
-                        className="h-6 max-w-48 justify-start truncate px-0"
+                        className="max-w-48 justify-start truncate px-0"
                         variant="link"
-                        size="sm"
+                        size="xs"
                         onClick={() => setInfo({ title: "错误堆栈", content: row.original.stack, wide: true })}
                     >
                         {row.original.stack}
@@ -229,9 +229,9 @@ const Page: FC = () => {
             cell: ({ row }) =>
                 row.original.params ? (
                     <Button
-                        className="h-6 max-w-48 justify-start truncate px-0"
+                        className="max-w-48 justify-start truncate px-0"
                         variant="link"
-                        size="sm"
+                        size="xs"
                         onClick={() => setInfo({ title: "错误参数", content: <JsonViewer value={parseJson(row.original.params!)} />, wide: true })}
                     >
                         {row.original.params}
@@ -248,9 +248,9 @@ const Page: FC = () => {
             cell: ({ row }) =>
                 row.original.userAgent ? (
                     <Button
-                        className="h-6 max-w-48 justify-start truncate px-0"
+                        className="max-w-48 justify-start truncate px-0"
                         variant="link"
-                        size="sm"
+                        size="xs"
                         onClick={() => setInfo({ title: "UserAgent", content: row.original.userAgent })}
                     >
                         {row.original.userAgent}

@@ -32,7 +32,7 @@ export const ConfirmButton: FC<ConfirmButtonProps> = ({ children, title, descrip
                 {children}
             </Button>
         </AlertDialogTrigger>
-        <AlertDialogContent className="rounded-4xl sm:rounded-4xl">
+        <AlertDialogContent>
             <AlertDialogHeader>
                 <AlertDialogTitle>{title}</AlertDialogTitle>
                 {description && <AlertDialogDescription>{description}</AlertDialogDescription>}

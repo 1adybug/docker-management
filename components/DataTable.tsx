@@ -289,7 +289,7 @@ export function DataTable<TData extends RowData>({
                         <SelectTrigger className="w-20">
                             <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="border-border/60 bg-popover/95 backdrop-blur-md">
+                        <SelectContent>
                             {[10, 20, 50, 100].map(size => (
                                 <SelectItem key={size} value={`${size}`}>
                                     {size}
@@ -300,37 +300,19 @@ export function DataTable<TData extends RowData>({
                     <span>
                         第 {pageNum} / {pageCount} 页
                     </span>
-                    <Button className="h-7 w-7" variant="outline" size="icon" disabled={pageNum <= 1 || loading} onClick={() => onPageChange(1, pageSize)}>
+                    <Button variant="outline" size="icon-sm" disabled={pageNum <= 1 || loading} onClick={() => onPageChange(1, pageSize)}>
                         <ChevronsLeftIcon />
                         <span className="sr-only">第一页</span>
                     </Button>
-                    <Button
-                        className="h-7 w-7"
-                        variant="outline"
-                        size="icon"
-                        disabled={pageNum <= 1 || loading}
-                        onClick={() => onPageChange(pageNum - 1, pageSize)}
-                    >
+                    <Button variant="outline" size="icon-sm" disabled={pageNum <= 1 || loading} onClick={() => onPageChange(pageNum - 1, pageSize)}>
                         <ChevronLeftIcon />
                         <span className="sr-only">上一页</span>
                     </Button>
-                    <Button
-                        className="h-7 w-7"
-                        variant="outline"
-                        size="icon"
-                        disabled={pageNum >= pageCount || loading}
-                        onClick={() => onPageChange(pageNum + 1, pageSize)}
-                    >
+                    <Button variant="outline" size="icon-sm" disabled={pageNum >= pageCount || loading} onClick={() => onPageChange(pageNum + 1, pageSize)}>
                         <ChevronRightIcon />
                         <span className="sr-only">下一页</span>
                     </Button>
-                    <Button
-                        className="h-7 w-7"
-                        variant="outline"
-                        size="icon"
-                        disabled={pageNum >= pageCount || loading}
-                        onClick={() => onPageChange(pageCount, pageSize)}
-                    >
+                    <Button variant="outline" size="icon-sm" disabled={pageNum >= pageCount || loading} onClick={() => onPageChange(pageCount, pageSize)}>
                         <ChevronsRightIcon />
                         <span className="sr-only">最后一页</span>
                     </Button>

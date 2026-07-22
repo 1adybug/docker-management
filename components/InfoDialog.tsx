@@ -18,12 +18,7 @@ export interface InfoDialogProps {
 
 export const InfoDialog: FC<InfoDialogProps> = ({ title, description = "查看完整信息。", children, open = false, wide, onClose }) => (
     <Dialog open={open} onOpenChange={nextOpen => !nextOpen && onClose?.()}>
-        <DialogContent
-            className={clsx(
-                "rounded-4xl sm:rounded-4xl [&>button]:inline-flex [&>button]:h-7 [&>button]:w-7 [&>button]:items-center [&>button]:justify-center [&>button]:rounded-2xl",
-                wide && "sm:max-w-3xl",
-            )}
-        >
+        <DialogContent className={clsx(wide && "sm:max-w-3xl")}>
             <DialogHeader>
                 <DialogTitle>{title}</DialogTitle>
                 <DialogDescription>{description}</DialogDescription>

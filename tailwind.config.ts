@@ -66,7 +66,7 @@ const config: Config = {
                 },
             },
             borderRadius: {
-                // New York 使用的等级小于旧 Rhea；在不修改生成组件的前提下映射到原预设的有效圆角。
+                // New York 使用的等级小于旧 Rhea；统一映射到原预设的有效圆角。
                 sm: "var(--radius-xl)",
                 md: "var(--radius-2xl)",
                 lg: "var(--radius-2xl)",

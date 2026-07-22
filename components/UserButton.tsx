@@ -14,7 +14,7 @@ export interface UserButtonProps extends Omit<ComponentProps<typeof Button>, "as
 }
 
 export const UserButton: FC<UserButtonProps> = ({ data: { id, name }, ...rest }) => (
-    <Button asChild className="h-6 px-2.5" variant="link" size="sm" {...rest}>
+    <Button asChild variant="link" size="xs" {...rest}>
         <Link href={`/admin/user?id=${id}`}>{name}</Link>
     </Button>
 )

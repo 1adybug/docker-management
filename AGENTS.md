@@ -372,13 +372,15 @@ export const App: FC<AppProps> = ({ ref, ...rest }) => {
 
 ### 第三方组件
 
-- 如果使用 `shadcn/ui` 组件，禁止自动生成组件代码，必须使用命令行工具添加：
+- 新增 `shadcn/ui` 组件时禁止凭空生成组件代码，必须先使用命令行工具添加：
 
     ```bash
     npx shadcn@latest add <component-name>
     ```
 
-- 禁止修改 `shadcn/ui` 添加的原始组件，一般路径为 `@/components/ui/**/*.tsx`。
+- `@/components/ui/**/*.tsx` 是项目设计系统源码。项目级默认预设、通用尺寸变体、稳定语义属性或通用组件 API 应直接在对应组件中维护；只服务于单个页面或单次使用的差异仍在调用处通过 props 或 `className` 实现。
+- 再次通过 CLI 覆盖已有组件前，必须先审计并保留项目级定制，不能把组件源码中的预设改动重新迁移成全局 CSS 选择器。
+- 新增或更新组件时必须遵循 [`components/ui/README.md`](components/ui/README.md) 中的适配流程、当前项目级预设和验证清单。
 - 如果使用 `ai-elements` 组件，禁止修改原始组件，一般路径为 `@/components/ai-elements/**/*.tsx`。
 
 ## API Rules

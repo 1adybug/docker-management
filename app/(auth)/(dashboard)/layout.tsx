@@ -16,7 +16,7 @@ const Layout: FC<LayoutProps> = ({ children }) => (
             <header className="flex h-14 flex-none items-center gap-2 border-b bg-background px-3 md:hidden">
                 <SidebarTrigger />
                 <div className="min-w-0 flex-auto truncate text-sm font-semibold">格数科技项目模板</div>
-                <ThemeSwitcher className="h-7 w-7" size="icon" />
+                <ThemeSwitcher size="icon-sm" />
             </header>
             <main className="min-h-0 flex-auto overflow-auto">
                 <div className="mx-auto min-h-full w-full max-w-[1600px] p-4 sm:p-6">{children}</div>

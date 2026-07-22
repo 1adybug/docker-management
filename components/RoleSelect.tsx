@@ -36,7 +36,7 @@ export const RoleSelect: FC<RoleSelectProps> = ({ id, value: _value, disabled, i
             <SelectTrigger id={id} className="w-full" aria-invalid={invalid} onBlur={onBlur}>
                 <SelectValue placeholder="选择角色" />
             </SelectTrigger>
-            <SelectContent className="border-border/60 bg-popover/95 backdrop-blur-md">
+            <SelectContent>
                 {Object.entries(userRoleItems).map(([value, label]) => (
                     <SelectItem key={value} value={value}>
                         {label}

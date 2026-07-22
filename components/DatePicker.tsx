@@ -40,7 +40,7 @@ export const DatePicker: FC<DatePickerProps> = ({ value: _value, onValueChange: 
                         <span className="truncate">{value ? formatDateTime(value, "YYYY年M月D日") : "选择日期"}</span>
                     </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto overflow-hidden rounded-3xl border-border/60 bg-popover/95 p-0 backdrop-blur-md" align="start">
+                <PopoverContent className="w-auto overflow-hidden rounded-3xl p-0" align="start">
                     <Calendar
                         className="bg-transparent"
                         mode="single"
@@ -53,7 +53,7 @@ export const DatePicker: FC<DatePickerProps> = ({ value: _value, onValueChange: 
                 </PopoverContent>
             </Popover>
             {value && (
-                <Button className="h-7 w-7" type="button" variant="ghost" size="icon" aria-label="清除日期" onClick={() => onValueChange(undefined)}>
+                <Button type="button" variant="ghost" size="icon-sm" aria-label="清除日期" onClick={() => onValueChange(undefined)}>
                     <XIcon />
                 </Button>
             )}

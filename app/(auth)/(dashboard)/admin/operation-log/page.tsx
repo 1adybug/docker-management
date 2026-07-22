@@ -182,9 +182,9 @@ const Page: FC = () => {
             cell: ({ row }) =>
                 row.original.params ? (
                     <Button
-                        className="h-6 max-w-48 justify-start truncate px-0"
+                        className="max-w-48 justify-start truncate px-0"
                         variant="link"
-                        size="sm"
+                        size="xs"
                         onClick={() => setInfo({ title: "操作参数", content: <JsonViewer value={parseJson(row.original.params!)} />, wide: true })}
                     >
                         {row.original.params}
@@ -201,9 +201,9 @@ const Page: FC = () => {
             cell: ({ row }) =>
                 row.original.userAgent ? (
                     <Button
-                        className="h-6 max-w-48 justify-start truncate px-0"
+                        className="max-w-48 justify-start truncate px-0"
                         variant="link"
-                        size="sm"
+                        size="xs"
                         onClick={() => setInfo({ title: "UserAgent", content: row.original.userAgent })}
                     >
                         {row.original.userAgent}

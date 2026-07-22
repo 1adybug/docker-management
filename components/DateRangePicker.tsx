@@ -51,7 +51,7 @@ export const DateRangePicker: FC<DateRangePickerProps> = ({ value: _value, onVal
                         <span className="truncate">{label}</span>
                     </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto overflow-hidden rounded-3xl border-border/60 bg-popover/95 p-0 backdrop-blur-md" align="start">
+                <PopoverContent className="w-auto overflow-hidden rounded-3xl p-0" align="start">
                     <Calendar
                         className="bg-transparent"
                         mode="range"
@@ -65,7 +65,7 @@ export const DateRangePicker: FC<DateRangePickerProps> = ({ value: _value, onVal
                 </PopoverContent>
             </Popover>
             {value?.from && (
-                <Button className="h-7 w-7" type="button" variant="ghost" size="icon" aria-label="清除日期范围" onClick={onClear}>
+                <Button type="button" variant="ghost" size="icon-sm" aria-label="清除日期范围" onClick={onClear}>
                     <XIcon />
                 </Button>
             )}

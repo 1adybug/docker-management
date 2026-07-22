@@ -26,7 +26,7 @@ export const ThemeSwitcher: FC<ThemeSwitcherProps> = ({ type = "button", variant
                     <span className="sr-only">切换主题</span>
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-36 border-border/60 bg-popover/95 backdrop-blur-md" align="end">
+            <DropdownMenuContent className="w-36" align="end">
                 <DropdownMenuItem onClick={() => setTheme("system")}>
                     <MonitorIcon />
                     跟随系统

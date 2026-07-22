@@ -76,7 +76,7 @@ const SystemSettingInput: FC<SystemSettingInputProps> = ({ setting, value, disab
                 <SelectTrigger className="w-full" aria-invalid={invalid} onBlur={onBlur}>
                     <SelectValue placeholder="默认" />
                 </SelectTrigger>
-                <SelectContent className="border-border/60 bg-popover/95 backdrop-blur-md">
+                <SelectContent>
                     <SelectItem value="default">默认</SelectItem>
                     <SelectItem value="1">开启</SelectItem>
                     <SelectItem value="0">关闭</SelectItem>

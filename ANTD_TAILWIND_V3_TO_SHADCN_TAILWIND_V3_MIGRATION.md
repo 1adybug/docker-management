@@ -125,7 +125,7 @@ export default config
 - `background`、`foreground`、`card`、`popover`、`primary`、`secondary`、`muted`、`accent`、`destructive`、`border`、`input`、`ring`、`chart` 和 `sidebar` 语义色。
 - Inter 对应的 `fontFamily.heading` 与 `fontFamily.sans`。
 - `tailwindcss-animate` 插件和 Radix Accordion 动画。
-- 当前模板用于恢复旧预设圆角的 Token，以及限定到 shadcn 组件完整结构的控件密度规则。
+- 当前模板用于恢复旧预设圆角的 Token，以及在 shadcn 组件源码中维护的控件密度预设。
 
 不要照搬目标项目原来的空 `theme.extend`。也不要通过全局修改常用的 `h-8`、`w-8`、`h-9`、`w-9` 等尺度解决组件差异，否则会连带破坏 Sidebar 和业务布局。
 
@@ -200,7 +200,7 @@ pnpm exec shadcn info --json
 pnpm exec shadcn add alert-dialog alert avatar badge button calendar card dialog dropdown-menu field input label pagination popover select separator sheet sidebar skeleton switch table textarea tooltip
 ```
 
-应根据目标项目实际功能裁剪组件集，但不能手写缺失组件，也不能修改生成后的 `components/ui`。
+应根据目标项目实际功能裁剪组件集。缺失组件先通过 CLI 添加；生成后允许在 `components/ui` 中维护项目级默认预设、通用尺寸变体和组件 API，单点差异仍保留在调用处。具体适配流程和当前组件契约见 [`components/ui/README.md`](components/ui/README.md)。
 
 生成完成后检查别名、依赖和 `hooks/use-mobile.*` 的实际文件名。不要把临时参考项目的 `src` 结构带入目标项目。
 
@@ -301,7 +301,7 @@ Radix Select 的值使用非空字符串：
 - Dialog 右上角关闭按钮是否具有 28px 的点击区域。
 - 圆角是否由主题层统一映射，而不是逐个组件硬编码。
 
-本模板在 `tailwind.config.ts` 中维护圆角 Token，在 `app/globals.css` 中通过完整组件结构选择器维护控件密度。迁移目标若要求与本模板一致，应以当前文件为准合并，不得修改 CLI 生成组件，也不得用通用 Tailwind 类组合匹配所有业务元素。
+本模板在 `tailwind.config.ts` 中维护圆角 Token，在 Button、Input、Select、Switch、Badge、Textarea、Pagination 等组件源码中维护控件密度。迁移目标若要求与本模板一致，应合并对应组件预设，不得用 Tailwind 工具类组合选择器识别组件；调用方的 `className` 可能经 `tailwind-merge` 删除其中任意冲突类。
 
 还必须检查以下 New York 结构差异：
 
@@ -309,7 +309,7 @@ Radix Select 的值使用非空字符串：
 - 带边框的 CardFooter 需要显式顶部内边距。
 - Card 内绝对定位渐变或背景需要 Card 自身 `overflow-hidden` 才能按圆角裁切。
 - New York 没有 `CardAction`，标题与操作区应在业务层使用横向布局。
-- Select、DropdownMenu 和 Popover 的半透明背景、轻边框与模糊效果放在业务调用处，不修改生成组件。
+- Select、DropdownMenu 和 Popover 的半透明背景、轻边框与模糊效果属于项目级预设，放在对应内容组件源码中；宽度、对齐和日期弹层裁切等单点布局放在业务调用处。
 
 ## 九、清理旧技术栈
 
@@ -365,4 +365,4 @@ git status --short
 - 通知、暗色模式、圆角、控件密度和所有弹层裁切。
 - 在 Chrome 102 或等价自动化环境中检查登录、后台全高布局、Radix 状态切换和所有依赖 `:has()` 的当前用法。
 
-只有 shadcn CLI 正确识别 T3、旧 UI 引用清零、业务行为保持、生成组件未被手改、Chrome 102 兼容层与产物回退存在且所有静态检查通过，才能报告迁移完成。除非用户明确要求，不创建 Git 提交或推送。
+只有 shadcn CLI 正确识别 T3、旧 UI 引用清零、业务行为保持、组件级预设与业务单点样式边界清晰、Chrome 102 兼容层与产物回退存在且所有静态检查通过，才能报告迁移完成。除非用户明确要求，不创建 Git 提交或推送。
