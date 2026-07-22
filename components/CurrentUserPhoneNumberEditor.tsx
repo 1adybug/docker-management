@@ -8,7 +8,7 @@ import { z } from "zod"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 
@@ -141,52 +141,30 @@ export const CurrentUserPhoneNumberEditor: FC<CurrentUserPhoneNumberEditorProps>
                     <DialogTitle>修改手机号</DialogTitle>
                     <DialogDescription>需要分别验证当前手机号和新手机号。</DialogDescription>
                 </DialogHeader>
-                <Alert>
-                    <AlertTitle>双重验证</AlertTitle>
-                    <AlertDescription>验证码均为 4 位数字，有效时间以短信内容为准。</AlertDescription>
-                </Alert>
-                <form
-                    id="phone-number-editor-form"
-                    onSubmit={event => {
-                        event.preventDefault()
-                        event.stopPropagation()
-                        void form.handleSubmit()
-                    }}
-                >
-                    <FieldGroup>
-                        <form.Field name="phoneNumber" validators={{ onBlur: getOnBlurValidator(phoneNumberSchema) }}>
-                            {field => {
-                                const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
-                                return (
-                                    <Field data-invalid={isInvalid}>
-                                        <FieldLabel htmlFor={field.name}>新手机号</FieldLabel>
-                                        <Input
-                                            id={field.name}
-                                            name={field.name}
-                                            autoComplete="tel"
-                                            disabled={isUpdateCurrentUserProfilePending}
-                                            aria-invalid={isInvalid}
-                                            value={field.state.value}
-                                            onBlur={field.handleBlur}
-                                            onChange={event => field.handleChange(event.target.value)}
-                                        />
-                                        {isInvalid && <FieldError errors={field.state.meta.errors} />}
-                                    </Field>
-                                )
-                            }}
-                        </form.Field>
-                        <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
-                            <form.Field name="oldOtp" validators={{ onBlur: getOnBlurValidator(otpSchema) }}>
+                <DialogBody className="space-y-6">
+                    <Alert>
+                        <AlertTitle>双重验证</AlertTitle>
+                        <AlertDescription>验证码均为 4 位数字，有效时间以短信内容为准。</AlertDescription>
+                    </Alert>
+                    <form
+                        id="phone-number-editor-form"
+                        onSubmit={event => {
+                            event.preventDefault()
+                            event.stopPropagation()
+                            void form.handleSubmit()
+                        }}
+                    >
+                        <FieldGroup>
+                            <form.Field name="phoneNumber" validators={{ onBlur: getOnBlurValidator(phoneNumberSchema) }}>
                                 {field => {
                                     const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
                                     return (
                                         <Field data-invalid={isInvalid}>
-                                            <FieldLabel htmlFor={field.name}>原手机号验证码</FieldLabel>
+                                            <FieldLabel htmlFor={field.name}>新手机号</FieldLabel>
                                             <Input
                                                 id={field.name}
                                                 name={field.name}
-                                                inputMode="numeric"
-                                                autoComplete="one-time-code"
+                                                autoComplete="tel"
                                                 disabled={isUpdateCurrentUserProfilePending}
                                                 aria-invalid={isInvalid}
                                                 value={field.state.value}
@@ -198,53 +176,77 @@ export const CurrentUserPhoneNumberEditor: FC<CurrentUserPhoneNumberEditorProps>
                                     )
                                 }}
                             </form.Field>
-                            <Button
-                                className="self-end sm:min-w-36"
-                                type="button"
-                                variant="outline"
-                                disabled={oldOtpLeft > 0 || isPending}
-                                onClick={() => void onSendOldOtp()}
-                            >
-                                {isSendOldPhoneNumberOtpPending && <LoaderCircleIcon className="animate-spin" />}
-                                {oldOtpLeft > 0 ? `${oldOtpLeft} 秒` : "发送验证码"}
-                            </Button>
-                        </div>
-                        <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
-                            <form.Field name="newOtp" validators={{ onBlur: getOnBlurValidator(otpSchema) }}>
-                                {field => {
-                                    const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
-                                    return (
-                                        <Field data-invalid={isInvalid}>
-                                            <FieldLabel htmlFor={field.name}>新手机号验证码</FieldLabel>
-                                            <Input
-                                                id={field.name}
-                                                name={field.name}
-                                                inputMode="numeric"
-                                                autoComplete="one-time-code"
-                                                disabled={isUpdateCurrentUserProfilePending}
-                                                aria-invalid={isInvalid}
-                                                value={field.state.value}
-                                                onBlur={field.handleBlur}
-                                                onChange={event => field.handleChange(event.target.value)}
-                                            />
-                                            {isInvalid && <FieldError errors={field.state.meta.errors} />}
-                                        </Field>
-                                    )
-                                }}
-                            </form.Field>
-                            <Button
-                                className="self-end sm:min-w-36"
-                                type="button"
-                                variant="outline"
-                                disabled={newOtpLeft > 0 || isPending}
-                                onClick={() => void onSendNewOtp()}
-                            >
-                                {isSendNewPhoneNumberOtpPending && <LoaderCircleIcon className="animate-spin" />}
-                                {newOtpLeft > 0 ? `${newOtpLeft} 秒` : "发送验证码"}
-                            </Button>
-                        </div>
-                    </FieldGroup>
-                </form>
+                            <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
+                                <form.Field name="oldOtp" validators={{ onBlur: getOnBlurValidator(otpSchema) }}>
+                                    {field => {
+                                        const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
+                                        return (
+                                            <Field data-invalid={isInvalid}>
+                                                <FieldLabel htmlFor={field.name}>原手机号验证码</FieldLabel>
+                                                <Input
+                                                    id={field.name}
+                                                    name={field.name}
+                                                    inputMode="numeric"
+                                                    autoComplete="one-time-code"
+                                                    disabled={isUpdateCurrentUserProfilePending}
+                                                    aria-invalid={isInvalid}
+                                                    value={field.state.value}
+                                                    onBlur={field.handleBlur}
+                                                    onChange={event => field.handleChange(event.target.value)}
+                                                />
+                                                {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                                            </Field>
+                                        )
+                                    }}
+                                </form.Field>
+                                <Button
+                                    className="self-end sm:min-w-36"
+                                    type="button"
+                                    variant="outline"
+                                    disabled={oldOtpLeft > 0 || isPending}
+                                    onClick={() => void onSendOldOtp()}
+                                >
+                                    {isSendOldPhoneNumberOtpPending && <LoaderCircleIcon className="animate-spin" />}
+                                    {oldOtpLeft > 0 ? `${oldOtpLeft} 秒` : "发送验证码"}
+                                </Button>
+                            </div>
+                            <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
+                                <form.Field name="newOtp" validators={{ onBlur: getOnBlurValidator(otpSchema) }}>
+                                    {field => {
+                                        const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
+                                        return (
+                                            <Field data-invalid={isInvalid}>
+                                                <FieldLabel htmlFor={field.name}>新手机号验证码</FieldLabel>
+                                                <Input
+                                                    id={field.name}
+                                                    name={field.name}
+                                                    inputMode="numeric"
+                                                    autoComplete="one-time-code"
+                                                    disabled={isUpdateCurrentUserProfilePending}
+                                                    aria-invalid={isInvalid}
+                                                    value={field.state.value}
+                                                    onBlur={field.handleBlur}
+                                                    onChange={event => field.handleChange(event.target.value)}
+                                                />
+                                                {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                                            </Field>
+                                        )
+                                    }}
+                                </form.Field>
+                                <Button
+                                    className="self-end sm:min-w-36"
+                                    type="button"
+                                    variant="outline"
+                                    disabled={newOtpLeft > 0 || isPending}
+                                    onClick={() => void onSendNewOtp()}
+                                >
+                                    {isSendNewPhoneNumberOtpPending && <LoaderCircleIcon className="animate-spin" />}
+                                    {newOtpLeft > 0 ? `${newOtpLeft} 秒` : "发送验证码"}
+                                </Button>
+                            </div>
+                        </FieldGroup>
+                    </form>
+                </DialogBody>
                 <DialogFooter>
                     <Button type="button" variant="outline" disabled={isUpdateCurrentUserProfilePending} onClick={onClose}>
                         取消

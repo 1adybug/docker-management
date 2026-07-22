@@ -5,7 +5,7 @@ import type { FC, ReactNode } from "react"
 import { clsx } from "deepsea-tools"
 
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 export interface InfoDialogProps {
     title?: string
@@ -23,7 +23,9 @@ export const InfoDialog: FC<InfoDialogProps> = ({ title, description = "查看�
                 <DialogTitle>{title}</DialogTitle>
                 <DialogDescription>{description}</DialogDescription>
             </DialogHeader>
-            <div className="max-h-[65vh] overflow-auto whitespace-pre-wrap break-words rounded-2xl bg-muted p-4">{children}</div>
+            <DialogBody>
+                <div className="whitespace-pre-wrap break-words rounded-2xl bg-muted p-4">{children}</div>
+            </DialogBody>
             <DialogFooter>
                 <Button type="button" variant="outline" onClick={onClose}>
                     关闭
