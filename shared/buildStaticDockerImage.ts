@@ -259,37 +259,39 @@ function isDirectoryZipEntry(path: string) {
 }
 
 async function openZipFile({ path }: OpenZipFileParams) {
-    return await new Promise<ZipFile>((resolve, reject) => {
-        yauzl.open(
-            path,
-            {
-                decodeStrings: false,
-                lazyEntries: true,
-                validateEntrySizes: true,
-            },
-            (error, zipFile) => {
-                if (error || !zipFile) {
-                    reject(error ?? new Error("打开 zip 文件失败"))
-                    return
-                }
+    return await new Promise<ZipFile>(
+        (resolve, reject) =>
+            void yauzl.open(
+                path,
+                {
+                    decodeStrings: false,
+                    lazyEntries: true,
+                    validateEntrySizes: true,
+                },
+                (error, zipFile) => {
+                    if (error || !zipFile) {
+                        reject(error ?? new Error("打开 zip 文件失败"))
+                        return
+                    }
 
-                resolve(zipFile)
-            },
-        )
-    })
+                    resolve(zipFile)
+                },
+            ),
+    )
 }
 
 async function openZipReadStream({ entry, zipFile }: OpenZipReadStreamParams) {
-    return await new Promise<NodeJS.ReadableStream>((resolve, reject) => {
-        zipFile.openReadStream(entry, (error, stream) => {
-            if (error || !stream) {
-                reject(error ?? new Error("读取 zip 文件内容失败"))
-                return
-            }
+    return await new Promise<NodeJS.ReadableStream>(
+        (resolve, reject) =>
+            void zipFile.openReadStream(entry, (error, stream) => {
+                if (error || !stream) {
+                    reject(error ?? new Error("读取 zip 文件内容失败"))
+                    return
+                }
 
-            resolve(stream)
-        })
-    })
+                resolve(stream)
+            }),
+    )
 }
 
 async function extractZipEntry({ entry, outputDirectory, zipFile }: ExtractZipEntryParams) {

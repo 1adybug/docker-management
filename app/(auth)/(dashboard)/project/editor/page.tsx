@@ -264,9 +264,7 @@ const Page: FC = () => {
                 message.open({ type: "error", content: "YAML 编辑器初始化失败" })
             })
 
-        return () => {
-            isMounted = false
-        }
+        return () => void (isMounted = false)
     }, [])
 
     useEffect(() => {

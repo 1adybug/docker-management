@@ -27,6 +27,7 @@ export interface DockerTempDirectoryRootError {
 }
 
 export const dockerTempDirectoryPrefixes = ["docker-management-image-", "docker-management-static-image-", "docker-management-jar-image-"]
+
 export const DefaultDockerTempDirectoryRoot = resolve(process.cwd(), "data", "tmp", "docker")
 
 function getDockerTempDirectoryGlobalState() {

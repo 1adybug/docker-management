@@ -752,9 +752,7 @@ const Page: FC = () => {
     const hasExpandableRows = expandableRowKeys.length > 0
     const isAllExpanded = hasExpandableRows && expandableRowKeys.every(item => expandedRowKeys.includes(item))
 
-    useEffect(() => {
-        setExpandedRowKeys(prev => prev.filter(item => expandableRowKeys.includes(item)))
-    }, [expandableRowKeys])
+    useEffect(() => void setExpandedRowKeys(prev => prev.filter(item => expandableRowKeys.includes(item))), [expandableRowKeys])
 
     function onToggleExpandAll() {
         setExpandedRowKeys(isAllExpanded ? [] : expandableRowKeys)

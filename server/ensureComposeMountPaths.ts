@@ -619,7 +619,7 @@ async function applyMountPathOwner(path: string, pathStat: Stats, numericUser: C
 
 async function ensureMountPathPermission(item: ComposeMountPathPermissionRepairItem) {
     try {
-        await applyMountPathPermission(item.item.resolvedPath, async function onVisit(path, pathStat) {
+        await applyMountPathPermission(item.item.resolvedPath, async (path, pathStat) => {
             if (item.candidate.numericUser) await applyMountPathOwner(path, pathStat, item.candidate.numericUser)
             await applyMountPathMode(path, pathStat)
         })

@@ -359,12 +359,7 @@ const Page: FC = () => {
 
     const projectOptions = useMemo(() => {
         const projectMap = new Map<string, string>()
-
-        ;(data ?? []).forEach(item => {
-            item.projectItems.forEach(project => {
-                projectMap.set(project.name, project.displayName)
-            })
-        })
+        ;(data ?? []).forEach(item => void item.projectItems.forEach(project => void projectMap.set(project.name, project.displayName)))
 
         return Array.from(projectMap.entries())
             .sort((first, second) => compareName(first[1], second[1]))

@@ -7,9 +7,7 @@ export async function readTextFromFile(path: string) {
     await new Promise<void>((resolve, reject) => {
         const stream = createReadStream(path)
 
-        stream.on("data", chunk => {
-            chunks.push(Buffer.from(chunk))
-        })
+        stream.on("data", chunk => void chunks.push(Buffer.from(chunk)))
 
         stream.on("error", reject)
         stream.on("end", () => resolve())
