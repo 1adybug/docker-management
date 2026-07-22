@@ -4,30 +4,23 @@ import { withUseMutationDefaults } from "soda-tanstack-query"
 
 import type { updateUser } from "@/shared/updateUser"
 
+import { toast } from "@/utils/toast"
+
 export const createUseUpdateUser = withUseMutationDefaults<typeof updateUser>(() => {
     const key = useId()
 
     return {
         onMutate(variables, context) {
-            message.open({
-                key,
-                type: "loading",
-                content: "更新用户中...",
-                duration: 0,
-            })
+            toast.loading("更新用户中...", { id: key })
         },
         onSuccess(data, variables, onMutateResult, context) {
             context.client.invalidateQueries({ queryKey: ["query-user"] })
             context.client.invalidateQueries({ queryKey: ["get-user", data.id] })
 
-            message.open({
-                key,
-                type: "success",
-                content: "更新用户成功",
-            })
+            toast.success("更新用户成功", { id: key })
         },
         onError(error, variables, onMutateResult, context) {
-            message.destroy(key)
+            toast.dismiss(key)
         },
         onSettled(data, error, variables, onMutateResult, context) {},
     }

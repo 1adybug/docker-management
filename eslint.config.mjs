@@ -15,6 +15,9 @@ const nextCoreWebVitals = requireFromSharedConfig("eslint-config-next/core-web-v
     })
 
 const eslintConfig = [
+    {
+        ignores: ["components/ui/**", "utils/shadcn.ts"],
+    },
     ...defineConfig({
         next: {
             recommended: false,

@@ -1,11 +1,16 @@
 "use client"
 
-import { type ChangeEvent, type ComponentProps, type FC, useEffect, useRef, useState } from "react"
+import { type FC, useEffect, useState } from "react"
 
-import { Button, Form, Input, Modal } from "antd"
-import { useForm } from "antd/es/form/Form"
-import FormItem from "antd/es/form/FormItem"
-import { schemaToRule } from "soda-antd"
+import { useForm } from "@tanstack/react-form"
+import { LoaderCircleIcon } from "lucide-react"
+import { z } from "zod"
+
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
 
 import { useSendCurrentUserPhoneNumberOtp } from "@/hooks/useSendCurrentUserPhoneNumberOtp"
 import { useUpdateCurrentUserProfile } from "@/hooks/useUpdateCurrentUserProfile"
@@ -13,38 +18,28 @@ import { useUpdateCurrentUserProfile } from "@/hooks/useUpdateCurrentUserProfile
 import type { User } from "@/prisma/generated/client"
 
 import { otpSchema } from "@/schemas/otp"
-import { phoneNumberParser } from "@/schemas/phoneNumber"
+import { phoneNumberParser, phoneNumberSchema } from "@/schemas/phoneNumber"
+import { updateCurrentUserProfileParser } from "@/schemas/updateCurrentUserProfile"
 
-export interface CurrentUserPhoneNumberEditorProps extends Omit<ComponentProps<typeof Modal>, "children" | "onOk" | "onCancel"> {
+import { getOnBlurValidator } from "@/utils/getOnBlurValidator"
+import { toast } from "@/utils/toast"
+
+const phoneNumberEditorSchema = z.object({
+    phoneNumber: phoneNumberSchema,
+    oldOtp: otpSchema,
+    newOtp: otpSchema,
+})
+
+export interface CurrentUserPhoneNumberEditorProps {
     data: User
+    open?: boolean
     onClose?: () => void
     onSuccess?: (data: User) => void
 }
 
-export interface CurrentUserPhoneNumberEditorFormData {
-    oldOtp?: string
-    newOtp?: string
-}
-
-export const CurrentUserPhoneNumberEditor: FC<CurrentUserPhoneNumberEditorProps> = ({
-    data,
-    open,
-    onClose,
-    onSuccess,
-    mask = { enabled: true, closable: true, blur: true },
-    okButtonProps: { loading: okButtonLoading, ...okButtonProps } = {},
-    cancelButtonProps: { disabled: cancelButtonDisabled, ...cancelButtonProps } = {},
-    ...rest
-}) => {
-    const { enabled, closable, blur } = typeof mask === "boolean" ? { enabled: mask, closable: true, blur: true } : mask
-    const isOpen = !!open
-    const [form] = useForm<CurrentUserPhoneNumberEditorFormData>()
-    const prevOpen = useRef(false)
-    const [phoneNumber, setPhoneNumber] = useState(data.phoneNumber)
-    const [phoneNumberError, setPhoneNumberError] = useState<string>()
+export const CurrentUserPhoneNumberEditor: FC<CurrentUserPhoneNumberEditorProps> = ({ data, open = false, onClose, onSuccess }) => {
     const [oldOtpLeft, setOldOtpLeft] = useState(0)
     const [newOtpLeft, setNewOtpLeft] = useState(0)
-    const isPhoneNumberChanged = phoneNumber !== data.phoneNumber
 
     const { mutateAsync: sendOldPhoneNumberOtp, isPending: isSendOldPhoneNumberOtpPending } = useSendCurrentUserPhoneNumberOtp({
         onSuccess() {
@@ -60,199 +55,212 @@ export const CurrentUserPhoneNumberEditor: FC<CurrentUserPhoneNumberEditorProps>
 
     const { mutateAsync: updateCurrentUserProfile, isPending: isUpdateCurrentUserProfilePending } = useUpdateCurrentUserProfile({
         onSuccess(nextUser) {
-            setOldOtpLeft(0)
-            setNewOtpLeft(0)
             onSuccess?.(nextUser)
             onClose?.()
         },
     })
 
+    const form = useForm({
+        defaultValues: {
+            phoneNumber: data.phoneNumber,
+            oldOtp: "",
+            newOtp: "",
+        },
+        validators: {
+            onSubmit: phoneNumberEditorSchema,
+        },
+        async onSubmit({ value }) {
+            if (value.phoneNumber === data.phoneNumber) {
+                toast.warning("新手机号不能与当前手机号一致")
+                return
+            }
+
+            await updateCurrentUserProfile(
+                updateCurrentUserProfileParser({
+                    ...value,
+                    nickname: data.nickname,
+                }),
+            )
+        },
+    })
+
     useEffect(() => {
-        const wasOpen = prevOpen.current
-        prevOpen.current = isOpen
+        if (!open) {
+            form.reset({ phoneNumber: data.phoneNumber, oldOtp: "", newOtp: "" })
+            setOldOtpLeft(0)
+            setNewOtpLeft(0)
+            return
+        }
 
-        if (!isOpen || wasOpen) return
-
-        setPhoneNumber(data.phoneNumber)
-        setPhoneNumberError(undefined)
+        form.reset({ phoneNumber: data.phoneNumber, oldOtp: "", newOtp: "" })
         setOldOtpLeft(0)
         setNewOtpLeft(0)
-
-        form.setFieldsValue({
-            oldOtp: undefined,
-            newOtp: undefined,
-        })
-    }, [data.phoneNumber, form, isOpen])
+    }, [data.phoneNumber, form, open])
 
     useEffect(() => {
-        if (isOpen) return
-
-        form.resetFields()
-        setPhoneNumber(data.phoneNumber)
-        setPhoneNumberError(undefined)
-        setOldOtpLeft(0)
-        setNewOtpLeft(0)
-    }, [data.phoneNumber, form, isOpen])
-
-    useEffect(() => {
-        if (!isOpen) return
-        if (oldOtpLeft === 0 && newOtpLeft === 0) return
+        if (!open || (oldOtpLeft === 0 && newOtpLeft === 0)) return
 
         const timeout = setTimeout(() => {
-            setOldOtpLeft(left => Math.max(0, left - 1))
-            setNewOtpLeft(left => Math.max(0, left - 1))
+            setOldOtpLeft(value => Math.max(0, value - 1))
+            setNewOtpLeft(value => Math.max(0, value - 1))
         }, 1000)
 
         return () => clearTimeout(timeout)
-    }, [isOpen, newOtpLeft, oldOtpLeft])
-
-    useEffect(() => {
-        if (isPhoneNumberChanged) return
-
-        form.setFieldsValue({
-            oldOtp: undefined,
-            newOtp: undefined,
-        })
-
-        setOldOtpLeft(0)
-        setNewOtpLeft(0)
-    }, [form, isPhoneNumberChanged])
-
-    function onPhoneNumberChange(event: ChangeEvent<HTMLInputElement>) {
-        setPhoneNumber(event.target.value)
-        setPhoneNumberError(undefined)
-    }
-
-    function validatePhoneNumber() {
-        try {
-            const nextPhoneNumber = phoneNumberParser(phoneNumber)
-            setPhoneNumber(nextPhoneNumber)
-            setPhoneNumberError(undefined)
-            return nextPhoneNumber
-        } catch (error) {
-            const messageText = error instanceof Error ? error.message : "无效的手机号"
-            setPhoneNumberError(messageText)
-            return undefined
-        }
-    }
+    }, [newOtpLeft, oldOtpLeft, open])
 
     async function onSendOldOtp() {
-        await sendOldPhoneNumberOtp({
-            phoneNumber: data.phoneNumber,
-        })
+        await sendOldPhoneNumberOtp({ phoneNumber: data.phoneNumber })
     }
 
     async function onSendNewOtp() {
-        const nextPhoneNumber = validatePhoneNumber()
-        if (!nextPhoneNumber) return
+        try {
+            const phoneNumber = phoneNumberParser(form.getFieldValue("phoneNumber"))
 
-        if (!isPhoneNumberChanged) {
-            message.open({
-                type: "warning",
-                content: "新手机号不能与当前手机号一致",
-            })
+            if (phoneNumber === data.phoneNumber) {
+                toast.warning("新手机号不能与当前手机号一致")
+                return
+            }
 
-            return
+            await sendNewPhoneNumberOtp({ phoneNumber })
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : "无效的手机号")
         }
-
-        await sendNewPhoneNumberOtp({
-            phoneNumber: nextPhoneNumber,
-        })
     }
 
-    async function onFinish(values: CurrentUserPhoneNumberEditorFormData) {
-        const nextPhoneNumber = validatePhoneNumber()
-        if (!nextPhoneNumber) return
-
-        if (!isPhoneNumberChanged) {
-            message.open({
-                type: "warning",
-                content: "新手机号不能与当前手机号一致",
-            })
-
-            return
-        }
-
-        await updateCurrentUserProfile({
-            ...values,
-            nickname: data.nickname,
-            phoneNumber: nextPhoneNumber,
-        })
+    function onOpenChange(nextOpen: boolean) {
+        if (!nextOpen && !isUpdateCurrentUserProfilePending) onClose?.()
     }
 
     const isSendingOtp = isSendOldPhoneNumberOtpPending || isSendNewPhoneNumberOtpPending
-    const isSubmitting = isUpdateCurrentUserProfilePending
+    const isPending = isSendingOtp || isUpdateCurrentUserProfilePending
 
     return (
-        <Modal
-            title="修改手机号"
-            open={isOpen}
-            destroyOnHidden
-            mask={{ enabled, closable: closable && !isSubmitting, blur }}
-            onOk={() => form.submit()}
-            onCancel={() => onClose?.()}
-            okText="保存"
-            okButtonProps={{ loading: isSubmitting || okButtonLoading, ...okButtonProps }}
-            cancelButtonProps={{ disabled: isSubmitting || cancelButtonDisabled, ...cancelButtonProps }}
-            {...rest}
-        >
-            <Form<CurrentUserPhoneNumberEditorFormData>
-                name="current-user-phone-number-editor"
-                form={form}
-                layout="vertical"
-                disabled={isSubmitting}
-                onFinish={onFinish}
-            >
-                <FormItem label="新手机号" validateStatus={phoneNumberError ? "error" : undefined} help={phoneNumberError}>
-                    <Input autoComplete="off" allowClear value={phoneNumber} onChange={onPhoneNumberChange} />
-                </FormItem>
-                <div className="mb-4 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm leading-6 text-orange-700">
-                    修改手机号时，需要分别校验当前手机号和新手机号的验证码。
-                </div>
-                <div className="grid gap-4">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
-                        <FormItem<CurrentUserPhoneNumberEditorFormData>
-                            className="mb-0 flex-auto"
-                            name="oldOtp"
-                            label="原手机号验证码"
-                            rules={[schemaToRule(otpSchema)]}
-                        >
-                            <Input autoComplete="off" allowClear />
-                        </FormItem>
-                        <Button
-                            className="w-full flex-none sm:mt-[30px] sm:w-auto sm:min-w-[148px]"
-                            htmlType="button"
-                            loading={isSendOldPhoneNumberOtpPending}
-                            disabled={oldOtpLeft > 0 || isSendingOtp || isSubmitting}
-                            onClick={onSendOldOtp}
-                        >
-                            {oldOtpLeft > 0 ? `${oldOtpLeft} 秒后重试` : "发送原手机号验证码"}
-                        </Button>
-                    </div>
-                    <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
-                        <FormItem<CurrentUserPhoneNumberEditorFormData>
-                            className="mb-0 flex-auto"
-                            name="newOtp"
-                            label="新手机号验证码"
-                            rules={[schemaToRule(otpSchema)]}
-                        >
-                            <Input autoComplete="off" allowClear />
-                        </FormItem>
-                        <Button
-                            className="w-full flex-none sm:mt-[30px] sm:w-auto sm:min-w-[148px]"
-                            htmlType="button"
-                            loading={isSendNewPhoneNumberOtpPending}
-                            disabled={newOtpLeft > 0 || isSendingOtp || isSubmitting}
-                            onClick={onSendNewOtp}
-                        >
-                            {newOtpLeft > 0 ? `${newOtpLeft} 秒后重试` : "发送新手机号验证码"}
-                        </Button>
-                    </div>
-                </div>
-                <FormItem<CurrentUserPhoneNumberEditorFormData> noStyle>
-                    <Button className="!hidden" htmlType="submit" />
-                </FormItem>
-            </Form>
-        </Modal>
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent showCloseButton={!isUpdateCurrentUserProfilePending}>
+                <DialogHeader>
+                    <DialogTitle>修改手机号</DialogTitle>
+                    <DialogDescription>需要分别验证当前手机号和新手机号。</DialogDescription>
+                </DialogHeader>
+                <DialogBody className="space-y-6">
+                    <Alert>
+                        <AlertTitle>双重验证</AlertTitle>
+                        <AlertDescription>验证码均为 4 位数字，有效时间以短信内容为准。</AlertDescription>
+                    </Alert>
+                    <form
+                        id="phone-number-editor-form"
+                        onSubmit={event => {
+                            event.preventDefault()
+                            event.stopPropagation()
+                            void form.handleSubmit()
+                        }}
+                    >
+                        <FieldGroup>
+                            <form.Field name="phoneNumber" validators={{ onBlur: getOnBlurValidator(phoneNumberSchema) }}>
+                                {field => {
+                                    const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
+                                    return (
+                                        <Field data-invalid={isInvalid}>
+                                            <FieldLabel htmlFor={field.name}>新手机号</FieldLabel>
+                                            <Input
+                                                id={field.name}
+                                                name={field.name}
+                                                autoComplete="tel"
+                                                disabled={isUpdateCurrentUserProfilePending}
+                                                aria-invalid={isInvalid}
+                                                value={field.state.value}
+                                                onBlur={field.handleBlur}
+                                                onChange={event => field.handleChange(event.target.value)}
+                                            />
+                                            {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                                        </Field>
+                                    )
+                                }}
+                            </form.Field>
+                            <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
+                                <form.Field name="oldOtp" validators={{ onBlur: getOnBlurValidator(otpSchema) }}>
+                                    {field => {
+                                        const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
+                                        return (
+                                            <Field data-invalid={isInvalid}>
+                                                <FieldLabel htmlFor={field.name}>原手机号验证码</FieldLabel>
+                                                <Input
+                                                    id={field.name}
+                                                    name={field.name}
+                                                    inputMode="numeric"
+                                                    autoComplete="one-time-code"
+                                                    disabled={isUpdateCurrentUserProfilePending}
+                                                    aria-invalid={isInvalid}
+                                                    value={field.state.value}
+                                                    onBlur={field.handleBlur}
+                                                    onChange={event => field.handleChange(event.target.value)}
+                                                />
+                                                {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                                            </Field>
+                                        )
+                                    }}
+                                </form.Field>
+                                <Button
+                                    className="self-end sm:min-w-36"
+                                    type="button"
+                                    variant="outline"
+                                    disabled={oldOtpLeft > 0 || isPending}
+                                    onClick={() => void onSendOldOtp()}
+                                >
+                                    {isSendOldPhoneNumberOtpPending && <LoaderCircleIcon className="animate-spin" />}
+                                    {oldOtpLeft > 0 ? `${oldOtpLeft} 秒` : "发送验证码"}
+                                </Button>
+                            </div>
+                            <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
+                                <form.Field name="newOtp" validators={{ onBlur: getOnBlurValidator(otpSchema) }}>
+                                    {field => {
+                                        const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
+                                        return (
+                                            <Field data-invalid={isInvalid}>
+                                                <FieldLabel htmlFor={field.name}>新手机号验证码</FieldLabel>
+                                                <Input
+                                                    id={field.name}
+                                                    name={field.name}
+                                                    inputMode="numeric"
+                                                    autoComplete="one-time-code"
+                                                    disabled={isUpdateCurrentUserProfilePending}
+                                                    aria-invalid={isInvalid}
+                                                    value={field.state.value}
+                                                    onBlur={field.handleBlur}
+                                                    onChange={event => field.handleChange(event.target.value)}
+                                                />
+                                                {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                                            </Field>
+                                        )
+                                    }}
+                                </form.Field>
+                                <Button
+                                    className="self-end sm:min-w-36"
+                                    type="button"
+                                    variant="outline"
+                                    disabled={newOtpLeft > 0 || isPending}
+                                    onClick={() => void onSendNewOtp()}
+                                >
+                                    {isSendNewPhoneNumberOtpPending && <LoaderCircleIcon className="animate-spin" />}
+                                    {newOtpLeft > 0 ? `${newOtpLeft} 秒` : "发送验证码"}
+                                </Button>
+                            </div>
+                        </FieldGroup>
+                    </form>
+                </DialogBody>
+                <DialogFooter>
+                    <Button type="button" variant="outline" disabled={isUpdateCurrentUserProfilePending} onClick={onClose}>
+                        取消
+                    </Button>
+                    <form.Subscribe selector={state => [state.canSubmit, state.isSubmitting, state.isPristine]}>
+                        {([canSubmit, isSubmitting, isPristine]) => (
+                            <Button type="submit" form="phone-number-editor-form" disabled={!canSubmit || isPending || isSubmitting || isPristine}>
+                                {(isUpdateCurrentUserProfilePending || isSubmitting) && <LoaderCircleIcon className="animate-spin" />}
+                                保存
+                            </Button>
+                        )}
+                    </form.Subscribe>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     )
 }

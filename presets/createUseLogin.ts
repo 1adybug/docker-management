@@ -4,27 +4,20 @@ import { withUseMutationDefaults } from "soda-tanstack-query"
 
 import type { login } from "@/shared/login"
 
+import { toast } from "@/utils/toast"
+
 export const createUseLogin = withUseMutationDefaults<typeof login>(() => {
     const key = useId()
 
     return {
         onMutate(variables, context) {
-            message.open({
-                key,
-                type: "loading",
-                content: "登录中...",
-                duration: 0,
-            })
+            toast.loading("登录中...", { id: key })
         },
         onSuccess(data, variables, onMutateResult, context) {
-            message.open({
-                key,
-                type: "success",
-                content: "登录成功",
-            })
+            toast.success("登录成功", { id: key })
         },
         onError(error, variables, onMutateResult, context) {
-            message.destroy(key)
+            toast.dismiss(key)
         },
         onSettled(data, error, variables, onMutateResult, context) {},
     }

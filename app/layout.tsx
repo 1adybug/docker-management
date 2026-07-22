@@ -21,7 +21,7 @@ export interface RootLayoutProps {
 }
 
 const RootLayout: FC<RootLayoutProps> = ({ children }) => (
-    <html lang="zh">
+    <html lang="zh-CN" suppressHydrationWarning>
         <body>
             <Registry>{children}</Registry>
         </body>

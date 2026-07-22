@@ -2,12 +2,15 @@
 
 import { type FC, useEffect, useId, useState } from "react"
 
-import { Button, Form, Input } from "antd"
-import { useForm } from "antd/es/form/Form"
-import FormItem from "antd/es/form/FormItem"
+import { useForm } from "@tanstack/react-form"
 import { getErrorMessage } from "deepsea-tools"
+import { LoaderCircleIcon } from "lucide-react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { schemaToRule } from "soda-antd"
+
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Field, FieldError, FieldGroup } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
 
 import { GeshuOAuthProviderId } from "@/constants"
 
@@ -15,11 +18,13 @@ import { useLogin } from "@/hooks/useLogin"
 import { useQueryGeshuOAuthLoginStatus } from "@/hooks/useQueryGeshuOAuthLoginStatus"
 import { useSendPhoneNumberOtp } from "@/hooks/useSendPhoneNumberOtp"
 
-import { accountSchema } from "@/schemas/account"
-import type { LoginParams } from "@/schemas/login"
+import { accountParser, accountSchema } from "@/schemas/account"
+import { loginParser, loginSchema } from "@/schemas/login"
 import { otpSchema } from "@/schemas/otp"
 
 import { authClient } from "@/utils/authClient"
+import { getOnBlurValidator } from "@/utils/getOnBlurValidator"
+import { toast } from "@/utils/toast"
 
 const OAuthLoginErrorMessage = {
     signup_disabled: "当前手机号还不能登录本系统，请联系管理员先为你开通账号。",
@@ -43,7 +48,6 @@ const Page: FC = () => {
     const pathname = usePathname()
     const router = useRouter()
     const searchParams = useSearchParams()
-    const [form] = useForm<LoginParams>()
     const [left, setLeft] = useState(0)
     const [isOAuthLoginPending, setIsOAuthLoginPending] = useState(false)
 
@@ -61,6 +65,19 @@ const Page: FC = () => {
         },
     })
 
+    const form = useForm({
+        defaultValues: {
+            account: "",
+            otp: "",
+        },
+        validators: {
+            onSubmit: loginSchema,
+        },
+        async onSubmit({ value }) {
+            await login(loginParser(value))
+        },
+    })
+
     useEffect(() => {
         if (left === 0) return
         const timeout = setTimeout(() => setLeft(Math.max(0, left - 1)), 1000)
@@ -72,48 +89,34 @@ const Page: FC = () => {
         if (!error) return
 
         const description = searchParams.get("error_description") ?? undefined
-
-        message.open({
-            key,
-            type: "error",
-            content: getOAuthLoginErrorMessage(error, description),
-        })
+        toast.error(getOAuthLoginErrorMessage(error, description), { id: key })
 
         const nextSearchParams = new URLSearchParams(searchParams)
         nextSearchParams.delete("error")
         nextSearchParams.delete("error_description")
 
         const search = nextSearchParams.toString()
-        const nextPathname = search ? `${pathname}?${search}` : pathname
-
-        window.history.replaceState(null, "", nextPathname)
+        window.history.replaceState(null, "", search ? `${pathname}?${search}` : pathname)
     }, [key, pathname, searchParams])
 
-    function sendOtp() {
-        sendPhoneNumberOtp(form.getFieldValue("account"))
+    async function sendOtp() {
+        try {
+            await sendPhoneNumberOtp(accountParser(form.getFieldValue("account")))
+        } catch (error) {
+            toast.error(getErrorMessage(error))
+        }
     }
 
     async function onOAuthLogin() {
         if (isOAuthLoginPending) return
 
         if (!geshuOAuthLoginStatus?.ready) {
-            message.open({
-                key,
-                type: "error",
-                content: "暂时无法使用格数账号登录，请联系管理员处理。",
-            })
-
+            toast.error("暂时无法使用格数账号登录，请联系管理员处理。")
             return
         }
 
         setIsOAuthLoginPending(true)
-
-        message.open({
-            key,
-            type: "loading",
-            content: "正在跳转账号平台...",
-            duration: 0,
-        })
+        toast.loading("正在跳转账号平台...", { id: key })
 
         try {
             const response = await authClient.signIn.oauth2({
@@ -123,14 +126,9 @@ const Page: FC = () => {
             })
 
             if (response.error) throw new Error(response.error.message || "账号平台登录失败")
-
-            message.destroy(key)
+            toast.dismiss(key)
         } catch (error) {
-            message.open({
-                key,
-                type: "error",
-                content: getErrorMessage(error),
-            })
+            toast.error(getErrorMessage(error), { id: key })
         } finally {
             setIsOAuthLoginPending(false)
         }
@@ -140,34 +138,100 @@ const Page: FC = () => {
     const isOAuthLoginReady = geshuOAuthLoginStatus?.ready === true
 
     return (
-        <Form<LoginParams> name="login-form" form={form} className="!mx-auto flex w-64 flex-col" onFinish={login} disabled={isLoginPending}>
-            <FormItem<LoginParams> name="account" rules={[schemaToRule(accountSchema)]}>
-                <Input placeholder="用户名或手机号" autoComplete="off" />
-            </FormItem>
-            <div className="flex gap-2">
-                <FormItem<LoginParams> name="otp" rules={[schemaToRule(otpSchema)]}>
-                    <Input placeholder="验证码" autoComplete="off" />
-                </FormItem>
-                <Button className="w-[112px] flex-none" onClick={sendOtp} loading={isSendPhoneNumberOtpPending} disabled={left > 0}>
-                    {left > 0 ? `${left} 秒后重试` : "发送验证码"}
-                </Button>
-            </div>
-            <Button className="mt-4" type="primary" block disabled={isLoginPending} htmlType="submit">
-                登录
-            </Button>
-            {isOAuthLoginVisible && (
-                <Button
-                    className="mt-4"
-                    block
-                    title={isOAuthLoginReady ? undefined : "暂时无法使用格数账号登录"}
-                    loading={isOAuthLoginPending}
-                    disabled={!isOAuthLoginReady}
-                    onClick={onOAuthLogin}
+        <Card>
+            <CardHeader>
+                <CardTitle>登录</CardTitle>
+                <CardDescription>使用手机号验证码或格数账号进入系统。</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <form
+                    id="login-form"
+                    className="space-y-4"
+                    onSubmit={event => {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        void form.handleSubmit()
+                    }}
                 >
-                    格数账号登录
-                </Button>
-            )}
-        </Form>
+                    <FieldGroup>
+                        <form.Field name="account" validators={{ onBlur: getOnBlurValidator(accountSchema) }}>
+                            {field => {
+                                const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
+                                return (
+                                    <Field data-invalid={isInvalid}>
+                                        <Input
+                                            id={field.name}
+                                            name={field.name}
+                                            placeholder="用户名或手机号"
+                                            autoComplete="username"
+                                            aria-invalid={isInvalid}
+                                            value={field.state.value}
+                                            onBlur={field.handleBlur}
+                                            onChange={event => field.handleChange(event.target.value)}
+                                        />
+                                        {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                                    </Field>
+                                )
+                            }}
+                        </form.Field>
+                        <div className="flex items-start gap-2">
+                            <form.Field name="otp" validators={{ onBlur: getOnBlurValidator(otpSchema) }}>
+                                {field => {
+                                    const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
+                                    return (
+                                        <Field className="min-w-0 flex-auto" data-invalid={isInvalid}>
+                                            <Input
+                                                id={field.name}
+                                                name={field.name}
+                                                inputMode="numeric"
+                                                placeholder="验证码"
+                                                autoComplete="one-time-code"
+                                                aria-invalid={isInvalid}
+                                                value={field.state.value}
+                                                onBlur={field.handleBlur}
+                                                onChange={event => field.handleChange(event.target.value)}
+                                            />
+                                            {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                                        </Field>
+                                    )
+                                }}
+                            </form.Field>
+                            <Button
+                                className="w-32 flex-none"
+                                type="button"
+                                variant="outline"
+                                disabled={left > 0 || isSendPhoneNumberOtpPending}
+                                onClick={() => void sendOtp()}
+                            >
+                                {isSendPhoneNumberOtpPending && <LoaderCircleIcon className="animate-spin" />}
+                                {left > 0 ? `${left} 秒` : "发送验证码"}
+                            </Button>
+                        </div>
+                    </FieldGroup>
+                    <form.Subscribe selector={state => [state.canSubmit, state.isSubmitting, state.isPristine]}>
+                        {([canSubmit, isSubmitting, isPristine]) => (
+                            <Button className="w-full" type="submit" disabled={!canSubmit || isSubmitting || isLoginPending || isPristine}>
+                                {(isSubmitting || isLoginPending) && <LoaderCircleIcon className="animate-spin" />}
+                                登录
+                            </Button>
+                        )}
+                    </form.Subscribe>
+                    {isOAuthLoginVisible && (
+                        <Button
+                            className="w-full"
+                            type="button"
+                            variant="outline"
+                            title={isOAuthLoginReady ? undefined : "暂时无法使用格数账号登录"}
+                            disabled={!isOAuthLoginReady || isOAuthLoginPending}
+                            onClick={() => void onOAuthLogin()}
+                        >
+                            {isOAuthLoginPending && <LoaderCircleIcon className="animate-spin" />}
+                            格数账号登录
+                        </Button>
+                    )}
+                </form>
+            </CardContent>
+        </Card>
     )
 }
 

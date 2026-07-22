@@ -4,27 +4,20 @@ import { withUseMutationDefaults } from "soda-tanstack-query"
 
 import type { createFirstUser } from "@/shared/createFirstUser"
 
+import { toast } from "@/utils/toast"
+
 export const createUseCreateFirstUser = withUseMutationDefaults<typeof createFirstUser>(() => {
     const key = useId()
 
     return {
         onMutate(variables, context) {
-            message.open({
-                key,
-                type: "loading",
-                content: "初始化中...",
-                duration: 0,
-            })
+            toast.loading("初始化中...", { id: key })
         },
         onSuccess(data, variables, onMutateResult, context) {
-            message.open({
-                key,
-                type: "success",
-                content: "初始化成功",
-            })
+            toast.success("初始化成功", { id: key })
         },
         onError(error, variables, onMutateResult, context) {
-            message.destroy(key)
+            toast.dismiss(key)
         },
         onSettled(data, error, variables, onMutateResult, context) {},
     }

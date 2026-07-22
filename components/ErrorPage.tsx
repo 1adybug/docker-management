@@ -1,10 +1,11 @@
 import type { ComponentProps, FC } from "react"
 
-import { IconArrowLeft } from "@tabler/icons-react"
 import { clsx } from "deepsea-tools"
+import { ArrowLeftIcon } from "lucide-react"
 import Link from "next/link"
 
 import { Brand } from "@/components/Brand"
+import { ThemeSwitcher } from "@/components/ThemeSwitcher"
 
 export interface ErrorPageProps extends ComponentProps<"div"> {
     code: number | string
@@ -16,20 +17,24 @@ export interface ErrorPageProps extends ComponentProps<"div"> {
 }
 
 export const ErrorPage: FC<ErrorPageProps> = ({ code, title, description, href, link, image, className, ...rest }) => (
-    <div className={clsx("grid h-full grid-cols-1 sm:grid-cols-2", className)} {...rest}>
-        <div className="relative p-8">
-            <Brand />
-            <div className="absolute left-8 top-1/2 -translate-y-1/2">
-                <div className="text-primary text-base leading-loose">{code}</div>
-                <div className="mt-4 text-[60px] font-bold leading-none">{title}</div>
-                <div className="text-foreground-500 mt-8 text-xl leading-8">{description}</div>
-                <div className="text-primary mt-10 text-sm leading-loose">
-                    <Link href={href}>
-                        <IconArrowLeft className="inline-block h-5 w-5 align-text-bottom" /> {link}
+    <div className={clsx("grid min-h-full grid-cols-1 bg-background lg:grid-cols-2", className)} {...rest}>
+        <div className="flex min-h-screen flex-col p-6 supports-[min-height:100svh]:min-h-svh sm:p-8">
+            <div className="flex items-center justify-between gap-4">
+                <Brand />
+                <ThemeSwitcher variant="outline" />
+            </div>
+            <div className="flex flex-auto items-center py-12">
+                <div>
+                    <div className="text-sm font-medium text-primary">错误代码 {code}</div>
+                    <h1 className="mt-4 text-5xl font-semibold tracking-tight sm:text-6xl">{title}</h1>
+                    <p className="mt-6 max-w-lg text-lg leading-8 text-muted-foreground">{description}</p>
+                    <Link className="mt-8 inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline" href={href}>
+                        <ArrowLeftIcon className="size-4" />
+                        {link}
                     </Link>
                 </div>
             </div>
         </div>
-        <div className="hidden bg-cover bg-bottom sm:block" style={{ backgroundImage: `url(${image})` }} />
+        <div className="hidden bg-cover bg-bottom lg:block" style={{ backgroundImage: `url(${image})` }} />
     </div>
 )

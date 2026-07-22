@@ -1,48 +1,67 @@
 "use client"
 
-import {
-    type ComponentProps,
-    type FC,
-    type KeyboardEvent as ReactKeyboardEvent,
-    type MouseEvent as ReactMouseEvent,
-    type ReactNode,
-    useEffect,
-    useState,
-} from "react"
+import { type ComponentProps, type FC, type ReactNode, useEffect, useState } from "react"
 
-import { IconAt, IconCalendarPlus, IconCheck, IconClockEdit, IconId, IconPencil, IconPhone, IconShieldCheck, IconUserCircle } from "@tabler/icons-react"
-import { Avatar, Button, Card, Tag, Tooltip } from "antd"
+import { useForm } from "@tanstack/react-form"
 import { type StrictOmit, clsx, getEnumKey } from "deepsea-tools"
+import {
+    AtSignIcon,
+    BadgeCheckIcon,
+    CalendarPlusIcon,
+    ClockIcon,
+    IdCardIcon,
+    LoaderCircleIcon,
+    PencilIcon,
+    PhoneIcon,
+    ShieldCheckIcon,
+    UserRoundIcon,
+    XIcon,
+} from "lucide-react"
 import { useRouter } from "next/navigation"
+import { z } from "zod"
+
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Field, FieldError, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
+import { Separator } from "@/components/ui/separator"
 
 import { useUpdateCurrentUserProfile } from "@/hooks/useUpdateCurrentUserProfile"
 
 import type { User } from "@/prisma/generated/client"
 
-import { nicknameParser } from "@/schemas/nickname"
+import { nicknameSchema } from "@/schemas/nickname"
+import { updateCurrentUserProfileParser } from "@/schemas/updateCurrentUserProfile"
 import { UserRole } from "@/schemas/userRole"
 
 import { formatDateTime } from "@/utils/formatDateTime"
+import { getOnBlurValidator } from "@/utils/getOnBlurValidator"
 
 import { CurrentUserPhoneNumberEditor } from "./CurrentUserPhoneNumberEditor"
 
-export interface ProfileDetailItemProps extends StrictOmit<ComponentProps<"div">, "children"> {
-    icon?: ReactNode
+const nicknameFormSchema = z.object({
+    nickname: nicknameSchema,
+})
+
+export interface ProfileInformationItemProps extends StrictOmit<ComponentProps<"div">, "children"> {
+    icon: ReactNode
     label: string
-    valueExtra?: ReactNode
+    description?: ReactNode
+    action?: ReactNode
     children?: ReactNode
 }
 
-export const ProfileDetailItem: FC<ProfileDetailItemProps> = ({ className, icon, label, valueExtra, children, ...rest }) => (
-    <div className={clsx("flex gap-3 border-b border-neutral-100 py-4 last:border-b-0", className)} {...rest}>
-        <div className="flex size-9 flex-none items-center justify-center rounded-lg bg-neutral-100 text-neutral-500">{icon}</div>
+export const ProfileInformationItem: FC<ProfileInformationItemProps> = ({ className, icon, label, description, action, children, ...rest }) => (
+    <div className={clsx("flex flex-col gap-3 py-4 sm:flex-row sm:items-start", className)} {...rest}>
+        <div className="flex size-10 flex-none items-center justify-center rounded-2xl bg-muted text-muted-foreground">{icon}</div>
         <div className="min-w-0 flex-auto">
-            <div className="text-sm font-medium text-neutral-500">{label}</div>
-            <div className="mt-1 flex min-h-9 min-w-0 items-center justify-between gap-2 text-base text-neutral-900 sm:gap-3">
-                <div className="min-w-0 flex-auto break-words">{children}</div>
-                {valueExtra ? <div className="flex flex-none items-center">{valueExtra}</div> : null}
-            </div>
+            <div className="text-xs font-medium tracking-wide text-muted-foreground">{label}</div>
+            <div className="mt-1 min-h-6 break-words text-sm font-medium">{children}</div>
+            {description && <div className="mt-1 text-xs text-muted-foreground">{description}</div>}
         </div>
+        {action && <div className="flex flex-none items-center sm:pt-1">{action}</div>}
     </div>
 )
 
@@ -61,92 +80,52 @@ export const CurrentUserProfile: FC<CurrentUserProfileProps> = ({ className, dat
     const router = useRouter()
     const [currentUser, setCurrentUser] = useState(data)
     const [isEditingNickname, setIsEditingNickname] = useState(false)
-    const [nicknameInputValue, setNicknameInputValue] = useState(data.nickname)
     const [isPhoneNumberEditorOpen, setIsPhoneNumberEditorOpen] = useState(false)
 
-    const { mutateAsync: updateCurrentUserProfile, isPending: isUpdateCurrentUserProfilePending } = useUpdateCurrentUserProfile({
+    const { mutateAsync: updateCurrentUserProfile, isPending } = useUpdateCurrentUserProfile({
         onSuccess(nextUser) {
             setCurrentUser(nextUser)
-            setNicknameInputValue(nextUser.nickname)
             setIsEditingNickname(false)
             router.refresh()
         },
     })
 
+    const nicknameForm = useForm({
+        defaultValues: {
+            nickname: data.nickname,
+        },
+        validators: {
+            onSubmit: nicknameFormSchema,
+        },
+        async onSubmit({ value }) {
+            if (value.nickname.trim() === currentUser.nickname) {
+                setIsEditingNickname(false)
+                return
+            }
+
+            await updateCurrentUserProfile(
+                updateCurrentUserProfileParser({
+                    nickname: value.nickname,
+                    phoneNumber: currentUser.phoneNumber,
+                }),
+            )
+        },
+    })
+
     useEffect(() => {
         setCurrentUser(data)
-        setNicknameInputValue(data.nickname)
         setIsEditingNickname(false)
-    }, [data])
+        nicknameForm.reset({ nickname: data.nickname })
+    }, [data, nicknameForm])
 
     function onEditNickname() {
-        setNicknameInputValue(currentUser.nickname)
+        nicknameForm.reset({ nickname: currentUser.nickname })
         setIsEditingNickname(true)
     }
 
-    function onNicknameActionClick() {
-        if (isEditingNickname) void onSubmitNickname()
-        else onEditNickname()
-    }
-
-    function onNicknameButtonMouseDown(event: ReactMouseEvent<HTMLButtonElement, MouseEvent>) {
-        if (!isEditingNickname) return
-        event.preventDefault()
-    }
-
-    function onNicknameInputValueChange(event: React.ChangeEvent<HTMLInputElement>) {
-        setNicknameInputValue(event.target.value)
-    }
-
-    async function onSubmitNickname() {
-        if (!isEditingNickname || isUpdateCurrentUserProfilePending) return
-
-        const nickname = nicknameInputValue.trim()
-
-        if (!nickname || nickname === currentUser.nickname) {
-            setNicknameInputValue(currentUser.nickname)
-            setIsEditingNickname(false)
-            return
-        }
-
-        try {
-            nicknameParser(nickname)
-        } catch (error) {
-            const messageText = error instanceof Error ? error.message : "昵称格式不正确"
-
-            message.open({
-                type: "error",
-                content: messageText,
-            })
-
-            return
-        }
-
-        const nextUser = await updateCurrentUserProfile({
-            nickname,
-            phoneNumber: currentUser.phoneNumber,
-        })
-
-        setCurrentUser(nextUser)
-    }
-
-    function onNicknameBlur() {
-        void onSubmitNickname()
-    }
-
-    function onNicknameInputKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
-        if (event.key !== "Enter") return
-
-        event.preventDefault()
-        void onSubmitNickname()
-    }
-
-    function onPhoneNumberEditorClose() {
-        setIsPhoneNumberEditorOpen(false)
-    }
-
-    function onOpenPhoneNumberEditor() {
-        setIsPhoneNumberEditorOpen(true)
+    function onCancelEditNickname() {
+        nicknameForm.reset({ nickname: currentUser.nickname })
+        setIsEditingNickname(false)
     }
 
     function onPhoneNumberEditorSuccess(nextUser: User) {
@@ -157,117 +136,179 @@ export const CurrentUserProfile: FC<CurrentUserProfileProps> = ({ className, dat
     const roleName = getEnumKey(UserRole, currentUser.role)
 
     return (
-        <div className={clsx("h-full overflow-auto bg-neutral-50", className)} {...rest}>
-            <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-3 py-4 sm:gap-6 sm:px-4 sm:py-6 md:px-6">
-                <section className="rounded-lg border border-neutral-200 bg-white px-4 py-4 shadow-sm sm:px-5 sm:py-5 md:px-6">
-                    <div className="flex min-w-0 items-start gap-3 sm:items-center sm:gap-4">
-                        <Avatar className="size-16 flex-none bg-blue-600 text-2xl font-semibold" size={64}>
-                            {getAvatarText(currentUser)}
-                        </Avatar>
-                        <div className="min-w-0 flex-auto">
-                            <div className="flex flex-wrap items-center gap-2">
-                                <h1 className="m-0 max-w-full truncate text-xl font-semibold text-neutral-950 sm:text-2xl">{currentUser.nickname}</h1>
-                                <Tag className="m-0" color={currentUser.role === UserRole.管理员 ? "blue" : "default"}>
-                                    {roleName}
-                                </Tag>
-                            </div>
-                            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-neutral-500">
-                                <span className="inline-flex min-w-0 items-center gap-1.5">
-                                    <IconAt className="flex-none" size={16} />
-                                    <span className="truncate">{currentUser.name}</span>
-                                </span>
-                                <span className="inline-flex min-w-0 items-center gap-1.5">
-                                    <IconPhone className="flex-none" size={16} />
-                                    <span className="truncate">{currentUser.phoneNumber}</span>
-                                </span>
-                            </div>
+        <div className={clsx("space-y-6", className)} {...rest}>
+            <div>
+                <h1 className="text-2xl font-semibold tracking-tight">个人中心</h1>
+                <p className="mt-1 text-sm text-muted-foreground">查看账户信息并维护个人资料。</p>
+            </div>
+
+            <Card className="relative isolate overflow-hidden">
+                <div className="absolute inset-0 -z-10 bg-gradient-to-r from-primary/20 via-primary/10 to-primary/5" aria-hidden />
+                <CardContent className="flex flex-col gap-5 pt-8 sm:flex-row sm:items-end">
+                    <Avatar className="size-24 flex-none shadow-sm ring-4 ring-card">
+                        <AvatarFallback className="bg-primary text-3xl font-semibold text-primary-foreground">{getAvatarText(currentUser)}</AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-auto pb-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <h2 className="truncate text-2xl font-semibold tracking-tight">{currentUser.nickname}</h2>
+                            <Badge variant={currentUser.role === UserRole.管理员 ? "default" : "secondary"}>{roleName}</Badge>
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted-foreground">
+                            <span className="inline-flex items-center gap-1.5">
+                                <AtSignIcon className="size-4" />
+                                {currentUser.name}
+                            </span>
+                            <span className="inline-flex items-center gap-1.5">
+                                <PhoneIcon className="size-4" />
+                                {currentUser.phoneNumber}
+                            </span>
                         </div>
                     </div>
-                </section>
+                    <div className="flex flex-none items-center gap-2 rounded-2xl bg-background/70 px-3 py-2 text-xs text-muted-foreground ring-1 ring-foreground/5 backdrop-blur-sm">
+                        <ShieldCheckIcon className="size-4 text-primary" />
+                        账户状态正常
+                    </div>
+                </CardContent>
+            </Card>
 
-                <Card
-                    className="overflow-hidden [&_.ant-card-body]:p-4 sm:[&_.ant-card-body]:p-6 [&_.ant-card-head]:px-4 sm:[&_.ant-card-head]:px-6"
-                    title="基础资料"
-                >
-                    <ProfileDetailItem
-                        icon={<IconUserCircle size={20} />}
-                        label="昵称"
-                        valueExtra={
-                            allowUpdateNickname ? (
-                                <Tooltip title={isEditingNickname ? "保存昵称" : "修改昵称"}>
-                                    <Button
-                                        type="text"
-                                        size="small"
-                                        className="flex-none text-neutral-500"
-                                        disabled={isUpdateCurrentUserProfilePending}
-                                        icon={isEditingNickname ? <IconCheck size={16} /> : <IconPencil size={16} />}
-                                        aria-label={isEditingNickname ? "保存昵称" : "修改昵称"}
-                                        onMouseDown={onNicknameButtonMouseDown}
-                                        onClick={onNicknameActionClick}
-                                    />
-                                </Tooltip>
-                            ) : undefined
-                        }
-                    >
-                        <div className="h-6 min-w-0 text-base leading-6">
-                            {isEditingNickname ? (
-                                <input
-                                    autoFocus
-                                    autoComplete="off"
-                                    className="block h-6 w-full min-w-0 appearance-none border-0 bg-transparent p-0 text-base leading-6 text-neutral-900 outline-none disabled:cursor-not-allowed disabled:text-neutral-400"
-                                    disabled={isUpdateCurrentUserProfilePending}
-                                    value={nicknameInputValue}
-                                    onBlur={onNicknameBlur}
-                                    onChange={onNicknameInputValueChange}
-                                    onKeyDown={onNicknameInputKeyDown}
-                                />
-                            ) : (
-                                <div className="h-6 truncate leading-6">{currentUser.nickname}</div>
-                            )}
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(300px,0.8fr)]">
+                <Card>
+                    <CardHeader className="flex-row items-start justify-between gap-4 space-y-0 border-b">
+                        <div className="space-y-1.5">
+                            <CardTitle>个人资料</CardTitle>
+                            <CardDescription>用于识别账户和接收验证信息。</CardDescription>
                         </div>
-                    </ProfileDetailItem>
-                    <ProfileDetailItem icon={<IconAt size={20} />} label="用户名">
-                        {currentUser.name}
-                    </ProfileDetailItem>
-                    <ProfileDetailItem
-                        icon={<IconPhone size={20} />}
-                        label="手机号"
-                        valueExtra={
-                            allowUpdatePhoneNumber ? (
-                                <Tooltip title="修改手机号">
-                                    <Button
-                                        type="text"
-                                        size="small"
-                                        className="flex-none text-neutral-500"
-                                        icon={<IconPencil size={16} />}
-                                        aria-label="修改手机号"
-                                        onClick={onOpenPhoneNumberEditor}
-                                    />
-                                </Tooltip>
-                            ) : undefined
-                        }
-                    >
-                        {currentUser.phoneNumber}
-                    </ProfileDetailItem>
-                    <ProfileDetailItem icon={<IconShieldCheck size={20} />} label="角色">
-                        {roleName}
-                    </ProfileDetailItem>
-                    <ProfileDetailItem icon={<IconId size={20} />} label="账号 ID">
-                        {currentUser.id}
-                    </ProfileDetailItem>
-                    <ProfileDetailItem icon={<IconCalendarPlus size={20} />} label="注册时间">
-                        {formatDateTime(currentUser.createdAt)}
-                    </ProfileDetailItem>
-                    <ProfileDetailItem icon={<IconClockEdit size={20} />} label="最近更新">
-                        {formatDateTime(currentUser.updatedAt)}
-                    </ProfileDetailItem>
+                        <div className="flex-none">
+                            <Badge variant="outline">
+                                <UserRoundIcon data-icon="inline-start" />
+                                个人账户
+                            </Badge>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <ProfileInformationItem
+                            icon={<UserRoundIcon className="size-5" />}
+                            label="昵称"
+                            description={allowUpdateNickname ? "昵称会显示在后台导航和个人资料中。" : "系统当前不允许修改昵称。"}
+                            action={
+                                !isEditingNickname && allowUpdateNickname ? (
+                                    <Button type="button" size="sm" variant="outline" disabled={isPending} onClick={onEditNickname}>
+                                        <PencilIcon />
+                                        修改
+                                    </Button>
+                                ) : undefined
+                            }
+                        >
+                            {isEditingNickname ? (
+                                <form
+                                    id="nickname-form"
+                                    className="max-w-md space-y-3"
+                                    onSubmit={event => {
+                                        event.preventDefault()
+                                        event.stopPropagation()
+                                        void nicknameForm.handleSubmit()
+                                    }}
+                                >
+                                    <nicknameForm.Field name="nickname" validators={{ onBlur: getOnBlurValidator(nicknameSchema) }}>
+                                        {field => {
+                                            const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
+
+                                            return (
+                                                <Field data-invalid={isInvalid}>
+                                                    <FieldLabel className="sr-only" htmlFor={field.name}>
+                                                        昵称
+                                                    </FieldLabel>
+                                                    <Input
+                                                        autoFocus
+                                                        id={field.name}
+                                                        autoComplete="off"
+                                                        disabled={isPending}
+                                                        aria-invalid={isInvalid}
+                                                        value={field.state.value}
+                                                        onBlur={field.handleBlur}
+                                                        onChange={event => field.handleChange(event.target.value)}
+                                                    />
+                                                    {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                                                </Field>
+                                            )
+                                        }}
+                                    </nicknameForm.Field>
+                                    <div className="flex flex-wrap gap-2">
+                                        <nicknameForm.Subscribe selector={state => [state.canSubmit, state.isSubmitting, state.isPristine]}>
+                                            {([canSubmit, isSubmitting, isPristine]) => (
+                                                <Button type="submit" size="sm" disabled={!canSubmit || isPending || isSubmitting || isPristine}>
+                                                    {(isPending || isSubmitting) && <LoaderCircleIcon className="animate-spin" />}
+                                                    保存昵称
+                                                </Button>
+                                            )}
+                                        </nicknameForm.Subscribe>
+                                        <Button type="button" size="sm" variant="ghost" disabled={isPending} onClick={onCancelEditNickname}>
+                                            <XIcon />
+                                            取消
+                                        </Button>
+                                    </div>
+                                </form>
+                            ) : (
+                                currentUser.nickname
+                            )}
+                        </ProfileInformationItem>
+                        <Separator />
+                        <ProfileInformationItem icon={<AtSignIcon className="size-5" />} label="用户名" description="用户名是账户的唯一登录标识。">
+                            {currentUser.name}
+                        </ProfileInformationItem>
+                        <Separator />
+                        <ProfileInformationItem
+                            icon={<PhoneIcon className="size-5" />}
+                            label="手机号"
+                            description={allowUpdatePhoneNumber ? "修改手机号需要分别验证当前号码和新号码。" : "系统当前不允许修改手机号。"}
+                            action={
+                                allowUpdatePhoneNumber ? (
+                                    <Button type="button" size="sm" variant="outline" onClick={() => setIsPhoneNumberEditorOpen(true)}>
+                                        <PencilIcon />
+                                        修改
+                                    </Button>
+                                ) : undefined
+                            }
+                        >
+                            {currentUser.phoneNumber}
+                        </ProfileInformationItem>
+                        <Separator />
+                        <ProfileInformationItem icon={<BadgeCheckIcon className="size-5" />} label="系统角色" description="角色决定可以访问的后台功能。">
+                            <Badge variant={currentUser.role === UserRole.管理员 ? "default" : "secondary"}>{roleName}</Badge>
+                        </ProfileInformationItem>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="border-b">
+                        <CardTitle>账户信息</CardTitle>
+                        <CardDescription>由系统自动维护的账户记录。</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <ProfileInformationItem icon={<IdCardIcon className="size-5" />} label="账号 ID" description="用于系统内部识别此账户。">
+                            <span className="break-all font-mono text-xs">{currentUser.id}</span>
+                        </ProfileInformationItem>
+                        <Separator />
+                        <ProfileInformationItem icon={<CalendarPlusIcon className="size-5" />} label="注册时间">
+                            {formatDateTime(currentUser.createdAt)}
+                        </ProfileInformationItem>
+                        <Separator />
+                        <ProfileInformationItem icon={<ClockIcon className="size-5" />} label="最近更新">
+                            {formatDateTime(currentUser.updatedAt)}
+                        </ProfileInformationItem>
+                    </CardContent>
+                    <CardFooter className="gap-2 border-t pt-6 text-xs text-muted-foreground">
+                        <ShieldCheckIcon className="size-4 text-primary" />
+                        账户标识和时间记录不可手动修改。
+                    </CardFooter>
                 </Card>
             </div>
-            {allowUpdatePhoneNumber && isPhoneNumberEditorOpen && (
+
+            {allowUpdatePhoneNumber && (
                 <CurrentUserPhoneNumberEditor
                     data={currentUser}
                     open={isPhoneNumberEditorOpen}
-                    onClose={onPhoneNumberEditorClose}
+                    onClose={() => setIsPhoneNumberEditorOpen(false)}
                     onSuccess={onPhoneNumberEditorSuccess}
                 />
             )}

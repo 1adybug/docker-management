@@ -3,7 +3,10 @@
 import type { ComponentProps, FC } from "react"
 
 import JsonView from "@uiw/react-json-view"
+import { darkTheme } from "@uiw/react-json-view/dark"
+import { lightTheme } from "@uiw/react-json-view/light"
 import { type StrictOmit, clsx } from "deepsea-tools"
+import { useTheme } from "next-themes"
 
 export interface JsonViewerProps extends StrictOmit<ComponentProps<typeof JsonView>, "children" | "displayDataTypes" | "value"> {
     value?: unknown
@@ -23,12 +26,25 @@ function renderArrow({ children, className, style, ...props }: JsonViewerArrowPr
     )
 }
 
-export const JsonViewer: FC<JsonViewerProps> = ({ className, value, ...rest }) => {
-    if (value === null || typeof value !== "object")
-        return <div className={clsx("whitespace-pre-wrap break-all !font-['Noto_Sans_SC_Variable']", className)}>{String(value)}</div>
+export const JsonViewer: FC<JsonViewerProps> = ({ className, style, value, ...rest }) => {
+    const { resolvedTheme } = useTheme()
+
+    if (value === null || typeof value !== "object") {
+        return (
+            <div className={clsx("whitespace-pre-wrap break-all !font-sans", className)} style={style}>
+                {String(value)}
+            </div>
+        )
+    }
 
     return (
-        <JsonView className={clsx("!font-['Noto_Sans_SC_Variable']", className)} value={value} displayDataTypes={false} {...rest}>
+        <JsonView
+            className={clsx("!font-sans", className)}
+            style={{ ...(resolvedTheme === "dark" ? darkTheme : lightTheme), ...style }}
+            value={value}
+            displayDataTypes={false}
+            {...rest}
+        >
             <JsonView.Arrow render={renderArrow} />
             <JsonView.Quote render={() => <span />} />
             <JsonView.Row

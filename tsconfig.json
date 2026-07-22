@@ -13,7 +13,7 @@
         "isolatedModules": true,
         "jsx": "react-jsx",
         "incremental": true,
-        "verbatimModuleSyntax": true,
+        "verbatimModuleSyntax": false,
         "plugins": [
             {
                 "name": "next"
