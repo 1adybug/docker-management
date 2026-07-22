@@ -14,12 +14,22 @@ const nextCoreWebVitals = requireFromSharedConfig("eslint-config-next/core-web-v
         return { ...config, languageOptions }
     })
 
-export default defineConfig({
-    next: {
-        recommended: false,
-        extends: nextCoreWebVitals,
+const eslintConfig = [
+    ...defineConfig({
+        next: {
+            recommended: false,
+            extends: nextCoreWebVitals,
+        },
+        rules: {
+            "@typescript-eslint/no-deprecated": "off",
+        },
+    }),
+    {
+        files: ["shared/**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}"],
+        rules: {
+            "prefer-arrow-callback": "off",
+        },
     },
-    rules: {
-        "@typescript-eslint/no-deprecated": "off",
-    },
-})
+]
+
+export default eslintConfig

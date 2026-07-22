@@ -249,18 +249,17 @@ export async function getSystemSettingValueMap({ force = false }: GetSystemSetti
 
     const values: SystemSettingValueMap = {}
 
-    SystemSettingDefinitions.forEach(definition => {
-        values[definition.key] = getDefaultSystemSettingValue(definition)
-    })
+    SystemSettingDefinitions.forEach(definition => void (values[definition.key] = getDefaultSystemSettingValue(definition)))
 
     records.forEach(record => {
         if (!getSystemSettingDefinition(record.key)) return
         values[record.key] = record.value
     })
 
-    SystemSettingDefinitions.forEach(definition => {
-        values[definition.key] = resolveSystemSettingValue(definition.key, values[definition.key] ?? getDefaultSystemSettingValue(definition))
-    })
+    SystemSettingDefinitions.forEach(
+        definition =>
+            void (values[definition.key] = resolveSystemSettingValue(definition.key, values[definition.key] ?? getDefaultSystemSettingValue(definition))),
+    )
 
     globalThis.__SYSTEM_SETTING_VALUES__ = values
 

@@ -156,15 +156,12 @@ export async function startAutoBackupScheduler() {
 
     globalThis.__AUTO_BACKUP_SCHEDULER__ = scheduler
 
-    void runAutoBackupMaintenance().catch(error => {
-        console.error("[auto-backup] 首次自动备份执行失败", error)
-    })
+    void runAutoBackupMaintenance().catch(error => void console.error("[auto-backup] 首次自动备份执行失败", error))
 
-    scheduler.timer = setInterval(() => {
-        void runAutoBackupMaintenance().catch(error => {
-            console.error("[auto-backup] 自动备份执行失败", error)
-        })
-    }, 60 * 1000)
+    scheduler.timer = setInterval(
+        () => void void runAutoBackupMaintenance().catch(error => void console.error("[auto-backup] 自动备份执行失败", error)),
+        60 * 1000,
+    )
 
     console.log("[auto-backup] 自动备份调度器已启动")
 
