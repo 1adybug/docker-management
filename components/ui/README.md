@@ -83,9 +83,9 @@
 | SelectTrigger | `default=32px`、`sm=28px` |
 | Switch | `default=32×20px`、`sm=24×16px`，Thumb 尺寸与位移同步 |
 | PaginationEllipsis | 默认 32×32px |
-| DialogContent | 默认使用项目 `rounded-4xl`；通过 `showCloseButton` 控制关闭按钮；关闭按钮点击区域 28×28px |
+| DialogContent | 默认使用项目 `rounded-4xl`；通过 `showCloseButton` 控制关闭按钮；关闭按钮点击区域 28×28px；外层限制高度并隐藏溢出，`DialogHeader`、`DialogFooter` 固定，只有 `DialogBody` 纵向滚动 |
 | AlertDialogContent | 默认使用项目 `rounded-4xl` |
-| SheetContent | 通过 `showCloseButton` 控制关闭按钮；关闭按钮点击区域 28×28px |
+| SheetContent | 通过 `showCloseButton` 控制关闭按钮；关闭按钮点击区域 28×28px；外层使用 `min-h-0` 并隐藏溢出，`SheetHeader`、`SheetFooter` 固定，实际内容区负责纵向滚动 |
 | SelectContent、DropdownMenuContent、PopoverContent | 默认使用轻边框、`bg-popover/95` 和 `backdrop-blur-md` |
 
 这些默认值都应由组件源码直接表达。调用方需要不同尺寸时传入已有 `size`，确有一次性差异时再传 `className`。
