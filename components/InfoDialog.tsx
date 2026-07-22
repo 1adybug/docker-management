@@ -3,7 +3,7 @@
 import type { FC, ReactNode } from "react"
 
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 export interface InfoDialogProps {
     title?: string
@@ -21,7 +21,9 @@ export const InfoDialog: FC<InfoDialogProps> = ({ title, description = "查看�
                 <DialogTitle>{title}</DialogTitle>
                 <DialogDescription>{description}</DialogDescription>
             </DialogHeader>
-            <div className="bg-muted max-h-[65vh] overflow-auto rounded-2xl p-4 break-words whitespace-pre-wrap">{children}</div>
+            <DialogBody>
+                <div className="bg-muted rounded-2xl p-4 break-words whitespace-pre-wrap">{children}</div>
+            </DialogBody>
             <DialogFooter>
                 <Button type="button" variant="outline" onClick={onClose}>
                     关闭
