@@ -70,9 +70,7 @@ export const BanUserEditor: FC<BanUserEditorProps> = ({ id, open = false, onClos
         },
     })
 
-    useEffect(() => {
-        form.reset({ banReason: "", banDate: "" })
-    }, [form, id, open])
+    useEffect(() => void form.reset({ banReason: "", banDate: "" }), [form, id, open])
 
     function onOpenChange(nextOpen: boolean) {
         if (!nextOpen && !isPending) onClose?.()

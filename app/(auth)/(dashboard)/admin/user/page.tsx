@@ -220,17 +220,19 @@ const Page: FC = () => {
     const isRequesting = isLoading || isUnbanUserPending || isDeleteUserPending || isTemplateDownloading || isExporting || isImporting
     const sorting: SortingState = query.sortBy ? [{ id: query.sortBy, desc: query.sortOrder === "desc" }] : []
 
-    useEffect(() => {
-        form.reset({
-            name: query.name ?? "",
-            nickname: query.nickname ?? "",
-            phoneNumber: query.phoneNumber ?? "",
-            createdAfter: query.createdAfter,
-            createdBefore: query.createdBefore,
-            updatedAfter: query.updatedAfter,
-            updatedBefore: query.updatedBefore,
-        })
-    }, [form, query.createdAfter, query.createdBefore, query.name, query.nickname, query.phoneNumber, query.updatedAfter, query.updatedBefore])
+    useEffect(
+        () =>
+            void form.reset({
+                name: query.name ?? "",
+                nickname: query.nickname ?? "",
+                phoneNumber: query.phoneNumber ?? "",
+                createdAfter: query.createdAfter,
+                createdBefore: query.createdBefore,
+                updatedAfter: query.updatedAfter,
+                updatedBefore: query.updatedBefore,
+            }),
+        [form, query.createdAfter, query.createdBefore, query.name, query.nickname, query.phoneNumber, query.updatedAfter, query.updatedBefore],
+    )
 
     const columns: ColumnDef<User>[] = [
         {

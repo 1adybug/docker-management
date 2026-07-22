@@ -143,17 +143,19 @@ const Page: FC = () => {
 
     const sorting: SortingState = query.sortBy ? [{ id: query.sortBy, desc: query.sortOrder === "desc" }] : []
 
-    useEffect(() => {
-        form.reset({
-            action: query.action ?? "",
-            name: query.name ?? "",
-            nickname: query.nickname ?? "",
-            ip: query.ip ?? "",
-            userAgent: query.userAgent ?? "",
-            createdAfter: query.createdAfter,
-            createdBefore: query.createdBefore,
-        })
-    }, [form, query.action, query.createdAfter, query.createdBefore, query.ip, query.name, query.nickname, query.userAgent])
+    useEffect(
+        () =>
+            void form.reset({
+                action: query.action ?? "",
+                name: query.name ?? "",
+                nickname: query.nickname ?? "",
+                ip: query.ip ?? "",
+                userAgent: query.userAgent ?? "",
+                createdAfter: query.createdAfter,
+                createdBefore: query.createdBefore,
+            }),
+        [form, query.action, query.createdAfter, query.createdBefore, query.ip, query.name, query.nickname, query.userAgent],
+    )
 
     const columns: ColumnDef<OperationLog>[] = [
         {

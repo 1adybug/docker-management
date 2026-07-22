@@ -108,9 +108,7 @@ export const auth = betterAuth({
 
                 printAuthOtp({ phoneNumber, code })
 
-                void sendOtp({ phoneNumber, code }).catch(error => {
-                    console.error("发送手机号验证码失败", error)
-                })
+                void sendOtp({ phoneNumber, code }).catch(error => void console.error("发送手机号验证码失败", error))
             },
             signUpOnVerification: {
                 getTempEmail,

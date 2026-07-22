@@ -44,11 +44,7 @@ export function getSystemSettingFormValue(setting: PublicSystemSetting) {
 export function getSystemSettingFormValues(groups: PublicSystemSettingGroup[] = []) {
     const values: SystemSettingFormData = {}
 
-    groups.forEach(group => {
-        group.settings.forEach(setting => {
-            values[setting.key] = getSystemSettingFormValue(setting)
-        })
-    })
+    groups.forEach(group => void group.settings.forEach(setting => void (values[setting.key] = getSystemSettingFormValue(setting))))
 
     return values
 }

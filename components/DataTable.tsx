@@ -89,9 +89,7 @@ function useDataTableInteractionCapabilities() {
         const tableViewport = tableViewportRef.current
         if (!tableViewport) return
 
-        const observer = new ResizeObserver(entries => {
-            setTableViewportWidth(entries[0]?.contentRect.width ?? 0)
-        })
+        const observer = new ResizeObserver(entries => void setTableViewportWidth(entries[0]?.contentRect.width ?? 0))
 
         observer.observe(tableViewport)
         return () => observer.disconnect()
