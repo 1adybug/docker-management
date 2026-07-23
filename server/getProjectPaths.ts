@@ -42,7 +42,7 @@ function resolveDirectoryPath(root: string, path: string) {
     return resolve(root, path)
 }
 
-function isSubDirectory(root: string, path: string) {
+export function isSubDirectory(root: string, path: string) {
     const relativePath = isWindowsAbsolutePath(root) ? win32.relative(root, path) : relative(root, path)
 
     if (!relativePath) return true

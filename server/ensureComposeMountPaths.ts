@@ -11,6 +11,8 @@ import {
 import type { ProjectStartMountOption } from "@/schemas/projectStartMountOption"
 import { ProjectStartMountPathKind } from "@/schemas/projectStartMountPathKind"
 
+import { isSubDirectory } from "@/server/getProjectPaths"
+
 import { ClientError } from "@/utils/clientError"
 import { parseComposeYaml } from "@/utils/compose"
 
@@ -60,6 +62,12 @@ export interface ComposeMountPathCandidate {
     isRelativePath: boolean
     defaultPathKind: ProjectStartMountPathKind
     numericUser?: ComposeNumericUser
+}
+
+export interface HasProjectDirectoryBindMountParams {
+    content: string
+    projectDir: string
+    projectHostDir: string
 }
 
 /** 已存在的路径信息 */
@@ -380,6 +388,13 @@ function getComposeMountPathCandidates({ projectDir, content }: EnsureComposeMou
     } catch {
         return []
     }
+}
+
+/** 是否存在会随项目目录一起删除的 bind mount 路径 */
+export function hasProjectDirectoryBindMount({ content, projectDir, projectHostDir }: HasProjectDirectoryBindMountParams) {
+    const candidates = getComposeMountPathCandidates({ content, projectDir })
+
+    return candidates.some(item => isSubDirectory(projectDir, item.resolvedPath) || isSubDirectory(projectHostDir, item.resolvedPath))
 }
 
 async function checkMissingFile({ candidate, canConfigure }: CheckMissingFileParams) {

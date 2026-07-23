@@ -5,7 +5,19 @@ import { type FC, useEffect, useMemo, useRef, useState } from "react"
 import { useForm } from "@tanstack/react-form"
 import type { ColumnDef, SortingState, Updater } from "@tanstack/react-table"
 import { clsx, formatTime } from "deepsea-tools"
-import { CopyIcon, DownloadIcon, FileTextIcon, LoaderCircleIcon, PencilIcon, PlayIcon, PlusIcon, RefreshCwIcon, SquareIcon, Trash2Icon } from "lucide-react"
+import {
+    CopyIcon,
+    DownloadIcon,
+    FileTextIcon,
+    LoaderCircleIcon,
+    PencilIcon,
+    PlayIcon,
+    PlusIcon,
+    RefreshCwIcon,
+    SquareIcon,
+    Trash2Icon,
+    TriangleAlertIcon,
+} from "lucide-react"
 import { useRouter } from "next/navigation"
 import type { StateToQueryFnMap } from "soda-hooks"
 import { useQueryState } from "soda-next"
@@ -14,9 +26,11 @@ import { DataTable } from "@/components/DataTable"
 import { DatePicker } from "@/components/DatePicker"
 import { ProjectLogDrawer } from "@/components/ProjectLogDrawer"
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
@@ -47,14 +61,6 @@ import type { ProjectSummary } from "@/shared/queryProject"
 import { parseQueryDate, stringifyQueryEndDate, stringifyQueryStartDate } from "@/utils/queryDate"
 import { toast } from "@/utils/toast"
 
-/** 项目删除方式 */
-export const ProjectDeleteMode = {
-    仅删除项目: "only-delete",
-    删除并清理容器: "delete-and-cleanup",
-} as const
-
-export type ProjectDeleteMode = (typeof ProjectDeleteMode)[keyof typeof ProjectDeleteMode]
-
 /** 项目容器状态统计 */
 export interface ProjectContainerStatusSummary {
     runningCount: number
@@ -77,6 +83,7 @@ export interface ProjectStartCheckState {
 export interface ProjectDeleteTarget {
     name: string
     displayName?: string
+    hasProjectDirectoryBindMount: boolean
 }
 
 export interface RequestStartCheckParams {
@@ -277,7 +284,8 @@ const Page: FC = () => {
     const [logContent, setLogContent] = useState<string>()
     const [deleteOpen, setDeleteOpen] = useState(false)
     const [deleteTarget, setDeleteTarget] = useState<ProjectDeleteTarget>()
-    const [deleteMode, setDeleteMode] = useState<ProjectDeleteMode>(ProjectDeleteMode.仅删除项目)
+    const [cleanupContainers, setCleanupContainers] = useState(false)
+    const [deleteDirectory, setDeleteDirectory] = useState(false)
     const [startCheckOpen, setStartCheckOpen] = useState(false)
     const [startCheck, setStartCheck] = useState<ProjectStartCheckState>(defaultProjectStartCheckState)
 
@@ -367,7 +375,8 @@ const Page: FC = () => {
 
     function onOpenDelete(project: ProjectDeleteTarget) {
         setDeleteTarget(project)
-        setDeleteMode(ProjectDeleteMode.仅删除项目)
+        setCleanupContainers(false)
+        setDeleteDirectory(false)
         setDeleteOpen(true)
     }
 
@@ -394,7 +403,11 @@ const Page: FC = () => {
 
     async function onDeleteConfirm() {
         if (!deleteTarget?.name) return
-        await deleteProject({ name: deleteTarget.name, cleanup: deleteMode === ProjectDeleteMode.删除并清理容器 })
+        await deleteProject({
+            name: deleteTarget.name,
+            cleanup: cleanupContainers,
+            deleteDirectory,
+        })
         setDeleteOpen(false)
         setDeleteTarget(undefined)
     }
@@ -563,7 +576,13 @@ const Page: FC = () => {
                             variant="destructive"
                             title="删除"
                             disabled={isRequesting}
-                            onClick={() => onOpenDelete({ name: record.name, displayName: record.displayName })}
+                            onClick={() =>
+                                onOpenDelete({
+                                    name: record.name,
+                                    displayName: record.displayName,
+                                    hasProjectDirectoryBindMount: record.hasProjectDirectoryBindMount,
+                                })
+                            }
                         >
                             <Trash2Icon />
                         </Button>
@@ -667,33 +686,63 @@ const Page: FC = () => {
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>{getProjectDeleteTitle(deleteTarget)}</DialogTitle>
-                        <DialogDescription>请选择是否同时停止并清理项目容器。</DialogDescription>
+                        <DialogDescription>项目记录将从平台中删除，请选择是否同时清理关联资源。</DialogDescription>
                     </DialogHeader>
                     <DialogBody className="space-y-3">
-                        <button
+                        <FieldLabel
                             className={clsx(
-                                "w-full rounded-2xl border p-4 text-left transition-colors",
-                                deleteMode === ProjectDeleteMode.仅删除项目 ? "border-primary bg-primary/5" : "hover:bg-muted/50",
+                                "w-full cursor-pointer items-start rounded-2xl border p-4 transition-colors",
+                                cleanupContainers ? "border-primary bg-primary/5" : "hover:bg-muted/50",
                             )}
-                            type="button"
-                            disabled={isDeletePending}
-                            onClick={() => setDeleteMode(ProjectDeleteMode.仅删除项目)}
+                            htmlFor="delete-project-cleanup-containers"
                         >
-                            <div className="font-medium">仅删除项目</div>
-                            <div className="mt-1 text-sm text-muted-foreground">仅删除数据库记录与本地项目目录，容器保持运行。</div>
-                        </button>
-                        <button
+                            <Checkbox
+                                id="delete-project-cleanup-containers"
+                                className="mt-0.5 flex-none"
+                                checked={cleanupContainers}
+                                disabled={isDeletePending}
+                                onCheckedChange={checked => setCleanupContainers(checked === true)}
+                            />
+                            <span className="min-w-0">
+                                <span className="block font-medium">停止并清理容器</span>
+                                <span className="mt-1 block text-sm font-normal text-muted-foreground">
+                                    执行 docker compose down，停止并删除项目容器与 Compose 网络。
+                                </span>
+                            </span>
+                        </FieldLabel>
+                        <FieldLabel
                             className={clsx(
-                                "w-full rounded-2xl border p-4 text-left transition-colors",
-                                deleteMode === ProjectDeleteMode.删除并清理容器 ? "border-destructive bg-destructive/5" : "hover:bg-muted/50",
+                                "w-full cursor-pointer items-start rounded-2xl border p-4 transition-colors",
+                                deleteDirectory ? "border-destructive bg-destructive/5" : "hover:bg-muted/50",
                             )}
-                            type="button"
-                            disabled={isDeletePending}
-                            onClick={() => setDeleteMode(ProjectDeleteMode.删除并清理容器)}
+                            htmlFor="delete-project-directory"
                         >
-                            <div className="font-medium text-destructive">删除项目并清理容器</div>
-                            <div className="mt-1 text-sm text-muted-foreground">先执行 docker compose down，再删除数据库记录与本地项目目录。</div>
-                        </button>
+                            <Checkbox
+                                id="delete-project-directory"
+                                className="mt-0.5 flex-none"
+                                checked={deleteDirectory}
+                                disabled={isDeletePending}
+                                onCheckedChange={checked => setDeleteDirectory(checked === true)}
+                            />
+                            <span className="min-w-0">
+                                <span className="block font-medium text-destructive">删除本地项目目录</span>
+                                <span className="mt-1 block text-sm font-normal text-muted-foreground">
+                                    删除平台保存的整个项目目录及其中所有文件；取消勾选可保留这些文件。
+                                </span>
+                            </span>
+                        </FieldLabel>
+                        {deleteDirectory && !cleanupContainers && deleteTarget?.hasProjectDirectoryBindMount && (
+                            <Alert variant="destructive">
+                                <TriangleAlertIcon />
+                                <AlertTitle>项目目录中存在本地路径映射</AlertTitle>
+                                <AlertDescription>
+                                    如果相关容器仍在运行，删除目录会同步删除挂载文件，并可能导致服务异常。建议先勾选“停止并清理容器”。
+                                </AlertDescription>
+                            </Alert>
+                        )}
+                        <div className="rounded-2xl border bg-muted/40 p-3 text-sm text-muted-foreground">
+                            未勾选的容器或文件会被保留，但项目移除后将无法继续通过项目管理页面操作。
+                        </div>
                     </DialogBody>
                     <DialogFooter>
                         <Button variant="outline" disabled={isDeletePending} onClick={onCloseDelete}>
@@ -701,7 +750,7 @@ const Page: FC = () => {
                         </Button>
                         <Button variant="destructive" disabled={!deleteTarget?.name || isDeletePending} onClick={() => void onDeleteConfirm()}>
                             {isDeletePending && <LoaderCircleIcon className="animate-spin" />}
-                            {deleteMode === ProjectDeleteMode.删除并清理容器 ? "删除并清理" : "删除"}
+                            确认删除
                         </Button>
                     </DialogFooter>
                 </DialogContent>

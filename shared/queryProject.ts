@@ -11,6 +11,8 @@ import { queryProjectSchema } from "@/schemas/queryProject"
 import type { SortOrderParams } from "@/schemas/sortOrder"
 
 import { createSharedFn } from "@/server/createSharedFn"
+import { hasProjectDirectoryBindMount } from "@/server/ensureComposeMountPaths"
+import { getProjectDir, getProjectHostDir } from "@/server/getProjectPaths"
 
 import { getComposeDescription } from "@/utils/compose"
 
@@ -22,6 +24,7 @@ export interface ProjectSummary {
     updatedAt: number
     createdUser?: string
     updatedUser?: string
+    hasProjectDirectoryBindMount: boolean
 }
 
 export interface ProjectUserInfo {
@@ -240,6 +243,11 @@ export const queryProject = createSharedFn({
             updatedAt: item.updatedAt.valueOf(),
             createdUser: userMap[item.name]?.createdUser,
             updatedUser: userMap[item.name]?.updatedUser,
+            hasProjectDirectoryBindMount: hasProjectDirectoryBindMount({
+                content: item.content,
+                projectDir: getProjectDir(item.name),
+                projectHostDir: getProjectHostDir(item.name),
+            }),
         })),
         exact: true,
         total,

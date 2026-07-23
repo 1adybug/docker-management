@@ -20,7 +20,7 @@ function getDockerComposeDownArgs(composePath: string, projectHostDir: string) {
 export const deleteProject = createSharedFn({
     name: "deleteProject",
     schema: deleteProjectSchema,
-})(async function deleteProject({ name, cleanup }) {
+})(async function deleteProject({ name, cleanup, deleteDirectory = true }) {
     await ensureProjectRoot()
     const projectDir = getProjectDir(name)
     const projectHostDir = getProjectHostDir(name)
@@ -46,7 +46,7 @@ export const deleteProject = createSharedFn({
 
     await prisma.project.delete({ where: { name } })
 
-    await deleteFileOrFolder(projectDir)
+    if (deleteDirectory) await deleteFileOrFolder(projectDir)
 
     return {
         name,
