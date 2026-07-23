@@ -2,7 +2,18 @@
 
 import type { FC } from "react"
 
-import { type LucideIcon, CircleUserRoundIcon, FileClockIcon, HouseIcon, SettingsIcon, ShieldAlertIcon, UsersIcon } from "lucide-react"
+import {
+    type LucideIcon,
+    BoxesIcon,
+    CircleUserRoundIcon,
+    FileClockIcon,
+    FolderKanbanIcon,
+    HouseIcon,
+    ImagesIcon,
+    SettingsIcon,
+    ShieldAlertIcon,
+    UsersIcon,
+} from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
@@ -42,6 +53,24 @@ const accountNavs: NavItem[] = [
         href: "/profile",
         name: "个人中心",
         icon: CircleUserRoundIcon,
+    },
+]
+
+const dockerNavs: NavItem[] = [
+    {
+        href: "/container",
+        name: "容器管理",
+        icon: BoxesIcon,
+    },
+    {
+        href: "/image",
+        name: "镜像管理",
+        icon: ImagesIcon,
+    },
+    {
+        href: "/project",
+        name: "项目管理",
+        icon: FolderKanbanIcon,
     },
 ]
 
@@ -95,7 +124,8 @@ const SidebarNavGroup: FC<SidebarNavGroupProps> = ({ label, navs, user }) => {
             <SidebarGroupContent>
                 <SidebarMenu>
                     {visibleNavs.map(({ href, icon: Icon, name }) => {
-                        const isActive = pathname === getPathnameAndSearchParams(href).pathname
+                        const navPathname = getPathnameAndSearchParams(href).pathname
+                        const isActive = pathname === navPathname || pathname.startsWith(`${navPathname}/`)
 
                         return (
                             <SidebarMenuItem key={href}>
@@ -123,6 +153,7 @@ export const DashboardSidebar: FC = () => {
                 <Brand classNames={{ text: "text-base" }} />
             </SidebarHeader>
             <SidebarContent>
+                <SidebarNavGroup label="Docker" navs={dockerNavs} user={user} />
                 <SidebarNavGroup label="账户" navs={accountNavs} user={user} />
                 <SidebarNavGroup label="系统管理" navs={adminNavs} user={user} />
             </SidebarContent>

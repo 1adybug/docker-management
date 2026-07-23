@@ -2,17 +2,26 @@
 
 import { type FC, useEffect, useMemo, useRef, useState } from "react"
 
-import { IconCopy, IconDownload, IconEdit, IconFileText, IconPlayerPlay, IconPlayerStop, IconRefresh, IconTrash } from "@tabler/icons-react"
-import { type TableProps, Button, Checkbox, DatePicker, Form, Input, Modal, Select, Table, Tabs } from "antd"
-import { useForm } from "antd/es/form/Form"
-import FormItem from "antd/es/form/FormItem"
-import { clsx, formatTime, showTotal } from "deepsea-tools"
+import { useForm } from "@tanstack/react-form"
+import type { ColumnDef, SortingState, Updater } from "@tanstack/react-table"
+import { clsx, formatTime } from "deepsea-tools"
+import { CopyIcon, DownloadIcon, FileTextIcon, LoaderCircleIcon, PencilIcon, PlayIcon, PlusIcon, RefreshCwIcon, SquareIcon, Trash2Icon } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { type Columns, useScroll } from "soda-antd"
 import type { StateToQueryFnMap } from "soda-hooks"
 import { useQueryState } from "soda-next"
 
+import { DataTable } from "@/components/DataTable"
+import { DatePicker } from "@/components/DatePicker"
 import { ProjectLogDrawer } from "@/components/ProjectLogDrawer"
+
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Field, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 
 import { DockerContainerStatus } from "@/constants"
 
@@ -35,8 +44,8 @@ import { sortOrderSchema } from "@/schemas/sortOrder"
 import type { DockerContainerItem } from "@/shared/queryDockerContainer"
 import type { ProjectSummary } from "@/shared/queryProject"
 
-import { getSortOrder } from "@/utils/getSortOrder"
 import { parseQueryDate, stringifyQueryEndDate, stringifyQueryStartDate } from "@/utils/queryDate"
+import { toast } from "@/utils/toast"
 
 /** 项目删除方式 */
 export const ProjectDeleteMode = {
@@ -99,6 +108,16 @@ export interface ProjectStartMountItemCardProps {
     onCreateDirectoryChange: (params: StartCheckMountPathCreateDirectoryChangeParams) => void | Promise<void>
 }
 
+interface ProjectFilterFormValues {
+    name: string
+    xName: string
+    contentKeyword: string
+    createdAfter?: Date
+    createdBefore?: Date
+    updatedAfter?: Date
+    updatedBefore?: Date
+}
+
 const defaultProjectStartCheckState: ProjectStartCheckState = {
     mountPathOptions: [],
 }
@@ -140,21 +159,14 @@ function getStartCheckStatusText(status: ProjectStartMountStatus) {
 }
 
 function getStartCheckStatusClassName(status: ProjectStartMountStatus) {
-    if (status === ProjectStartMountStatus.已存在) return "border-emerald-200 bg-emerald-50 text-emerald-700"
-    if (status === ProjectStartMountStatus.将创建) return "border-sky-200 bg-sky-50 text-sky-700"
-    return "border-red-200 bg-red-50 text-red-700"
+    if (status === ProjectStartMountStatus.已存在)
+        return "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300"
+    if (status === ProjectStartMountStatus.将创建) return "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-300"
+    return "border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
 }
 
 function getProjectStartMountPathKindText(pathKind: ProjectStartMountPathKind) {
-    if (pathKind === ProjectStartMountPathKind.文件) return "文件"
-    return "文件夹"
-}
-
-function getProjectStartMountPathKindOptions() {
-    return Object.entries(ProjectStartMountPathKind).map(([label, value]) => ({
-        label,
-        value,
-    }))
+    return pathKind === ProjectStartMountPathKind.文件 ? "文件" : "文件夹"
 }
 
 function getNextMountPathOptions({ mountPathOptions, key, pathKind, createDirectory }: UpdateStartCheckMountPathOptionParams) {
@@ -168,21 +180,16 @@ function getNextMountPathOptions({ mountPathOptions, key, pathKind, createDirect
 
     const targetIndex = nextMountPathOptions.findIndex(item => item.key === key)
 
-    if (targetIndex >= 0) {
-        nextMountPathOptions[targetIndex] = nextOption
-        return nextMountPathOptions
-    }
+    if (targetIndex >= 0) nextMountPathOptions[targetIndex] = nextOption
+    else nextMountPathOptions.push(nextOption)
 
-    nextMountPathOptions.push(nextOption)
     return nextMountPathOptions
 }
 
 function getProjectDeleteTitle(target?: ProjectDeleteTarget) {
     if (!target) return "删除项目"
-
     const name = target.name.trim()
     const displayName = target.displayName?.trim()
-
     if (displayName && displayName !== name) return `删除项目：${displayName}（${name}）`
     return `删除项目：${displayName || name}`
 }
@@ -191,56 +198,56 @@ const ProjectStartMountItemCard: FC<ProjectStartMountItemCardProps> = ({ item, d
     const isSamePath = item.sourcePath === item.resolvedPath
 
     return (
-        <div key={item.key} className="rounded-xl border border-slate-200 bg-white p-3">
+        <div className="rounded-2xl border bg-card p-3">
             <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium text-slate-900">{item.sourcePath}</div>
-                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
+                    <div className="truncate text-sm font-medium">{item.sourcePath}</div>
+                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
                         <div>服务：{item.serviceName}</div>
                         <div>容器路径：{item.targetPath}</div>
                         <div>类型：{getProjectStartMountPathKindText(item.pathKind)}</div>
                     </div>
-                    {!isSamePath ? <div className="mt-1 break-all text-xs text-slate-500">实际路径：{item.resolvedPath}</div> : null}
-                    <div className="mt-1 text-xs text-slate-500">{item.message || "-"}</div>
-                    {item.canConfigure && !item.exists ? (
-                        <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                            <div className="flex flex-wrap items-center gap-3">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-xs text-slate-500">路径类型</span>
+                    {!isSamePath && <div className="mt-1 break-all text-xs text-muted-foreground">实际路径：{item.resolvedPath}</div>}
+                    <div className="mt-1 text-xs text-muted-foreground">{item.message || "-"}</div>
+                    {item.canConfigure && !item.exists && (
+                        <div className="mt-3 rounded-2xl border bg-muted/40 p-3">
+                            <div className="flex flex-wrap items-center gap-4">
+                                <Field className="w-32">
+                                    <FieldLabel>路径类型</FieldLabel>
                                     <Select
-                                        className="min-w-[120px]"
                                         value={item.pathKind}
-                                        options={getProjectStartMountPathKindOptions()}
                                         disabled={disabled}
-                                        onChange={value =>
-                                            onPathKindChange({
-                                                item,
-                                                pathKind: value,
-                                            })
-                                        }
-                                    />
-                                </div>
-                                {item.pathKind === ProjectStartMountPathKind.文件夹 ? (
-                                    <Checkbox
-                                        checked={item.createDirectory !== false}
-                                        disabled={disabled}
-                                        onChange={event =>
-                                            onCreateDirectoryChange({
-                                                item,
-                                                createDirectory: event.target.checked,
-                                            })
-                                        }
+                                        onValueChange={value => void onPathKindChange({ item, pathKind: value as ProjectStartMountPathKind })}
                                     >
-                                        启动时自动创建文件夹
-                                    </Checkbox>
-                                ) : null}
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {Object.entries(ProjectStartMountPathKind).map(([label, value]) => (
+                                                <SelectItem key={value} value={value}>
+                                                    {label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </Field>
+                                {item.pathKind === ProjectStartMountPathKind.文件夹 && (
+                                    <Field className="w-auto" orientation="horizontal">
+                                        <Switch
+                                            checked={item.createDirectory !== false}
+                                            disabled={disabled}
+                                            onCheckedChange={createDirectory => void onCreateDirectoryChange({ item, createDirectory })}
+                                        />
+                                        <FieldLabel>启动时自动创建文件夹</FieldLabel>
+                                    </Field>
+                                )}
                             </div>
                         </div>
-                    ) : null}
+                    )}
                 </div>
-                <div className={clsx("flex-none rounded-full border px-2 py-1 text-xs font-medium", getStartCheckStatusClassName(item.status))}>
+                <Badge className={clsx("flex-none", getStartCheckStatusClassName(item.status))} variant="outline">
                     {getStartCheckStatusText(item.status)}
-                </div>
+                </Badge>
             </div>
         </div>
     )
@@ -266,10 +273,10 @@ const queryStringifiers: StateToQueryFnMap<typeof queryParsers> = {
 
 const Page: FC = () => {
     const [logOpen, setLogOpen] = useState(false)
-    const [logName, setLogName] = useState<string | undefined>(undefined)
-    const [logContent, setLogContent] = useState<string | undefined>(undefined)
+    const [logName, setLogName] = useState<string>()
+    const [logContent, setLogContent] = useState<string>()
     const [deleteOpen, setDeleteOpen] = useState(false)
-    const [deleteTarget, setDeleteTarget] = useState<ProjectDeleteTarget | undefined>(undefined)
+    const [deleteTarget, setDeleteTarget] = useState<ProjectDeleteTarget>()
     const [deleteMode, setDeleteMode] = useState<ProjectDeleteMode>(ProjectDeleteMode.仅删除项目)
     const [startCheckOpen, setStartCheckOpen] = useState(false)
     const [startCheck, setStartCheck] = useState<ProjectStartCheckState>(defaultProjectStartCheckState)
@@ -283,62 +290,71 @@ const Page: FC = () => {
         stringify: queryStringifiers,
     })
 
-    type FormParams = typeof query
+    const pageNum = query.pageNum ?? 1
+    const pageSize = query.pageSize ?? 10
 
-    const [form] = useForm<FormParams>()
-
-    const container = useRef<HTMLDivElement>(null)
-    const { y } = useScroll(container, { paginationMargin: 32 })
-
-    const { createdAfter, createdBefore, updatedAfter, updatedBefore, pageNum, pageSize, ...rest } = query
-
-    const { data, isLoading } = useQueryProject({
-        createdAfter: createdAfter?.toDate(),
-        createdBefore: createdBefore?.toDate(),
-        updatedAfter: updatedAfter?.toDate(),
-        updatedBefore: updatedBefore?.toDate(),
-        pageNum,
-        pageSize,
-        ...rest,
-    })
-
-    const { data: containerData } = useQueryDockerContainer()
-
-    const { mutateAsync: checkProjectStart, isPending: isCheckProjectStartPending } = useCheckProjectStart()
-    const { mutateAsync: deleteProject, isPending: isDeletePending } = useDeleteProject()
-    const { mutateAsync: runProject, isPending: isRunPending } = useRunProject()
-
-    const isRequesting = isLoading || isCheckProjectStartPending || isDeletePending || isRunPending
-
-    useEffect(() => {
-        form.resetFields()
-
-        form.setFieldsValue({
-            name: query.name,
-            xName: query.xName,
-            contentKeyword: query.contentKeyword,
+    const form = useForm({
+        defaultValues: {
+            name: query.name ?? "",
+            xName: query.xName ?? "",
+            contentKeyword: query.contentKeyword ?? "",
             createdAfter: query.createdAfter,
             createdBefore: query.createdBefore,
             updatedAfter: query.updatedAfter,
             updatedBefore: query.updatedBefore,
-        })
-    }, [form, query])
+        } as ProjectFilterFormValues,
+        onSubmit({ value }) {
+            setQuery(previous => ({
+                ...previous,
+                name: value.name.trim() || undefined,
+                xName: value.xName.trim() || undefined,
+                contentKeyword: value.contentKeyword.trim() || undefined,
+                createdAfter: value.createdAfter,
+                createdBefore: value.createdBefore,
+                updatedAfter: value.updatedAfter,
+                updatedBefore: value.updatedBefore,
+                pageNum: 1,
+            }))
+        },
+    })
 
-    function onAdd() {
-        router.push("/project/editor")
-    }
+    const { data, isLoading } = useQueryProject({
+        createdAfter: query.createdAfter,
+        createdBefore: query.createdBefore,
+        updatedAfter: query.updatedAfter,
+        updatedBefore: query.updatedBefore,
+        pageNum,
+        pageSize,
+        name: query.name,
+        xName: query.xName,
+        contentKeyword: query.contentKeyword,
+        sortBy: query.sortBy,
+        sortOrder: query.sortOrder,
+    })
 
-    function onEdit(name: string) {
-        router.push(`/project/editor?name=${encodeURIComponent(name)}`)
-    }
+    const { data: containerData } = useQueryDockerContainer()
+    const { mutateAsync: checkProjectStart, isPending: isCheckProjectStartPending } = useCheckProjectStart()
+    const { mutateAsync: deleteProject, isPending: isDeletePending } = useDeleteProject()
+    const { mutateAsync: runProject, isPending: isRunPending } = useRunProject()
+    const isRequesting = isLoading || isCheckProjectStartPending || isDeletePending || isRunPending
 
-    function onClickCopy(name: string) {
-        router.push(`/project/editor?copyFrom=${encodeURIComponent(name)}`)
-    }
+    useEffect(
+        () =>
+            void form.reset({
+                name: query.name ?? "",
+                xName: query.xName ?? "",
+                contentKeyword: query.contentKeyword ?? "",
+                createdAfter: query.createdAfter,
+                createdBefore: query.createdBefore,
+                updatedAfter: query.updatedAfter,
+                updatedBefore: query.updatedBefore,
+            }),
+        [form, query.contentKeyword, query.createdAfter, query.createdBefore, query.name, query.updatedAfter, query.updatedBefore, query.xName],
+    )
 
     function onReset() {
-        form.resetFields()
-        setQuery({} as FormParams)
+        form.reset({ name: "", xName: "", contentKeyword: "" })
+        setQuery({})
     }
 
     function onCloseLog() {
@@ -354,12 +370,13 @@ const Page: FC = () => {
     }
 
     function onCloseDelete() {
+        if (isDeletePending) return
         setDeleteOpen(false)
         setDeleteTarget(undefined)
     }
 
     function onCloseStartCheck() {
-        if (isRunPending) return
+        if (isRunPending || isCheckProjectStartPending) return
         startCheckRequestId.current += 1
         setStartCheckOpen(false)
         setStartCheck(defaultProjectStartCheckState)
@@ -368,36 +385,16 @@ const Page: FC = () => {
     async function requestStartCheck({ name, mountPathOptions }: RequestStartCheckParams) {
         const requestId = startCheckRequestId.current + 1
         startCheckRequestId.current = requestId
-
-        const data = await checkProjectStart({
-            name,
-            mountPathOptions: mountPathOptions.length > 0 ? mountPathOptions : undefined,
-        })
-
+        const data = await checkProjectStart({ name, mountPathOptions: mountPathOptions.length > 0 ? mountPathOptions : undefined })
         if (startCheckRequestId.current !== requestId) return
-
-        setStartCheck(prev => {
-            if (prev.name !== name) return prev
-
-            return {
-                name,
-                data,
-                mountPathOptions,
-            } as ProjectStartCheckState
-        })
+        setStartCheck(previous => (previous.name === name ? { name, data, mountPathOptions } : previous))
     }
 
     async function onDeleteConfirm() {
         if (!deleteTarget?.name) return
-        await deleteProject({
-            name: deleteTarget.name,
-            cleanup: deleteMode === ProjectDeleteMode.删除并清理容器,
-        })
-        onCloseDelete()
-    }
-
-    function onDeleteModeChange(key: string) {
-        if (key === ProjectDeleteMode.仅删除项目 || key === ProjectDeleteMode.删除并清理容器) setDeleteMode(key)
+        await deleteProject({ name: deleteTarget.name, cleanup: deleteMode === ProjectDeleteMode.删除并清理容器 })
+        setDeleteOpen(false)
+        setDeleteTarget(undefined)
     }
 
     async function onCommand(name: string, command: ProjectCommand) {
@@ -405,17 +402,10 @@ const Page: FC = () => {
             const mountPathOptions: ProjectStartMountOption[] = []
 
             setStartCheckOpen(true)
-
-            setStartCheck({
-                name,
-                mountPathOptions,
-            })
+            setStartCheck({ name, mountPathOptions })
 
             try {
-                await requestStartCheck({
-                    name,
-                    mountPathOptions,
-                })
+                await requestStartCheck({ name, mountPathOptions })
             } catch (error) {
                 startCheckRequestId.current += 1
                 setStartCheckOpen(false)
@@ -436,14 +426,13 @@ const Page: FC = () => {
     async function onConfirmStart() {
         const name = startCheck.name?.trim()
         if (!name) return
-
         await runProject({
             name,
             command: ProjectCommand.启动,
             mountPathOptions: startCheck.mountPathOptions.length > 0 ? startCheck.mountPathOptions : undefined,
         })
-
-        onCloseStartCheck()
+        setStartCheckOpen(false)
+        setStartCheck(defaultProjectStartCheckState)
     }
 
     async function onStartCheckMountPathKindChange({ item, pathKind }: StartCheckMountPathKindChangeParams) {
@@ -457,21 +446,12 @@ const Page: FC = () => {
             createDirectory: pathKind === ProjectStartMountPathKind.文件夹 ? (item.createDirectory ?? true) : undefined,
         })
 
-        setStartCheck(prev => ({
-            ...prev,
-            mountPathOptions,
-        }))
+        setStartCheck(previous => ({ ...previous, mountPathOptions }))
 
         try {
-            await requestStartCheck({
-                name,
-                mountPathOptions,
-            })
+            await requestStartCheck({ name, mountPathOptions })
         } catch (error) {
-            message.open({
-                type: "error",
-                content: error instanceof Error ? error.message : "挂载路径预检查失败",
-            })
+            toast.error(error instanceof Error ? error.message : "挂载路径预检查失败")
         }
     }
 
@@ -486,362 +466,306 @@ const Page: FC = () => {
             createDirectory,
         })
 
-        setStartCheck(prev => ({
-            ...prev,
-            mountPathOptions,
-        }))
+        setStartCheck(previous => ({ ...previous, mountPathOptions }))
 
         try {
-            await requestStartCheck({
-                name,
-                mountPathOptions,
-            })
+            await requestStartCheck({ name, mountPathOptions })
         } catch (error) {
-            message.open({
-                type: "error",
-                content: error instanceof Error ? error.message : "挂载路径预检查失败",
-            })
+            toast.error(error instanceof Error ? error.message : "挂载路径预检查失败")
         }
     }
 
-    function onDeleteLabel(mode: ProjectDeleteMode, label: string) {
-        return <span className={clsx("text-sm", deleteMode === mode ? "text-red-500" : "text-slate-600")}>{label}</span>
-    }
-
-    const onTableChange: TableProps<ProjectSummary>["onChange"] = function onTableChange(pagination, filters, sorter) {
-        if (Array.isArray(sorter)) return
-
-        const sortBy = (typeof sorter.columnKey === "string" ? sorter.columnKey : typeof sorter.field === "string" ? sorter.field : undefined) ?? undefined
-
-        setQuery(prev => ({
-            ...prev,
-            pageNum: pagination.current ?? prev.pageNum,
-            pageSize: pagination.pageSize ?? prev.pageSize,
-            sortBy: sortBy as ProjectSortByParams | undefined,
-            sortOrder: getSorterOrder(sorter.order),
-        }))
-    }
-
     const projectStatusMap = useMemo(() => getProjectContainerStatusMap(containerData ?? []), [containerData])
+    const sorting: SortingState = query.sortBy ? [{ id: query.sortBy, desc: query.sortOrder === "desc" }] : []
 
-    const columns: Columns<ProjectSummary> = [
+    const columns: ColumnDef<ProjectSummary>[] = [
         {
-            title: "项目名称",
-            dataIndex: "displayName",
-            key: "xName",
-            align: "center",
-            fixed: "left",
-            sorter: true,
-            sortOrder: getSortOrder(query, "xName"),
-            render(value, record) {
-                return value || record.name
-            },
+            accessorKey: "displayName",
+            id: "xName",
+            header: "项目名称",
+            enableSorting: true,
+            size: 180,
+            cell: ({ row }) => row.original.displayName || row.original.name,
         },
+        { accessorKey: "name", header: "英文名称", enableSorting: true, size: 220 },
+        { accessorKey: "description", header: "项目描述", size: 280, cell: ({ row }) => row.original.description || "-" },
+        { accessorKey: "createdUser", header: "创建用户", size: 130, cell: ({ row }) => row.original.createdUser || "-" },
+        { accessorKey: "createdAt", header: "创建时间", enableSorting: true, size: 180, cell: ({ row }) => formatTime(row.original.createdAt) },
+        { accessorKey: "updatedUser", header: "更新用户", size: 130, cell: ({ row }) => row.original.updatedUser || "-" },
+        { accessorKey: "updatedAt", header: "更新时间", enableSorting: true, size: 180, cell: ({ row }) => formatTime(row.original.updatedAt) },
         {
-            title: "英文名称",
-            dataIndex: "name",
-            key: "name",
-            align: "center",
-            fixed: "left",
-            width: 220,
-            ellipsis: true,
-            sorter: true,
-            sortOrder: getSortOrder(query, "name"),
-            render(value) {
-                return value || "-"
-            },
-        },
-        {
-            title: "项目描述",
-            dataIndex: "description",
-            align: "center",
-            width: 280,
-            ellipsis: true,
-        },
-        {
-            title: "创建用户",
-            dataIndex: "createdUser",
-            align: "center",
-            render(value) {
-                return value || "-"
-            },
-        },
-        {
-            title: "创建时间",
-            dataIndex: "createdAt",
-            align: "center",
-            sorter: true,
-            sortOrder: getSortOrder(query, "createdAt"),
-            render(value) {
-                return formatTime(value)
-            },
-        },
-        {
-            title: "更新用户",
-            dataIndex: "updatedUser",
-            align: "center",
-            render(value) {
-                return value || "-"
-            },
-        },
-        {
-            title: "更新时间",
-            dataIndex: "updatedAt",
-            align: "center",
-            sorter: true,
-            sortOrder: getSortOrder(query, "updatedAt"),
-            render(value) {
-                return formatTime(value)
-            },
-        },
-        {
-            title: "操作",
-            key: "operation",
-            align: "center",
-            fixed: "right",
-            render(value, record) {
+            id: "actions",
+            header: "操作",
+            size: 260,
+            cell: ({ row }) => {
+                const record = row.original
+                const isRunning = (projectStatusMap[record.name]?.runningCount ?? 0) > 0
                 return (
-                    <div className="inline-flex flex-wrap gap-1">
+                    <div className="flex items-center justify-center gap-1">
                         <Button
-                            size="small"
-                            shape="circle"
-                            color="geekblue"
-                            variant="text"
+                            size="icon-xs"
+                            variant="ghost"
                             title="编辑"
                             disabled={isRequesting}
-                            icon={<IconEdit className="size-4" />}
-                            onClick={() => onEdit(record.name)}
-                        />
+                            onClick={() => router.push(`/project/editor?name=${encodeURIComponent(record.name)}`)}
+                        >
+                            <PencilIcon />
+                        </Button>
                         <Button
-                            size="small"
-                            shape="circle"
-                            color="magenta"
-                            variant="text"
+                            size="icon-xs"
+                            variant="ghost"
                             title="复制"
                             disabled={isRequesting}
-                            icon={<IconCopy className="size-4" />}
-                            onClick={() => onClickCopy(record.name)}
-                        />
-                        {(projectStatusMap[record.name]?.runningCount ?? 0) > 0 ? (
-                            <Button
-                                size="small"
-                                shape="circle"
-                                color="orange"
-                                variant="text"
-                                title="停止"
-                                disabled={isRequesting}
-                                icon={<IconPlayerStop className="size-4" />}
-                                onClick={() => onCommand(record.name, ProjectCommand.停止)}
-                            />
-                        ) : (
-                            <Button
-                                size="small"
-                                shape="circle"
-                                color="green"
-                                variant="text"
-                                title="启动"
-                                disabled={isRequesting}
-                                icon={<IconPlayerPlay className="size-4" />}
-                                onClick={() => onCommand(record.name, ProjectCommand.启动)}
-                            />
-                        )}
+                            onClick={() => router.push(`/project/editor?copyFrom=${encodeURIComponent(record.name)}`)}
+                        >
+                            <CopyIcon />
+                        </Button>
                         <Button
-                            size="small"
-                            shape="circle"
-                            color="cyan"
-                            variant="text"
+                            size="icon-xs"
+                            variant="ghost"
+                            title={isRunning ? "停止" : "启动"}
+                            disabled={isRequesting}
+                            onClick={() => void onCommand(record.name, isRunning ? ProjectCommand.停止 : ProjectCommand.启动)}
+                        >
+                            {isRunning ? <SquareIcon /> : <PlayIcon />}
+                        </Button>
+                        <Button
+                            size="icon-xs"
+                            variant="ghost"
                             title="重启"
                             disabled={isRequesting}
-                            icon={<IconRefresh className="size-4" />}
-                            onClick={() => onCommand(record.name, ProjectCommand.重启)}
-                        />
+                            onClick={() => void onCommand(record.name, ProjectCommand.重启)}
+                        >
+                            <RefreshCwIcon />
+                        </Button>
                         <Button
-                            size="small"
-                            shape="circle"
-                            color="blue"
-                            variant="text"
+                            size="icon-xs"
+                            variant="ghost"
                             title="拉取"
                             disabled={isRequesting}
-                            icon={<IconDownload className="size-4" />}
-                            onClick={() => onCommand(record.name, ProjectCommand.拉取)}
-                        />
+                            onClick={() => void onCommand(record.name, ProjectCommand.拉取)}
+                        >
+                            <DownloadIcon />
+                        </Button>
                         <Button
-                            size="small"
-                            shape="circle"
-                            color="purple"
-                            variant="text"
+                            size="icon-xs"
+                            variant="ghost"
                             title="日志"
                             disabled={isRequesting}
-                            icon={<IconFileText className="size-4" />}
-                            onClick={() => onCommand(record.name, ProjectCommand.日志)}
-                        />
+                            onClick={() => void onCommand(record.name, ProjectCommand.日志)}
+                        >
+                            <FileTextIcon />
+                        </Button>
                         <Button
-                            size="small"
-                            shape="circle"
-                            color="danger"
-                            variant="text"
+                            size="icon-xs"
+                            variant="destructive"
                             title="删除"
                             disabled={isRequesting}
-                            icon={<IconTrash className="size-4" />}
-                            onClick={() =>
-                                onOpenDelete({
-                                    name: record.name,
-                                    displayName: record.displayName,
-                                })
-                            }
-                        />
+                            onClick={() => onOpenDelete({ name: record.name, displayName: record.displayName })}
+                        >
+                            <Trash2Icon />
+                        </Button>
                     </div>
                 )
             },
         },
     ]
 
+    function onSortingChange(updater: Updater<SortingState>) {
+        const next = (typeof updater === "function" ? updater(sorting) : updater)[0]
+
+        setQuery(previous => ({
+            ...previous,
+            sortBy: next?.id as ProjectSortByParams | undefined,
+            sortOrder: next ? (next.desc ? "desc" : "asc") : undefined,
+            pageNum: 1,
+        }))
+    }
+
     return (
-        <div className="flex h-full flex-col gap-4 pt-4">
-            <div className="flex-none px-4">
-                <Form<FormParams> name="query-project-form" form={form} className="gap-y-4" layout="inline" onFinish={setQuery}>
-                    <FormItem<FormParams> name="name" label="英文名称">
-                        <Input allowClear />
-                    </FormItem>
-                    <FormItem<FormParams> name="xName" label="项目名称">
-                        <Input allowClear />
-                    </FormItem>
-                    <FormItem<FormParams> name="contentKeyword" label="内容关键字">
-                        <Input allowClear />
-                    </FormItem>
-                    <FormItem<FormParams> name="createdAfter" label="创建开始日期">
-                        <DatePicker />
-                    </FormItem>
-                    <FormItem<FormParams> name="createdBefore" label="创建结束日期">
-                        <DatePicker />
-                    </FormItem>
-                    <FormItem<FormParams> name="updatedAfter" label="更新开始日期">
-                        <DatePicker />
-                    </FormItem>
-                    <FormItem<FormParams> name="updatedBefore" label="更新结束日期">
-                        <DatePicker />
-                    </FormItem>
-                    <FormItem<FormParams>>
-                        <Button htmlType="submit" type="primary" disabled={isRequesting}>
+        <div className="space-y-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                    <h1 className="text-2xl font-semibold tracking-tight">项目管理</h1>
+                    <p className="mt-1 text-sm text-muted-foreground">管理 Compose 项目配置、挂载预检查和运行状态。</p>
+                </div>
+                <Button disabled={isRequesting} onClick={() => router.push("/project/editor")}>
+                    <PlusIcon />
+                    新增项目
+                </Button>
+            </div>
+            <Card>
+                <CardContent className="pt-6">
+                    <form
+                        className="flex flex-wrap items-end gap-3"
+                        onSubmit={event => {
+                            event.preventDefault()
+                            event.stopPropagation()
+                            void form.handleSubmit()
+                        }}
+                    >
+                        {(
+                            [
+                                ["name", "英文名称"],
+                                ["xName", "项目名称"],
+                                ["contentKeyword", "内容关键字"],
+                            ] as const
+                        ).map(([name, label]) => (
+                            <form.Field key={name} name={name}>
+                                {field => (
+                                    <Field className="w-full sm:w-44">
+                                        <FieldLabel htmlFor={`project-${name}`}>{label}</FieldLabel>
+                                        <Input id={`project-${name}`} value={field.state.value} onChange={event => field.handleChange(event.target.value)} />
+                                    </Field>
+                                )}
+                            </form.Field>
+                        ))}
+                        {(
+                            [
+                                ["createdAfter", "创建开始日期"],
+                                ["createdBefore", "创建结束日期"],
+                                ["updatedAfter", "更新开始日期"],
+                                ["updatedBefore", "更新结束日期"],
+                            ] as const
+                        ).map(([name, label]) => (
+                            <form.Field key={name} name={name}>
+                                {field => (
+                                    <Field className="w-full sm:w-auto">
+                                        <FieldLabel>{label}</FieldLabel>
+                                        <DatePicker value={field.state.value} onValueChange={field.handleChange} />
+                                    </Field>
+                                )}
+                            </form.Field>
+                        ))}
+                        <Button type="submit" disabled={isRequesting}>
                             查询
                         </Button>
-                    </FormItem>
-                    <FormItem<FormParams>>
-                        <Button htmlType="button" type="text" disabled={isRequesting} onClick={onReset}>
+                        <Button type="button" variant="ghost" disabled={isRequesting} onClick={onReset}>
                             重置
                         </Button>
-                    </FormItem>
-                    <Button className="ml-auto" color="primary" disabled={isRequesting} onClick={onAdd}>
-                        新增项目
-                    </Button>
-                </Form>
-            </div>
-            <div ref={container} className="px-4 fill-y">
-                <ProjectLogDrawer name={logName} open={logOpen} content={logContent} onClose={onCloseLog} />
-                <Modal
-                    title={getProjectDeleteTitle(deleteTarget)}
-                    open={deleteOpen}
-                    okText={deleteMode === ProjectDeleteMode.删除并清理容器 ? "删除并清理" : "删除"}
-                    cancelText="取消"
-                    mask={{ closable: !isDeletePending }}
-                    okButtonProps={{ danger: true, disabled: !deleteTarget?.name, loading: isDeletePending }}
-                    cancelButtonProps={{ disabled: isDeletePending }}
-                    onOk={onDeleteConfirm}
-                    onCancel={onCloseDelete}
-                >
-                    <Tabs
-                        activeKey={deleteMode}
-                        items={[
-                            {
-                                key: ProjectDeleteMode.仅删除项目,
-                                label: onDeleteLabel(ProjectDeleteMode.仅删除项目, "仅删除项目"),
-                                children: <div className="text-sm text-slate-600">仅删除数据库记录与本地项目目录，容器保持运行</div>,
-                            },
-                            {
-                                key: ProjectDeleteMode.删除并清理容器,
-                                label: onDeleteLabel(ProjectDeleteMode.删除并清理容器, "删除项目并清理容器"),
-                                children: <div className="text-sm text-slate-600">会先执行 docker compose down，再删除数据库记录与本地项目目录</div>,
-                            },
-                        ]}
-                        onChange={onDeleteModeChange}
-                    />
-                </Modal>
-                <Modal
-                    title={startCheck.name ? `启动预检查：${startCheck.name}` : "启动预检查"}
-                    open={startCheckOpen}
-                    okText="确认启动"
-                    cancelText="取消"
-                    mask={{ closable: !isRunPending && !isCheckProjectStartPending }}
-                    okButtonProps={{
-                        disabled: !startCheck.name || !startCheck.data?.canStart || isCheckProjectStartPending,
-                        loading: isRunPending,
-                    }}
-                    cancelButtonProps={{
-                        disabled: isRunPending || isCheckProjectStartPending,
-                    }}
-                    onOk={onConfirmStart}
-                    onCancel={onCloseStartCheck}
-                >
-                    {isCheckProjectStartPending ? (
-                        <div className="py-6 text-sm text-slate-600">正在检查挂载路径...</div>
-                    ) : (
-                        <div className="space-y-3">
-                            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
-                                <div>已存在路径：{startCheck.data?.existsCount ?? 0}</div>
-                                <div>启动时将创建：{startCheck.data?.createCount ?? 0}</div>
-                                <div className={clsx((startCheck.data?.blockedCount ?? 0) > 0 ? "text-red-600" : "text-slate-700")}>
-                                    不可创建：{startCheck.data?.blockedCount ?? 0}
-                                </div>
-                            </div>
-                            {(startCheck.data?.items.length ?? 0) > 0 ? (
-                                <div className="max-h-80 space-y-2 overflow-auto pr-1">
-                                    {startCheck.data?.items.map(item => (
-                                        <ProjectStartMountItemCard
-                                            key={item.key}
-                                            item={item}
-                                            disabled={isRunPending || isCheckProjectStartPending}
-                                            onPathKindChange={onStartCheckMountPathKindChange}
-                                            onCreateDirectoryChange={onStartCheckMountPathCreateDirectoryChange}
-                                        />
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500">
-                                    未检测到需要自动处理的挂载路径
-                                </div>
+                    </form>
+                </CardContent>
+            </Card>
+            <DataTable
+                columns={columns}
+                columnPinning={{ left: ["xName", "name"], right: ["actions"] }}
+                columnSizingKey="docker-project"
+                data={data?.list}
+                loading={isLoading}
+                pageNum={pageNum}
+                pageSize={pageSize}
+                sorting={sorting}
+                total={data?.total}
+                getRowId={row => row.name}
+                onPageChange={(pageNum, pageSize) => setQuery(previous => ({ ...previous, pageNum, pageSize }))}
+                onSortingChange={onSortingChange}
+            />
+            <ProjectLogDrawer name={logName} open={logOpen} content={logContent} onClose={onCloseLog} />
+            <Dialog open={deleteOpen} onOpenChange={open => (!open ? onCloseDelete() : setDeleteOpen(true))}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{getProjectDeleteTitle(deleteTarget)}</DialogTitle>
+                        <DialogDescription>请选择是否同时停止并清理项目容器。</DialogDescription>
+                    </DialogHeader>
+                    <DialogBody className="space-y-3">
+                        <button
+                            className={clsx(
+                                "w-full rounded-2xl border p-4 text-left transition-colors",
+                                deleteMode === ProjectDeleteMode.仅删除项目 ? "border-primary bg-primary/5" : "hover:bg-muted/50",
                             )}
-                            {startCheck.data && !startCheck.data.canStart ? (
-                                <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-600">
-                                    存在不可创建的挂载路径，请先调整后再启动项目
+                            type="button"
+                            disabled={isDeletePending}
+                            onClick={() => setDeleteMode(ProjectDeleteMode.仅删除项目)}
+                        >
+                            <div className="font-medium">仅删除项目</div>
+                            <div className="mt-1 text-sm text-muted-foreground">仅删除数据库记录与本地项目目录，容器保持运行。</div>
+                        </button>
+                        <button
+                            className={clsx(
+                                "w-full rounded-2xl border p-4 text-left transition-colors",
+                                deleteMode === ProjectDeleteMode.删除并清理容器 ? "border-destructive bg-destructive/5" : "hover:bg-muted/50",
+                            )}
+                            type="button"
+                            disabled={isDeletePending}
+                            onClick={() => setDeleteMode(ProjectDeleteMode.删除并清理容器)}
+                        >
+                            <div className="font-medium text-destructive">删除项目并清理容器</div>
+                            <div className="mt-1 text-sm text-muted-foreground">先执行 docker compose down，再删除数据库记录与本地项目目录。</div>
+                        </button>
+                    </DialogBody>
+                    <DialogFooter>
+                        <Button variant="outline" disabled={isDeletePending} onClick={onCloseDelete}>
+                            取消
+                        </Button>
+                        <Button variant="destructive" disabled={!deleteTarget?.name || isDeletePending} onClick={() => void onDeleteConfirm()}>
+                            {isDeletePending && <LoaderCircleIcon className="animate-spin" />}
+                            {deleteMode === ProjectDeleteMode.删除并清理容器 ? "删除并清理" : "删除"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+            <Dialog open={startCheckOpen} onOpenChange={open => (!open ? onCloseStartCheck() : setStartCheckOpen(true))}>
+                <DialogContent className="max-w-3xl">
+                    <DialogHeader>
+                        <DialogTitle>{startCheck.name ? `启动预检查：${startCheck.name}` : "启动预检查"}</DialogTitle>
+                        <DialogDescription>确认宿主机挂载路径可以安全创建后再启动 Compose 项目。</DialogDescription>
+                    </DialogHeader>
+                    <DialogBody>
+                        {isCheckProjectStartPending ? (
+                            <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
+                                <LoaderCircleIcon className="size-4 animate-spin" />
+                                正在检查挂载路径...
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                <div className="rounded-2xl border bg-muted/40 p-3 text-sm">
+                                    <div>已存在路径：{startCheck.data?.existsCount ?? 0}</div>
+                                    <div>启动时将创建：{startCheck.data?.createCount ?? 0}</div>
+                                    <div className={(startCheck.data?.blockedCount ?? 0) > 0 ? "text-destructive" : undefined}>
+                                        不可创建：{startCheck.data?.blockedCount ?? 0}
+                                    </div>
                                 </div>
-                            ) : null}
-                        </div>
-                    )}
-                </Modal>
-                <Table<ProjectSummary>
-                    columns={columns}
-                    dataSource={data?.list}
-                    loading={isLoading}
-                    onChange={onTableChange}
-                    pagination={{
-                        current: pageNum,
-                        pageSize,
-                        total: data?.total,
-                        showTotal,
-                        showSizeChanger: true,
-                    }}
-                    rowKey="name"
-                    scroll={{ x: "max-content", y }}
-                />
-            </div>
+                                {(startCheck.data?.items.length ?? 0) > 0 ? (
+                                    <div className="space-y-2">
+                                        {startCheck.data?.items.map(item => (
+                                            <ProjectStartMountItemCard
+                                                key={item.key}
+                                                item={item}
+                                                disabled={isRunPending || isCheckProjectStartPending}
+                                                onPathKindChange={onStartCheckMountPathKindChange}
+                                                onCreateDirectoryChange={onStartCheckMountPathCreateDirectoryChange}
+                                            />
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="rounded-2xl border border-dashed bg-muted/30 px-4 py-6 text-sm text-muted-foreground">
+                                        未检测到需要自动处理的挂载路径
+                                    </div>
+                                )}
+                                {startCheck.data && !startCheck.data.canStart && (
+                                    <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+                                        存在不可创建的挂载路径，请先调整后再启动项目。
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </DialogBody>
+                    <DialogFooter>
+                        <Button variant="outline" disabled={isRunPending || isCheckProjectStartPending} onClick={onCloseStartCheck}>
+                            取消
+                        </Button>
+                        <Button
+                            disabled={!startCheck.name || !startCheck.data?.canStart || isCheckProjectStartPending || isRunPending}
+                            onClick={() => void onConfirmStart()}
+                        >
+                            {isRunPending && <LoaderCircleIcon className="animate-spin" />}
+                            确认启动
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     )
-}
-
-function getSorterOrder(order?: string | null) {
-    if (order === "ascend") return "asc"
-    if (order === "descend") return "desc"
-    return undefined
 }
 
 export default Page

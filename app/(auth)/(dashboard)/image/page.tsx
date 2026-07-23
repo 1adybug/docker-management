@@ -1,18 +1,35 @@
 "use client"
 
-import { type FC, useEffect, useMemo, useRef, useState } from "react"
+import { type FC, useEffect, useMemo, useState } from "react"
 
-import { IconBrandDocker, IconBrandReact, IconCoffee, IconCopy, IconPencil, IconTrash } from "@tabler/icons-react"
+import { useForm } from "@tanstack/react-form"
 import { useQueryClient } from "@tanstack/react-query"
-import { type TableProps, Button, Checkbox, Form, Input, message, Modal, Popconfirm, Select, Table, Tag } from "antd"
-import { useForm } from "antd/es/form/Form"
-import FormItem from "antd/es/form/FormItem"
-import { InputFileButton } from "deepsea-components"
-import { formatTime, showTotal } from "deepsea-tools"
-import { ArrowDownToLine, RotateCw } from "lucide-react"
+import type { ColumnDef, SortingState, Updater } from "@tanstack/react-table"
+import { formatTime } from "deepsea-tools"
+import { CoffeeIcon, CopyIcon, DownloadIcon, LoaderCircleIcon, PanelsTopLeftIcon, PencilIcon, RefreshCwIcon, Trash2Icon, UploadIcon } from "lucide-react"
 import Link from "next/link"
-import { type Columns, schemaToRule, useScroll } from "soda-antd"
 import { useQueryState } from "soda-next"
+
+import { ConfirmButton } from "@/components/ConfirmButton"
+import { DataTable } from "@/components/DataTable"
+
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 import { useBuildJarDockerImage } from "@/hooks/useBuildJarDockerImage"
 import { useBuildStaticDockerImage } from "@/hooks/useBuildStaticDockerImage"
@@ -36,7 +53,9 @@ import { type SortOrderParams, sortOrderSchema } from "@/schemas/sortOrder"
 
 import type { DockerImageContainerItem, DockerImageItem, DockerImageProjectItem } from "@/shared/queryDockerImageDetail"
 
-import { getSortOrder } from "@/utils/getSortOrder"
+import { getOnBlurValidator } from "@/utils/getOnBlurValidator"
+import { cn } from "@/utils/shadcn"
+import { toast } from "@/utils/toast"
 
 export interface DockerImageFilterParams {
     name?: string
@@ -52,19 +71,19 @@ export interface QueryImageFormParams extends DockerImageFilterParams {
 }
 
 export interface StaticDockerImageFormParams {
-    imageName?: string
-    nginxImage?: string
+    imageName: string
+    nginxImage: string
 }
 
 export interface JarDockerImageFormParams {
-    imageName?: string
-    javaImage?: string
-    startCommand?: string
+    imageName: string
+    javaImage: string
+    startCommand: string
 }
 
 export interface ImageTagFormParams {
-    tag?: string
-    targetName?: string
+    tag: string
+    targetName: string
 }
 
 export interface UploadDockerImageParams {
@@ -82,7 +101,50 @@ export interface BatchDeleteDockerImageErrorItem {
     message: string
 }
 
+interface FilePickerProps {
+    accept: string
+    disabled?: boolean
+    iconOnly?: boolean
+    title: string
+    onValueChange: (file: File) => void | Promise<void>
+}
+
+interface SelectOption {
+    label: string
+    value: string
+}
+
+interface OptionalStringFormFieldState {
+    value?: string
+}
+
+interface OptionalStringFormField {
+    state: OptionalStringFormFieldState
+    handleChange: (value?: string) => void
+}
+
 const DEFAULT_JAR_START_COMMAND = "java -jar app.jar"
+const allSelectValue = "__all"
+
+const FilePicker: FC<FilePickerProps> = ({ accept, disabled, iconOnly, title, onValueChange }) => (
+    <Button asChild size={iconOnly ? "icon-xs" : "default"} variant={iconOnly ? "ghost" : "outline"}>
+        <label className={cn("cursor-pointer", disabled && "pointer-events-none opacity-50")} title={title}>
+            <UploadIcon />
+            {!iconOnly && title}
+            <input
+                className="sr-only"
+                type="file"
+                accept={accept}
+                disabled={disabled}
+                onChange={event => {
+                    const file = event.target.files?.[0]
+                    event.target.value = ""
+                    if (file) void onValueChange(file)
+                }}
+            />
+        </label>
+    </Button>
+)
 
 function getDefaultNginxImage(imageNames: string[]) {
     if (imageNames.includes("nginx:latest")) return "nginx:latest"
@@ -108,7 +170,7 @@ function getDefaultJavaImage(imageNames: string[]) {
         if (imageNames.includes(item)) return item
     }
 
-    return imageNames.find(item => /eclipse-temurin|openjdk|amazoncorretto|liberica|sapmachine|semeru|dragonwell/i.test(item))
+    return imageNames.find(item => /eclipse-temurin|openjdk|amazoncorretto|liberica|sapmachine|semeru|dragonwell/iu.test(item))
 }
 
 function compareName(first?: string, second?: string) {
@@ -132,48 +194,28 @@ const dockerSizeRegex = /^([+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][+-]?\d+)?)\s*([a-
 function formatDockerSize(value?: string) {
     const match = value?.trim().match(dockerSizeRegex)
     if (!match) return value || "-"
-
     const size = Number(match[1])
     if (Number.isNaN(size)) return value || "-"
-
     return `${size.toLocaleString("en-US", { useGrouping: false, maximumFractionDigits: 20 })}${match[2]}`
 }
 
 function getDockerSizeValue(value?: string) {
     const match = value?.trim().match(dockerSizeRegex)
     if (!match) return undefined
-
     const size = Number(match[1])
-
     if (Number.isNaN(size)) return undefined
 
-    const unitMap = {
-        B: 1,
-        KB: 1024,
-        MB: 1024 ** 2,
-        GB: 1024 ** 3,
-        TB: 1024 ** 4,
-        PB: 1024 ** 5,
-    }
+    const unitMap = { B: 1, KB: 1024, MB: 1024 ** 2, GB: 1024 ** 3, TB: 1024 ** 4, PB: 1024 ** 5 }
 
-    const unit = match[2].toUpperCase()
-    const factor = unitMap[unit as keyof typeof unitMap]
-
-    if (!factor) return undefined
-
-    return size * factor
+    return size * (unitMap[match[2].toUpperCase() as keyof typeof unitMap] ?? 0) || undefined
 }
 
 function compareCreatedAt(first?: string, second?: string) {
-    const timestampDiff = compareOptionalNumber(getCreatedAtTimestamp(first), getCreatedAtTimestamp(second))
-    if (timestampDiff !== 0) return timestampDiff
-    return compareName(first, second)
+    return compareOptionalNumber(getCreatedAtTimestamp(first), getCreatedAtTimestamp(second)) || compareName(first, second)
 }
 
 function compareSize(first?: string, second?: string) {
-    const sizeDiff = compareOptionalNumber(getDockerSizeValue(first), getDockerSizeValue(second))
-    if (sizeDiff !== 0) return sizeDiff
-    return compareName(first, second)
+    return compareOptionalNumber(getDockerSizeValue(first), getDockerSizeValue(second)) || compareName(first, second)
 }
 
 function getProjectDisplayName(projectItems: DockerImageProjectItem[], name: string) {
@@ -200,23 +242,17 @@ function getProjectHref(name: string) {
 }
 
 function getContainerHref(name?: string) {
-    const containerName = name?.trim()
-    if (!containerName) return "/container"
-    return `/container?name=${encodeURIComponent(containerName)}`
+    return name?.trim() ? `/container?name=${encodeURIComponent(name.trim())}` : "/container"
 }
 
 function getContainerListHref(imageName?: string) {
-    const currentImageName = imageName?.trim()
-    if (!currentImageName) return "/container"
-    return `/container?image=${encodeURIComponent(currentImageName)}`
+    return imageName?.trim() ? `/container?image=${encodeURIComponent(imageName.trim())}` : "/container"
 }
 
 function getDockerContainerNamesText(containerItems: DockerImageContainerItem[]) {
     const names = containerItems.map(item => item.name).filter(Boolean)
-
     if (names.length === 0) return ""
     if (names.length <= 3) return names.join("、")
-
     return `${names.slice(0, 3).join("、")} 等 ${names.length} 个容器`
 }
 
@@ -225,42 +261,31 @@ function getDockerImageNameByRepositoryAndTag(repository: string, tag: string) {
 }
 
 function hasImageTag(value: string) {
-    const lastSlashIndex = value.lastIndexOf("/")
-    const lastColonIndex = value.lastIndexOf(":")
-    return lastColonIndex > lastSlashIndex
+    return value.lastIndexOf(":") > value.lastIndexOf("/")
 }
 
 function getImageFilterNames(value?: string) {
     const imageName = value?.trim()
-
     if (!imageName) return []
-    if (hasImageTag(imageName)) return [imageName]
-
-    return [imageName, `${imageName}:latest`]
+    return hasImageTag(imageName) ? [imageName] : [imageName, `${imageName}:latest`]
 }
 
 function compareProjects(first: DockerImageItem, second: DockerImageItem) {
-    const textDiff = compareName(getProjectDisplaySortText(first.projectItems, first.projects), getProjectDisplaySortText(second.projectItems, second.projects))
-
-    if (textDiff !== 0) return textDiff
-    return first.projects.length - second.projects.length
+    return (
+        compareName(getProjectDisplaySortText(first.projectItems, first.projects), getProjectDisplaySortText(second.projectItems, second.projects)) ||
+        first.projects.length - second.projects.length
+    )
 }
 
 function compareContainers(first: DockerImageContainerItem[], second: DockerImageContainerItem[]) {
-    const textDiff = compareName(getContainerSortText(first), getContainerSortText(second))
-    if (textDiff !== 0) return textDiff
-    return first.length - second.length
+    return compareName(getContainerSortText(first), getContainerSortText(second)) || first.length - second.length
 }
 
 function compareTag(first?: string, second?: string, sortOrder?: SortOrderParams) {
     const firstTag = first?.trim().toLowerCase() ?? ""
     const secondTag = second?.trim().toLowerCase() ?? ""
-    const isFirstLatest = firstTag === "latest"
-    const isSecondLatest = secondTag === "latest"
-
-    if (isFirstLatest && !isSecondLatest) return -1
-    if (!isFirstLatest && isSecondLatest) return 1
-
+    if (firstTag === "latest" && secondTag !== "latest") return -1
+    if (firstTag !== "latest" && secondTag === "latest") return 1
     const result = compareName(first, second)
     return sortOrder === "desc" ? result * -1 : result
 }
@@ -290,12 +315,6 @@ function getSortResult(result: number, sortOrder?: SortOrderParams) {
     return sortOrder === "desc" ? result * -1 : result
 }
 
-function getSorterOrder(order?: string | null) {
-    if (order === "ascend") return "asc"
-    if (order === "descend") return "desc"
-    return undefined
-}
-
 const Page: FC = () => {
     const { data, isLoading, refetch } = useQueryDockerImageDetail()
     const queryClient = useQueryClient()
@@ -317,71 +336,68 @@ const Page: FC = () => {
         },
     })
 
-    const [buildStaticForm] = useForm<StaticDockerImageFormParams>()
-    const [buildJarForm] = useForm<JarDockerImageFormParams>()
-    const [renameForm] = useForm<ImageTagFormParams>()
-    const [copyForm] = useForm<ImageTagFormParams>()
-    const [queryForm] = useForm<QueryImageFormParams>()
-    const container = useRef<HTMLDivElement>(null)
-    const [staticFile, setStaticFile] = useState<File | undefined>(undefined)
-    const [jarFile, setJarFile] = useState<File | undefined>(undefined)
-    const [isBuildStaticModalOpen, setIsBuildStaticModalOpen] = useState(false)
-    const [isBuildJarModalOpen, setIsBuildJarModalOpen] = useState(false)
-    const [isRenameModalOpen, setIsRenameModalOpen] = useState(false)
-    const [isCopyModalOpen, setIsCopyModalOpen] = useState(false)
-    const [isRestartProjectsModalOpen, setIsRestartProjectsModalOpen] = useState(false)
+    const [staticFile, setStaticFile] = useState<File>()
+    const [jarFile, setJarFile] = useState<File>()
+    const [isBuildStaticOpen, setIsBuildStaticOpen] = useState(false)
+    const [isBuildJarOpen, setIsBuildJarOpen] = useState(false)
+    const [isRenameOpen, setIsRenameOpen] = useState(false)
+    const [isRenameConfirmOpen, setIsRenameConfirmOpen] = useState(false)
+    const [isCopyOpen, setIsCopyOpen] = useState(false)
+    const [isRestartProjectsOpen, setIsRestartProjectsOpen] = useState(false)
     const [isRestartProjectsPending, setIsRestartProjectsPending] = useState(false)
     const [isBatchDeletePending, setIsBatchDeletePending] = useState(false)
-    const [buildStaticTarget, setBuildStaticTarget] = useState<DockerImageItem | undefined>(undefined)
-    const [buildJarTarget, setBuildJarTarget] = useState<DockerImageItem | undefined>(undefined)
-    const [renameTarget, setRenameTarget] = useState<DockerImageItem | undefined>(undefined)
-    const [copyTarget, setCopyTarget] = useState<DockerImageItem | undefined>(undefined)
-
-    const [restartProjectsState, setRestartProjectsState] = useState<RestartProjectsState>({
-        projectItems: [],
-    })
-
+    const [isBatchDeleteConfirmOpen, setIsBatchDeleteConfirmOpen] = useState(false)
+    const [batchDeleteErrors, setBatchDeleteErrors] = useState<BatchDeleteDockerImageErrorItem[]>([])
+    const [buildStaticTarget, setBuildStaticTarget] = useState<DockerImageItem>()
+    const [buildJarTarget, setBuildJarTarget] = useState<DockerImageItem>()
+    const [renameTarget, setRenameTarget] = useState<DockerImageItem>()
+    const [copyTarget, setCopyTarget] = useState<DockerImageItem>()
+    const [pendingRenameValues, setPendingRenameValues] = useState<ImageTagFormParams>()
+    const [restartProjectsState, setRestartProjectsState] = useState<RestartProjectsState>({ projectItems: [] })
     const [selectedRestartProjectNames, setSelectedRestartProjectNames] = useState<string[]>([])
     const [selectedImageReferences, setSelectedImageReferences] = useState<string[]>([])
-    const { y } = useScroll(container, { paginationMargin: 32 })
     const pageNum = query.pageNum ?? 1
     const pageSize = query.pageSize ?? 10
 
-    const imageNames = useMemo(() => Array.from(new Set((data ?? []).filter(item => !item.isDangling).map(item => item.name))), [data])
+    const queryForm = useForm({
+        defaultValues: { repository: query.repository, project: query.project } as DockerImageFilterParams,
+        onSubmit({ value }) {
+            setQuery(previous => ({ ...previous, repository: value.repository, project: value.project, pageNum: 1 }))
+        },
+    })
 
-    const repositoryOptions = useMemo(
-        () =>
-            Array.from(new Set((data ?? []).map(item => item.repository).filter(Boolean)))
-                .sort(compareName)
-                .map(item => ({ label: item, value: item })),
-        [data],
-    )
+    const buildStaticForm = useForm({
+        defaultValues: { imageName: "", nginxImage: "" } as StaticDockerImageFormParams,
+        onSubmit: ({ value }) => onBuildStaticFinish(value),
+    })
+
+    const buildJarForm = useForm({
+        defaultValues: { imageName: "", javaImage: "", startCommand: DEFAULT_JAR_START_COMMAND } as JarDockerImageFormParams,
+        onSubmit: ({ value }) => onBuildJarFinish(value),
+    })
+
+    const renameForm = useForm({
+        defaultValues: { tag: "", targetName: "" } as ImageTagFormParams,
+        onSubmit: ({ value }) => onRenameFinish(value),
+    })
+
+    const copyForm = useForm({
+        defaultValues: { tag: "", targetName: "" } as ImageTagFormParams,
+        onSubmit: ({ value }) => onCopyFinish(value),
+    })
+
+    const imageNames = useMemo(() => Array.from(new Set((data ?? []).filter(item => !item.isDangling).map(item => item.name))), [data])
+    const repositoryOptions = useMemo(() => Array.from(new Set((data ?? []).map(item => item.repository).filter(Boolean))).sort(compareName), [data])
 
     const projectOptions = useMemo(() => {
         const projectMap = new Map<string, string>()
         ;(data ?? []).forEach(item => void item.projectItems.forEach(project => void projectMap.set(project.name, project.displayName)))
-
-        return Array.from(projectMap.entries())
-            .sort((first, second) => compareName(first[1], second[1]))
-            .map(([value, label]) => ({ label, value }))
+        return Array.from(projectMap.entries()).sort((first, second) => compareName(first[1], second[1]))
     }, [data])
 
     const nginxImageNames = useMemo(() => imageNames.filter(name => name.startsWith("nginx:")), [imageNames])
     const defaultNginxImage = useMemo(() => getDefaultNginxImage(nginxImageNames), [nginxImageNames])
     const defaultJavaImage = useMemo(() => getDefaultJavaImage(imageNames), [imageNames])
-
-    useEffect(() => {
-        queryForm.resetFields()
-
-        queryForm.setFieldsValue({
-            repository: query.repository,
-            project: query.project,
-        })
-    }, [query, queryForm])
-
-    const imageOptions = useMemo(() => imageNames.map(item => ({ label: item, value: item })), [imageNames])
-    const nginxImageOptions = useMemo(() => nginxImageNames.map(item => ({ label: item, value: item })), [nginxImageNames])
-
     const isRequesting =
         isLoading ||
         isDeletePending ||
@@ -394,139 +410,67 @@ const Page: FC = () => {
         isRestartProjectsPending ||
         isBatchDeletePending
 
+    useEffect(() => void queryForm.reset({ repository: query.repository, project: query.project }), [query.project, query.repository, queryForm])
+
     useEffect(() => {
         const referenceSet = new Set((data ?? []).map(item => item.reference))
-
-        setSelectedImageReferences(prev => prev.filter(item => referenceSet.has(item)))
+        setSelectedImageReferences(previous => previous.filter(item => referenceSet.has(item)))
     }, [data])
 
-    useEffect(() => {
-        if (!isBuildStaticModalOpen) return
-
-        buildStaticForm.setFieldValue("nginxImage", defaultNginxImage)
-    }, [buildStaticForm, defaultNginxImage, isBuildStaticModalOpen])
-
-    useEffect(() => {
-        if (!isBuildJarModalOpen) return
-
-        buildJarForm.setFieldsValue({
-            javaImage: defaultJavaImage,
-            startCommand: DEFAULT_JAR_START_COMMAND,
-        })
-    }, [buildJarForm, defaultJavaImage, isBuildJarModalOpen])
-
-    useEffect(() => {
-        if (!isRenameModalOpen) return
-
-        renameForm.setFieldsValue({
-            tag: renameTarget?.tag,
-            targetName: renameTarget?.isDangling ? undefined : renameTarget?.name,
-        })
-    }, [isRenameModalOpen, renameForm, renameTarget])
-
-    useEffect(() => {
-        if (!isCopyModalOpen) return
-
-        copyForm.setFieldsValue({
-            tag: copyTarget?.tag,
-        })
-    }, [copyForm, copyTarget, isCopyModalOpen])
-
-    function onRefresh() {
-        refetch()
-    }
-
-    function onOpenRestartProjectsModal(data: DockerImageItem) {
-        if (data.projects.length === 0) return
-
-        setRestartProjectsState({
-            imageName: data.name,
-            projectItems: data.projectItems,
-        })
-
-        setSelectedRestartProjectNames(data.projects)
-        setIsRestartProjectsModalOpen(true)
-    }
-
-    function resetRestartProjectsModal() {
-        setRestartProjectsState({
-            projectItems: [],
-        })
-
+    function resetRestartProjectsDialog() {
+        setRestartProjectsState({ projectItems: [] })
         setSelectedRestartProjectNames([])
-        setIsRestartProjectsModalOpen(false)
+        setIsRestartProjectsOpen(false)
     }
 
-    function onCloseRestartProjectsModal() {
-        if (isRestartProjectsPending) return
-        resetRestartProjectsModal()
+    function onOpenRestartProjectsDialog(target: DockerImageItem) {
+        if (target.projects.length === 0) return
+        setRestartProjectsState({ imageName: target.name, projectItems: target.projectItems })
+        setSelectedRestartProjectNames(target.projects)
+        setIsRestartProjectsOpen(true)
     }
 
     async function onRestartProjects() {
         if (selectedRestartProjectNames.length === 0) {
-            message.error("请至少选择一个项目")
+            toast.error("请至少选择一个项目")
             return
         }
 
-        const key = "restart-projects-after-image-replace"
+        const toastId = toast.loading("重启关联项目中...")
 
         try {
             setIsRestartProjectsPending(true)
-
-            message.open({
-                key,
-                type: "loading",
-                content: "重启关联项目中...",
-                duration: 0,
-            })
-
-            for (const name of selectedRestartProjectNames) {
-                await runProjectClient({
-                    name,
-                    command: ProjectCommand.重启,
-                })
-            }
-
-            message.open({
-                key,
-                type: "success",
-                content: "重启关联项目成功",
-            })
-
-            resetRestartProjectsModal()
+            for (const name of selectedRestartProjectNames) await runProjectClient({ name, command: ProjectCommand.重启 })
+            toast.success("重启关联项目成功", { id: toastId })
+            resetRestartProjectsDialog()
         } catch (error) {
-            message.open({
-                key,
-                type: "error",
-                content: error instanceof Error ? error.message : String(error),
-            })
+            toast.error(error instanceof Error ? error.message : String(error), { id: toastId })
         } finally {
             setIsRestartProjectsPending(false)
         }
     }
 
-    async function onFileChange({ data, file }: UploadDockerImageParams) {
-        if (!file.name.toLowerCase().endsWith(".tar")) return message.error("仅支持上传 tar 文件")
+    async function onFileChange({ data: target, file }: UploadDockerImageParams) {
+        if (!file.name.toLowerCase().endsWith(".tar")) {
+            toast.error("仅支持上传 tar 文件")
+            return
+        }
 
         const formData = new FormData()
         formData.set("file", file)
-        if (data?.name) formData.set("targetName", data.name)
-
+        if (target?.name) formData.set("targetName", target.name)
         const result = await uploadDockerImage(formData)
-        if (data && !result.skipFollowUp) onOpenRestartProjectsModal(data)
+        if (target && !result.skipFollowUp) onOpenRestartProjectsDialog(target)
     }
 
-    async function onPull(data: DockerImageItem) {
-        const result = await pullDockerImage({
-            name: data.name,
-        })
-
-        if (!result.skipFollowUp) onOpenRestartProjectsModal(data)
+    async function onPull(target: DockerImageItem) {
+        const result = await pullDockerImage({ name: target.name })
+        if (!result.skipFollowUp) onOpenRestartProjectsDialog(target)
     }
 
     async function onDelete(name: string) {
         await deleteDockerImage({ name })
-        setSelectedImageReferences(prev => prev.filter(item => item !== name))
+        setSelectedImageReferences(previous => previous.filter(item => item !== name))
     }
 
     async function refreshDockerImageQueries() {
@@ -538,35 +482,23 @@ const Page: FC = () => {
     }
 
     async function onBatchDelete() {
-        if (selectedImageReferences.length === 0) {
-            message.error("请先选择需要删除的镜像")
-            return
-        }
-
-        const key = "batch-delete-docker-image"
+        if (selectedImageReferences.length === 0) return
 
         const imageReferences = [...selectedImageReferences]
 
         const failedItems: BatchDeleteDockerImageErrorItem[] = []
 
+        const toastId = toast.loading(`删除 ${imageReferences.length} 个镜像中...`)
+        setIsBatchDeleteConfirmOpen(false)
+
         try {
             setIsBatchDeletePending(true)
-
-            message.open({
-                key,
-                type: "loading",
-                content: `删除 ${imageReferences.length} 个镜像中...`,
-                duration: 0,
-            })
 
             for (const name of imageReferences) {
                 try {
                     await deleteDockerImageClient({ name })
                 } catch (error) {
-                    failedItems.push({
-                        name,
-                        message: error instanceof Error ? error.message : String(error),
-                    })
+                    failedItems.push({ name, message: error instanceof Error ? error.message : String(error) })
                 }
             }
 
@@ -574,151 +506,78 @@ const Page: FC = () => {
 
             if (failedItems.length === 0) {
                 setSelectedImageReferences([])
-
-                message.open({
-                    key,
-                    type: "success",
-                    content: `成功删除 ${imageReferences.length} 个镜像`,
-                })
-
+                toast.success(`成功删除 ${imageReferences.length} 个镜像`, { id: toastId })
                 return
             }
 
             const successCount = imageReferences.length - failedItems.length
-
             setSelectedImageReferences(failedItems.map(item => item.name))
+            setBatchDeleteErrors(failedItems)
 
-            message.open({
-                key,
-                type: successCount > 0 ? "warning" : "error",
-                content:
-                    successCount > 0 ? `成功删除 ${successCount} 个镜像，失败 ${failedItems.length} 个` : `删除失败，共 ${failedItems.length} 个镜像未删除`,
-            })
-
-            Modal.warning({
-                title: successCount > 0 ? "部分镜像删除失败" : "镜像删除失败",
-                okText: "知道了",
-                content: (
-                    <div className="space-y-2 text-sm text-slate-600">
-                        <div>{successCount > 0 ? `已成功删除 ${successCount} 个镜像，以下镜像删除失败：` : "以下镜像删除失败："}</div>
-                        <div className="max-h-60 space-y-2 overflow-y-auto">
-                            {failedItems.map(item => (
-                                <div key={item.name} className="rounded-md bg-slate-50 px-3 py-2">
-                                    <div className="font-medium text-slate-800">{item.name}</div>
-                                    <div>{item.message}</div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                ),
-            })
+            if (successCount > 0) toast.warning(`成功删除 ${successCount} 个镜像，失败 ${failedItems.length} 个`, { id: toastId })
+            else toast.error(`删除失败，共 ${failedItems.length} 个镜像未删除`, { id: toastId })
         } finally {
             setIsBatchDeletePending(false)
         }
     }
 
-    function onBatchDeleteConfirm() {
-        if (selectedImageReferences.length === 0) {
-            message.error("请先选择需要删除的镜像")
-            return
-        }
-
-        Modal.confirm({
-            title: `以下 ${selectedImageReferences.length} 个镜像将被删除`,
-            okText: "确认删除",
-            cancelText: "取消",
-            okButtonProps: {
-                danger: true,
-            },
-            content: (
-                <div className="space-y-2 text-sm text-slate-600">
-                    <div>删除后可能影响相关容器。</div>
-                    <div className="max-h-60 space-y-2 overflow-y-auto rounded-md bg-slate-50 p-3">
-                        {selectedImageReferences.map(item => (
-                            <div key={item} className="break-all text-slate-700">
-                                {item}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            ),
-            onOk() {
-                return onBatchDelete()
-            },
-        })
+    function onOpenBuildStaticDialog(target?: DockerImageItem) {
+        setBuildStaticTarget(target)
+        setStaticFile(undefined)
+        buildStaticForm.reset({ imageName: "", nginxImage: defaultNginxImage ?? "" })
+        setIsBuildStaticOpen(true)
     }
 
-    function onOpenBuildStaticModal(data?: DockerImageItem) {
-        setBuildStaticTarget(data)
-        setIsBuildStaticModalOpen(true)
+    function onOpenBuildJarDialog(target?: DockerImageItem) {
+        setBuildJarTarget(target)
+        setJarFile(undefined)
+        buildJarForm.reset({ imageName: "", javaImage: defaultJavaImage ?? "", startCommand: DEFAULT_JAR_START_COMMAND })
+        setIsBuildJarOpen(true)
     }
 
-    function onOpenBuildJarModal(data?: DockerImageItem) {
-        setBuildJarTarget(data)
-        setIsBuildJarModalOpen(true)
+    function onOpenRenameDialog(target: DockerImageItem) {
+        setRenameTarget(target)
+        renameForm.reset({ tag: target.tag === "<none>" ? "" : target.tag, targetName: target.isDangling ? "" : target.name })
+        setIsRenameOpen(true)
     }
 
-    function onOpenRenameModal(data: DockerImageItem) {
-        setRenameTarget(data)
-        setIsRenameModalOpen(true)
+    function onOpenCopyDialog(target: DockerImageItem) {
+        setCopyTarget(target)
+        copyForm.reset({ tag: target.tag, targetName: "" })
+        setIsCopyOpen(true)
     }
 
-    function onOpenCopyModal(data: DockerImageItem) {
-        setCopyTarget(data)
-        setIsCopyModalOpen(true)
-    }
-
-    function resetBuildStaticModal() {
-        buildStaticForm.resetFields()
+    function resetBuildStaticDialog() {
+        buildStaticForm.reset({ imageName: "", nginxImage: "" })
         setStaticFile(undefined)
         setBuildStaticTarget(undefined)
-        setIsBuildStaticModalOpen(false)
+        setIsBuildStaticOpen(false)
     }
 
-    function resetBuildJarModal() {
-        buildJarForm.resetFields()
+    function resetBuildJarDialog() {
+        buildJarForm.reset({ imageName: "", javaImage: "", startCommand: DEFAULT_JAR_START_COMMAND })
         setJarFile(undefined)
         setBuildJarTarget(undefined)
-        setIsBuildJarModalOpen(false)
+        setIsBuildJarOpen(false)
     }
 
-    function resetRenameModal() {
-        renameForm.resetFields()
+    function resetRenameDialog() {
+        renameForm.reset({ tag: "", targetName: "" })
         setRenameTarget(undefined)
-        setIsRenameModalOpen(false)
+        setPendingRenameValues(undefined)
+        setIsRenameConfirmOpen(false)
+        setIsRenameOpen(false)
     }
 
-    function resetCopyModal() {
-        copyForm.resetFields()
+    function resetCopyDialog() {
+        copyForm.reset({ tag: "", targetName: "" })
         setCopyTarget(undefined)
-        setIsCopyModalOpen(false)
-    }
-
-    function onCloseBuildStaticModal() {
-        if (isBuildStaticPending) return
-        resetBuildStaticModal()
-    }
-
-    function onCloseBuildJarModal() {
-        if (isBuildJarPending) return
-        resetBuildJarModal()
-    }
-
-    function onCloseRenameModal() {
-        if (isRenamePending) return
-        resetRenameModal()
-    }
-
-    function onCloseCopyModal() {
-        if (isCopyPending) return
-        resetCopyModal()
+        setIsCopyOpen(false)
     }
 
     function onStaticFileChange(file: File) {
-        const lowerFileName = file.name.toLowerCase()
-
-        if (!lowerFileName.endsWith(".zip") && !lowerFileName.endsWith(".7z")) {
-            message.error("仅支持上传 zip 或 7z 文件")
+        if (!/\.(zip|7z)$/iu.test(file.name)) {
+            toast.error("仅支持上传 zip 或 7z 文件")
             return
         }
 
@@ -727,7 +586,7 @@ const Page: FC = () => {
 
     function onJarFileChange(file: File) {
         if (!file.name.toLowerCase().endsWith(".jar")) {
-            message.error("仅支持上传 Jar 文件")
+            toast.error("仅支持上传 Jar 文件")
             return
         }
 
@@ -735,683 +594,816 @@ const Page: FC = () => {
     }
 
     async function onBuildStaticFinish(values: StaticDockerImageFormParams) {
-        if (!staticFile) {
-            message.error("请先选择静态文件")
-            return
-        }
-
-        if (!values.nginxImage) {
-            message.error("请先选择 nginx 镜像")
-            return
-        }
-
-        if (!buildStaticTarget && !values.imageName) {
-            message.error("请先填写镜像名")
-            return
-        }
-
+        if (!staticFile) return void toast.error("请先选择静态文件")
+        if (!values.nginxImage) return void toast.error("请先选择 nginx 镜像")
+        if (!buildStaticTarget && !values.imageName.trim()) return void toast.error("请先填写镜像名")
         const formData = new FormData()
         formData.set("file", staticFile)
         formData.set("nginxImage", values.nginxImage)
         if (buildStaticTarget?.name) formData.set("targetName", buildStaticTarget.name)
-        if (values.imageName) formData.set("imageName", values.imageName)
-
+        if (values.imageName.trim()) formData.set("imageName", values.imageName.trim())
         const target = buildStaticTarget
-
         const result = await buildStaticDockerImage(formData)
-        if (target && !result.skipFollowUp) onOpenRestartProjectsModal(target)
-        resetBuildStaticModal()
+        if (target && !result.skipFollowUp) onOpenRestartProjectsDialog(target)
+        resetBuildStaticDialog()
     }
 
     async function onBuildJarFinish(values: JarDockerImageFormParams) {
-        if (!jarFile) {
-            message.error("请先选择 Jar 文件")
-            return
-        }
-
-        if (!values.javaImage) {
-            message.error("请先选择 Java 镜像")
-            return
-        }
-
-        if (!buildJarTarget && !values.imageName) {
-            message.error("请先填写镜像名")
-            return
-        }
-
-        if (!values.startCommand) {
-            message.error("请先填写启动命令")
-            return
-        }
-
+        if (!jarFile) return void toast.error("请先选择 Jar 文件")
+        if (!values.javaImage) return void toast.error("请先选择 Java 镜像")
+        if (!buildJarTarget && !values.imageName.trim()) return void toast.error("请先填写镜像名")
+        if (!values.startCommand.trim()) return void toast.error("请先填写启动命令")
         const formData = new FormData()
         formData.set("file", jarFile)
         formData.set("javaImage", values.javaImage)
         if (buildJarTarget?.name) formData.set("targetName", buildJarTarget.name)
-        if (values.imageName) formData.set("imageName", values.imageName)
-        formData.set("startCommand", values.startCommand)
-
+        if (values.imageName.trim()) formData.set("imageName", values.imageName.trim())
+        formData.set("startCommand", values.startCommand.trim())
         const target = buildJarTarget
-
         const result = await buildJarDockerImage(formData)
-        if (target && !result.skipFollowUp) onOpenRestartProjectsModal(target)
-        resetBuildJarModal()
+        if (target && !result.skipFollowUp) onOpenRestartProjectsDialog(target)
+        resetBuildJarDialog()
     }
 
     async function onRename(values: ImageTagFormParams) {
         if (!renameTarget) return
-        const nextTag = values.tag?.trim()
-        const nextTargetName = values.targetName?.trim()
         const targetName = renameTarget.isDangling
-            ? nextTargetName
-            : nextTag
-              ? getDockerImageNameByRepositoryAndTag(renameTarget.repository, nextTag)
-              : undefined
-
-        if (!targetName) {
-            message.error(renameTarget.isDangling ? "请先填写新的镜像名" : "请先填写新的 tag")
-            return
-        }
-
-        await renameDockerImage({
-            name: renameTarget.name,
-            targetName,
-        })
-
-        resetRenameModal()
+            ? values.targetName.trim()
+            : values.tag.trim()
+              ? getDockerImageNameByRepositoryAndTag(renameTarget.repository, values.tag)
+              : ""
+        if (!targetName) return void toast.error(renameTarget.isDangling ? "请先填写新的镜像名" : "请先填写新的 tag")
+        await renameDockerImage({ name: renameTarget.name, targetName })
+        resetRenameDialog()
     }
 
-    function onRenameFinish(values: ImageTagFormParams) {
+    async function onRenameFinish(values: ImageTagFormParams) {
         if (!renameTarget) return
-
-        if (renameTarget.containerItems.length === 0) {
-            void onRename(values)
-            return
-        }
-
-        Modal.confirm({
-            title: "确认重命名镜像",
-            okText: "确认重命名",
-            cancelText: "取消",
-            content: (
-                <div className="space-y-2 text-sm text-slate-600">
-                    <div>当前镜像已关联容器：{getDockerContainerNamesText(renameTarget.containerItems)}</div>
-                    <div>重命名后，相关容器后续重建或重新创建时可能受到影响，是否继续？</div>
-                </div>
-            ),
-            onOk() {
-                return onRename(values)
-            },
-        })
+        if (renameTarget.containerItems.length === 0) return onRename(values)
+        setPendingRenameValues(values)
+        setIsRenameConfirmOpen(true)
     }
 
     async function onCopyFinish(values: ImageTagFormParams) {
-        const nextTag = values.tag?.trim()
-
         if (!copyTarget) return
-
-        if (!nextTag) {
-            message.error("请先填写新的 tag")
-            return
-        }
-
-        await copyDockerImage({
-            name: copyTarget.name,
-            tag: nextTag,
-        })
-
-        resetCopyModal()
+        const tag = values.tag.trim()
+        if (!tag) return void toast.error("请先填写新的 tag")
+        await copyDockerImage({ name: copyTarget.name, tag })
+        resetCopyDialog()
     }
 
     const filteredData = useMemo(() => {
-        const list = data ?? []
-        const imageNames = getImageFilterNames(query.name)
-        const repository = query.repository?.trim()
-        const project = query.project?.trim()
-
-        return list.filter(item => {
-            const isNameMatch = imageNames.length > 0 ? imageNames.includes(item.name) || imageNames.includes(item.reference) : true
-            const isRepositoryMatch = repository ? item.repository === repository : true
-            const isProjectMatch = project ? item.projects.includes(project) : true
-            return isNameMatch && isRepositoryMatch && isProjectMatch
+        const imageFilterNames = getImageFilterNames(query.name)
+        return (data ?? []).filter(item => {
+            const isNameMatch = imageFilterNames.length > 0 ? imageFilterNames.includes(item.name) || imageFilterNames.includes(item.reference) : true
+            return isNameMatch && (!query.repository || item.repository === query.repository) && (!query.project || item.projects.includes(query.project))
         })
     }, [data, query.name, query.project, query.repository])
 
     const sortedData = useMemo(() => {
         if (!query.sortBy) return filteredData
-
-        return filteredData.slice().sort((first, second) => {
-            if (query.sortBy === "tag") return compareDockerImage(first, second, query.sortBy, query.sortOrder)
-            return getSortResult(compareDockerImage(first, second, query.sortBy, query.sortOrder), query.sortOrder)
-        })
+        return filteredData
+            .slice()
+            .sort((first, second) =>
+                query.sortBy === "tag"
+                    ? compareDockerImage(first, second, query.sortBy, query.sortOrder)
+                    : getSortResult(compareDockerImage(first, second, query.sortBy, query.sortOrder), query.sortOrder))
     }, [filteredData, query.sortBy, query.sortOrder])
 
-    const pagedData = useMemo(() => {
-        const start = (pageNum - 1) * pageSize
-        const end = start + pageSize
-        return sortedData.slice(start, end)
-    }, [pageNum, pageSize, sortedData])
+    const pagedData = useMemo(() => sortedData.slice((pageNum - 1) * pageSize, pageNum * pageSize), [pageNum, pageSize, sortedData])
+    const sorting: SortingState = query.sortBy ? [{ id: query.sortBy, desc: query.sortOrder === "desc" }] : []
+    const allPageSelected = pagedData.length > 0 && pagedData.every(item => selectedImageReferences.includes(item.reference))
 
-    const onTableChange: TableProps<DockerImageItem>["onChange"] = function onTableChange(pagination, filters, sorter) {
-        if (Array.isArray(sorter)) return
-
-        const sortBy = (typeof sorter.columnKey === "string" ? sorter.columnKey : typeof sorter.field === "string" ? sorter.field : undefined) ?? undefined
-
-        setQuery(prev => ({
-            ...prev,
-            pageNum: pagination.current ?? prev.pageNum,
-            pageSize: pagination.pageSize ?? prev.pageSize,
-            sortBy: sortBy as DockerImageSortByParams | undefined,
-            sortOrder: getSorterOrder(sorter.order),
-        }))
+    function togglePageSelection(checked: boolean) {
+        const pageReferences = pagedData.map(item => item.reference)
+        setSelectedImageReferences(previous =>
+            checked ? Array.from(new Set([...previous, ...pageReferences])) : previous.filter(item => !pageReferences.includes(item)))
     }
 
-    function onResetQuery() {
-        queryForm.resetFields()
-        setQuery({} as QueryImageFormParams)
-    }
-
-    const rowSelection: TableProps<DockerImageItem>["rowSelection"] = {
-        fixed: true,
-        preserveSelectedRowKeys: true,
-        selectedRowKeys: selectedImageReferences,
-        onChange(selectedRowKeys) {
-            setSelectedImageReferences(selectedRowKeys.map(item => String(item)))
-        },
-        getCheckboxProps() {
-            return {
-                disabled: isRequesting,
-            }
-        },
-    }
-
-    const columns: Columns<DockerImageItem> = [
+    const columns: ColumnDef<DockerImageItem>[] = [
         {
-            title: "镜像名称",
-            dataIndex: "repository",
-            key: "repository",
-            align: "left",
-            fixed: "left",
-            sorter: true,
-            sortOrder: getSortOrder(query, "repository"),
-            render(value: string) {
-                if (value === "<none>") return <Tag>&lt;none&gt;</Tag>
-                return value || "-"
-            },
+            id: "select",
+            header: () => (
+                <input
+                    className="size-4 accent-primary"
+                    type="checkbox"
+                    aria-label="选择当前页镜像"
+                    checked={allPageSelected}
+                    disabled={isRequesting || pagedData.length === 0}
+                    onChange={event => togglePageSelection(event.target.checked)}
+                />
+            ),
+            size: 48,
+            cell: ({ row }) => (
+                <input
+                    className="size-4 accent-primary"
+                    type="checkbox"
+                    aria-label={`选择镜像 ${row.original.reference}`}
+                    checked={selectedImageReferences.includes(row.original.reference)}
+                    disabled={isRequesting}
+                    onChange={event =>
+                        setSelectedImageReferences(previous =>
+                            event.target.checked
+                                ? Array.from(new Set([...previous, row.original.reference]))
+                                : previous.filter(item => item !== row.original.reference))
+                    }
+                />
+            ),
         },
         {
-            title: "Tag",
-            dataIndex: "tag",
-            key: "tag",
-            align: "center",
-            fixed: "left",
-            sorter: true,
-            sortOrder: getSortOrder(query, "tag"),
-            render(value: string) {
-                if (value === "<none>") return <Tag>&lt;none&gt;</Tag>
-                return value || "-"
-            },
+            accessorKey: "repository",
+            header: "镜像名称",
+            enableSorting: true,
+            size: 220,
+            cell: ({ row }) => (row.original.repository === "<none>" ? <Badge variant="outline">&lt;none&gt;</Badge> : row.original.repository || "-"),
         },
         {
-            title: "镜像 ID",
-            dataIndex: "id",
-            key: "id",
-            align: "center",
-            sorter: true,
-            sortOrder: getSortOrder(query, "id"),
-            render(value: string) {
-                return value ? value.slice(0, 12) : "-"
-            },
+            accessorKey: "tag",
+            header: "Tag",
+            enableSorting: true,
+            size: 130,
+            cell: ({ row }) => (row.original.tag === "<none>" ? <Badge variant="outline">&lt;none&gt;</Badge> : row.original.tag || "-"),
         },
+        { accessorKey: "id", header: "镜像 ID", enableSorting: true, size: 150, cell: ({ row }) => row.original.id?.slice(0, 12) || "-" },
+        { accessorKey: "size", header: "大小", enableSorting: true, size: 110, cell: ({ row }) => formatDockerSize(row.original.size) },
+        { accessorKey: "createdAt", header: "创建时间", enableSorting: true, size: 180, cell: ({ row }) => formatTime(row.original.createdAt) },
         {
-            title: "大小",
-            dataIndex: "size",
-            key: "size",
-            align: "center",
-            sorter: true,
-            sortOrder: getSortOrder(query, "size"),
-            render(value: string) {
-                return formatDockerSize(value)
-            },
-        },
-        {
-            title: "创建时间",
-            dataIndex: "createdAt",
-            key: "createdAt",
-            align: "center",
-            sorter: true,
-            sortOrder: getSortOrder(query, "createdAt"),
-            render(value: string) {
-                return formatTime(value)
-            },
-        },
-        {
-            title: "关联项目",
-            dataIndex: "projects",
-            key: "projects",
-            align: "center",
-            sorter: true,
-            sortOrder: getSortOrder(query, "projects"),
-            render(value: string[], record) {
-                if (!value || value.length === 0) return "-"
-                return (
+            accessorKey: "projects",
+            header: "关联项目",
+            enableSorting: true,
+            size: 220,
+            cell: ({ row }) =>
+                row.original.projects.length > 0 ? (
                     <div className="flex flex-wrap justify-center gap-1">
-                        {value.map(item => (
+                        {row.original.projects.map(item => (
                             <Link key={item} href={getProjectHref(item)}>
-                                <Tag color="blue">{getProjectDisplayName(record.projectItems, item)}</Tag>
+                                <Badge>{getProjectDisplayName(row.original.projectItems, item)}</Badge>
                             </Link>
                         ))}
                     </div>
-                )
-            },
+                ) : (
+                    "-"
+                ),
         },
         {
-            title: "关联容器",
-            dataIndex: "containerItems",
-            key: "containerItems",
-            align: "center",
-            sorter: true,
-            sortOrder: getSortOrder(query, "containerItems"),
-            render(value: DockerImageContainerItem[], record) {
-                if (!value || value.length === 0) return "-"
-
-                const visibleContainerItems = value.slice(0, 3)
-                const hiddenCount = value.length - visibleContainerItems.length
-
+            accessorKey: "containerItems",
+            header: "关联容器",
+            enableSorting: true,
+            size: 240,
+            cell: ({ row }) => {
+                const items = row.original.containerItems
+                if (items.length === 0) return "-"
                 return (
                     <div className="flex flex-wrap justify-center gap-1">
-                        {visibleContainerItems.map(item => (
+                        {items.slice(0, 3).map(item => (
                             <Link key={item.id || item.name} href={getContainerHref(item.name)}>
-                                <Tag color="cyan">{item.name || item.id}</Tag>
+                                <Badge variant="secondary">{item.name || item.id}</Badge>
                             </Link>
                         ))}
-                        {hiddenCount > 0 ? (
-                            <Link href={getContainerListHref(record.name)}>
-                                <Tag>{`等 ${value.length} 个`}</Tag>
+                        {items.length > 3 && (
+                            <Link href={getContainerListHref(row.original.name)}>
+                                <Badge variant="outline">等 {items.length} 个</Badge>
                             </Link>
-                        ) : null}
+                        )}
                     </div>
                 )
             },
         },
         {
-            title: "操作",
-            key: "operation",
-            align: "center",
-            fixed: "right",
-            width: 280,
-            render(value, record) {
+            id: "actions",
+            header: "操作",
+            size: 280,
+            cell: ({ row }) => {
+                const record = row.original
                 return (
-                    <div className="flex flex-wrap justify-center gap-2">
-                        {record.isDangling ? null : (
-                            <InputFileButton
-                                as={Button}
-                                size="small"
-                                shape="circle"
-                                color="default"
-                                variant="text"
-                                title="上传镜像"
-                                disabled={isRequesting}
+                    <div className="flex items-center justify-center gap-1">
+                        {!record.isDangling && (
+                            <FilePicker
                                 accept=".tar,application/x-tar"
+                                disabled={isRequesting}
+                                iconOnly
+                                title="上传镜像"
                                 onValueChange={file => onFileChange({ data: record, file })}
-                                clearAfterChange
-                                icon={<IconBrandDocker className="size-4" />}
                             />
                         )}
-                        {record.isDangling ? null : (
+                        {!record.isDangling && (
                             <Button
-                                size="small"
-                                shape="circle"
-                                color="default"
-                                variant="text"
+                                size="icon-xs"
+                                variant="ghost"
                                 title="上传静态文件制作镜像"
                                 disabled={isRequesting}
-                                icon={<IconBrandReact className="size-4" />}
-                                onClick={() => onOpenBuildStaticModal(record)}
-                            />
+                                onClick={() => onOpenBuildStaticDialog(record)}
+                            >
+                                <PanelsTopLeftIcon />
+                            </Button>
                         )}
-                        {record.isDangling ? null : (
+                        {!record.isDangling && (
                             <Button
-                                size="small"
-                                shape="circle"
-                                color="default"
-                                variant="text"
+                                size="icon-xs"
+                                variant="ghost"
                                 title="上传 Jar 文件制作镜像"
                                 disabled={isRequesting}
-                                icon={<IconCoffee className="size-4" />}
-                                onClick={() => onOpenBuildJarModal(record)}
-                            />
+                                onClick={() => onOpenBuildJarDialog(record)}
+                            >
+                                <CoffeeIcon />
+                            </Button>
                         )}
-                        {record.isDangling ? null : (
-                            <Button
-                                size="small"
-                                shape="circle"
-                                color="default"
-                                variant="text"
-                                title="拉取镜像"
-                                disabled={isRequesting}
-                                icon={<ArrowDownToLine className="size-4" />}
-                                onClick={() => onPull(record)}
-                            />
+                        {!record.isDangling && (
+                            <Button size="icon-xs" variant="ghost" title="拉取镜像" disabled={isRequesting} onClick={() => void onPull(record)}>
+                                <DownloadIcon />
+                            </Button>
                         )}
                         <Button
-                            size="small"
-                            shape="circle"
-                            color="default"
-                            variant="text"
+                            size="icon-xs"
+                            variant="ghost"
                             title={record.isDangling ? "重命名悬空镜像" : "重命名镜像 tag"}
                             disabled={isRequesting}
-                            icon={<IconPencil className="size-4" />}
-                            onClick={() => onOpenRenameModal(record)}
-                        />
-                        {record.isDangling ? null : (
-                            <Button
-                                size="small"
-                                shape="circle"
-                                color="default"
-                                variant="text"
-                                title="复制镜像 tag"
-                                disabled={isRequesting}
-                                icon={<IconCopy className="size-4" />}
-                                onClick={() => onOpenCopyModal(record)}
-                            />
+                            onClick={() => onOpenRenameDialog(record)}
+                        >
+                            <PencilIcon />
+                        </Button>
+                        {!record.isDangling && (
+                            <Button size="icon-xs" variant="ghost" title="复制镜像 tag" disabled={isRequesting} onClick={() => onOpenCopyDialog(record)}>
+                                <CopyIcon />
+                            </Button>
                         )}
-                        <Popconfirm
+                        <ConfirmButton
                             title={`确认删除镜像：${record.reference}`}
-                            description="删除后可能影响相关容器"
+                            description="删除后可能影响相关容器。"
+                            size="icon-xs"
+                            variant="destructive"
+                            pending={isDeletePending}
+                            disabled={isRequesting}
                             onConfirm={() => onDelete(record.reference)}
                         >
-                            <Button
-                                size="small"
-                                shape="circle"
-                                color="danger"
-                                variant="text"
-                                title="删除"
-                                disabled={isRequesting}
-                                icon={<IconTrash className="size-4" />}
-                            />
-                        </Popconfirm>
+                            <Trash2Icon />
+                        </ConfirmButton>
                     </div>
                 )
             },
         },
     ]
 
+    function onSortingChange(updater: Updater<SortingState>) {
+        const next = (typeof updater === "function" ? updater(sorting) : updater)[0]
+
+        setQuery(previous => ({
+            ...previous,
+            sortBy: next?.id as DockerImageSortByParams | undefined,
+            sortOrder: next ? (next.desc ? "desc" : "asc") : undefined,
+            pageNum: 1,
+        }))
+    }
+
+    function renderSelectField(formField: OptionalStringFormField, options: SelectOption[], placeholder: string) {
+        return (
+            <Select
+                value={formField.state.value ?? allSelectValue}
+                onValueChange={value => formField.handleChange(value === allSelectValue ? undefined : value)}
+            >
+                <SelectTrigger>
+                    <SelectValue placeholder={placeholder} />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value={allSelectValue}>全部</SelectItem>
+                    {options.map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+        )
+    }
+
     return (
-        <div className="flex h-full flex-col gap-4 pt-4">
-            <div className="flex-none px-4">
-                <Form<QueryImageFormParams> name="query-image-form" form={queryForm} className="gap-y-4" layout="inline" onFinish={setQuery}>
-                    <FormItem<QueryImageFormParams> name="repository" label="镜像名称">
-                        <Select className="!w-48" allowClear showSearch options={repositoryOptions} placeholder="选择镜像名称" />
-                    </FormItem>
-                    <FormItem<QueryImageFormParams> name="project" label="关联项目">
-                        <Select className="!w-48" allowClear showSearch options={projectOptions} placeholder="选择关联项目" />
-                    </FormItem>
-                    <FormItem<QueryImageFormParams>>
-                        <Button htmlType="submit" type="primary" disabled={isRequesting}>
+        <div className="space-y-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                    <h1 className="text-2xl font-semibold tracking-tight">镜像管理</h1>
+                    <p className="mt-1 text-sm text-muted-foreground">管理 Docker 镜像、构建产物及其关联项目和容器。</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                    <FilePicker accept=".tar,application/x-tar" disabled={isRequesting} title="上传镜像" onValueChange={file => onFileChange({ file })} />
+                    <Button variant="outline" disabled={isRequesting} onClick={() => onOpenBuildStaticDialog()}>
+                        <PanelsTopLeftIcon />
+                        构建静态镜像
+                    </Button>
+                    <Button variant="outline" disabled={isRequesting} onClick={() => onOpenBuildJarDialog()}>
+                        <CoffeeIcon />
+                        构建 Jar 镜像
+                    </Button>
+                    <Button variant="outline" disabled={isRequesting} onClick={() => void refetch()}>
+                        {isLoading ? <LoaderCircleIcon className="animate-spin" /> : <RefreshCwIcon />}
+                        刷新
+                    </Button>
+                    <Button
+                        variant="destructive"
+                        disabled={isRequesting || selectedImageReferences.length === 0}
+                        onClick={() => setIsBatchDeleteConfirmOpen(true)}
+                    >
+                        <Trash2Icon />
+                        删除所选（{selectedImageReferences.length}）
+                    </Button>
+                </div>
+            </div>
+            <Card>
+                <CardContent className="pt-6">
+                    <form
+                        className="flex flex-wrap items-end gap-3"
+                        onSubmit={event => {
+                            event.preventDefault()
+                            event.stopPropagation()
+                            void queryForm.handleSubmit()
+                        }}
+                    >
+                        <queryForm.Field name="repository">
+                            {field => (
+                                <Field className="w-full sm:w-52">
+                                    <FieldLabel>镜像名称</FieldLabel>
+                                    {renderSelectField(
+                                        field,
+                                        repositoryOptions.map(value => ({ label: value, value })),
+                                        "选择镜像名称",
+                                    )}
+                                </Field>
+                            )}
+                        </queryForm.Field>
+                        <queryForm.Field name="project">
+                            {field => (
+                                <Field className="w-full sm:w-52">
+                                    <FieldLabel>关联项目</FieldLabel>
+                                    {renderSelectField(
+                                        field,
+                                        projectOptions.map(([value, label]) => ({ label, value })),
+                                        "选择关联项目",
+                                    )}
+                                </Field>
+                            )}
+                        </queryForm.Field>
+                        <Button type="submit" disabled={isRequesting}>
                             查询
                         </Button>
-                    </FormItem>
-                    <FormItem<QueryImageFormParams>>
-                        <Button htmlType="button" type="text" disabled={isRequesting} onClick={onResetQuery}>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            disabled={isRequesting}
+                            onClick={() => {
+                                queryForm.reset({ repository: undefined, project: undefined })
+                                setQuery(previous => ({ ...previous, repository: undefined, project: undefined, pageNum: 1 }))
+                            }}
+                        >
                             重置
                         </Button>
-                    </FormItem>
-                    <div className="ml-auto flex items-center gap-2">
-                        <InputFileButton
-                            as={Button}
-                            shape="circle"
-                            color="default"
-                            variant="text"
-                            title="上传镜像"
-                            disabled={isRequesting}
-                            accept=".tar,application/x-tar"
-                            onValueChange={file => onFileChange({ file })}
-                            clearAfterChange
-                            icon={<IconBrandDocker className="size-4" />}
-                        />
-                        <Button
-                            shape="circle"
-                            color="default"
-                            variant="text"
-                            title="上传静态文件制作镜像"
-                            disabled={isRequesting}
-                            icon={<IconBrandReact className="size-4" />}
-                            onClick={() => onOpenBuildStaticModal()}
-                        />
-                        <Button
-                            shape="circle"
-                            color="default"
-                            variant="text"
-                            title="上传 Jar 文件制作镜像"
-                            disabled={isRequesting}
-                            icon={<IconCoffee className="size-4" />}
-                            onClick={() => onOpenBuildJarModal()}
-                        />
-                        <Button
-                            shape="circle"
-                            color="default"
-                            variant="text"
-                            title="刷新"
-                            disabled={isRequesting}
-                            icon={<RotateCw className="size-4" />}
-                            onClick={onRefresh}
-                        />
-                        <Button
-                            size="small"
-                            shape="circle"
-                            color="danger"
-                            variant="text"
-                            title="删除所选"
-                            disabled={isRequesting || selectedImageReferences.length === 0}
-                            icon={<IconTrash className="size-4" />}
-                            onClick={onBatchDeleteConfirm}
-                        />
+                    </form>
+                </CardContent>
+            </Card>
+            <DataTable
+                columns={columns}
+                columnPinning={{ left: ["select", "repository", "tag"], right: ["actions"] }}
+                columnSizingKey="docker-image"
+                data={pagedData}
+                loading={isLoading || isBatchDeletePending}
+                pageNum={pageNum}
+                pageSize={pageSize}
+                sorting={sorting}
+                total={sortedData.length}
+                getRowId={row => row.reference}
+                onPageChange={(pageNum, pageSize) => setQuery(previous => ({ ...previous, pageNum, pageSize }))}
+                onSortingChange={onSortingChange}
+            />
+
+            <Dialog
+                open={isBuildStaticOpen}
+                onOpenChange={open => {
+                    if (open) setIsBuildStaticOpen(true)
+                    else if (!isBuildStaticPending) resetBuildStaticDialog()
+                }}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{buildStaticTarget ? `上传静态文件制作镜像并替换 ${buildStaticTarget.name}` : "上传静态文件制作镜像"}</DialogTitle>
+                        <DialogDescription>将 dist 文件夹压缩为 zip 或 7z 后上传，并选择本机 nginx 基础镜像。</DialogDescription>
+                    </DialogHeader>
+                    <DialogBody>
+                        <form className="space-y-4" id="build-static-image-form" onSubmit={event => event.preventDefault()}>
+                            {buildStaticTarget && (
+                                <Field>
+                                    <FieldLabel>当前镜像</FieldLabel>
+                                    <Input value={buildStaticTarget.name} readOnly />
+                                </Field>
+                            )}
+                            <Field>
+                                <FieldLabel>静态文件</FieldLabel>
+                                <div className="flex items-center gap-2">
+                                    <FilePicker
+                                        accept=".zip,.7z,application/zip,application/x-7z-compressed"
+                                        disabled={isBuildStaticPending}
+                                        title="选择文件"
+                                        onValueChange={onStaticFileChange}
+                                    />
+                                    <div className="min-w-0 flex-1 truncate text-sm text-muted-foreground">{staticFile?.name ?? "未选择文件"}</div>
+                                </div>
+                            </Field>
+                            <buildStaticForm.Field
+                                name="nginxImage"
+                                validators={{ onBlur: getOnBlurValidator(dockerImageNameSchema), onSubmit: dockerImageNameSchema }}
+                            >
+                                {field => {
+                                    const invalid = field.state.meta.isTouched && !field.state.meta.isValid
+                                    return (
+                                        <Field data-invalid={invalid}>
+                                            <FieldLabel>nginx 镜像</FieldLabel>
+                                            <Select value={field.state.value || undefined} disabled={isBuildStaticPending} onValueChange={field.handleChange}>
+                                                <SelectTrigger aria-invalid={invalid} onBlur={field.handleBlur}>
+                                                    <SelectValue placeholder="请选择 nginx 镜像" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {nginxImageNames.map(value => (
+                                                        <SelectItem key={value} value={value}>
+                                                            {value}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FieldDescription>
+                                                {nginxImageNames.length === 0
+                                                    ? "本机暂无 nginx 镜像，请先拉取 nginx 镜像。"
+                                                    : buildStaticTarget
+                                                      ? "构建成功后自动替换当前镜像。"
+                                                      : "选择用于托管静态资源的基础镜像。"}
+                                            </FieldDescription>
+                                            {invalid && <FieldError errors={field.state.meta.errors} />}
+                                        </Field>
+                                    )
+                                }}
+                            </buildStaticForm.Field>
+                            {!buildStaticTarget && (
+                                <buildStaticForm.Field
+                                    name="imageName"
+                                    validators={{ onBlur: getOnBlurValidator(dockerImageNameSchema), onSubmit: dockerImageNameSchema }}
+                                >
+                                    {field => {
+                                        const invalid = field.state.meta.isTouched && !field.state.meta.isValid
+                                        return (
+                                            <Field data-invalid={invalid}>
+                                                <FieldLabel htmlFor="static-image-name">镜像名</FieldLabel>
+                                                <Input
+                                                    id="static-image-name"
+                                                    value={field.state.value}
+                                                    placeholder="例如: my-spa:latest"
+                                                    aria-invalid={invalid}
+                                                    onBlur={field.handleBlur}
+                                                    onChange={event => field.handleChange(event.target.value)}
+                                                />
+                                                {invalid && <FieldError errors={field.state.meta.errors} />}
+                                            </Field>
+                                        )
+                                    }}
+                                </buildStaticForm.Field>
+                            )}
+                        </form>
+                    </DialogBody>
+                    <DialogFooter>
+                        <Button variant="outline" disabled={isBuildStaticPending} onClick={resetBuildStaticDialog}>
+                            取消
+                        </Button>
+                        <Button disabled={isBuildStaticPending || nginxImageNames.length === 0} onClick={() => void buildStaticForm.handleSubmit()}>
+                            {isBuildStaticPending && <LoaderCircleIcon className="animate-spin" />}
+                            确认
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog
+                open={isBuildJarOpen}
+                onOpenChange={open => {
+                    if (open) setIsBuildJarOpen(true)
+                    else if (!isBuildJarPending) resetBuildJarDialog()
+                }}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{buildJarTarget ? `上传 Jar 文件制作镜像并替换 ${buildJarTarget.name}` : "上传 Jar 文件制作镜像"}</DialogTitle>
+                        <DialogDescription>上传可直接运行的 Jar 文件，并选择包含 Java 运行环境的基础镜像。</DialogDescription>
+                    </DialogHeader>
+                    <DialogBody>
+                        <div className="space-y-4">
+                            {buildJarTarget && (
+                                <Field>
+                                    <FieldLabel>当前镜像</FieldLabel>
+                                    <Input value={buildJarTarget.name} readOnly />
+                                </Field>
+                            )}
+                            <Field>
+                                <FieldLabel>Jar 文件</FieldLabel>
+                                <div className="flex items-center gap-2">
+                                    <FilePicker
+                                        accept=".jar,application/java-archive,application/x-java-archive"
+                                        disabled={isBuildJarPending}
+                                        title="选择文件"
+                                        onValueChange={onJarFileChange}
+                                    />
+                                    <div className="min-w-0 flex-1 truncate text-sm text-muted-foreground">{jarFile?.name ?? "未选择文件"}</div>
+                                </div>
+                            </Field>
+                            <buildJarForm.Field
+                                name="javaImage"
+                                validators={{ onBlur: getOnBlurValidator(dockerImageNameSchema), onSubmit: dockerImageNameSchema }}
+                            >
+                                {field => {
+                                    const invalid = field.state.meta.isTouched && !field.state.meta.isValid
+                                    return (
+                                        <Field data-invalid={invalid}>
+                                            <FieldLabel>Java 镜像</FieldLabel>
+                                            <Select value={field.state.value || undefined} disabled={isBuildJarPending} onValueChange={field.handleChange}>
+                                                <SelectTrigger aria-invalid={invalid} onBlur={field.handleBlur}>
+                                                    <SelectValue placeholder="请选择 Java 镜像" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {imageNames.map(value => (
+                                                        <SelectItem key={value} value={value}>
+                                                            {value}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FieldDescription>
+                                                {imageNames.length === 0
+                                                    ? "本机暂无基础镜像。"
+                                                    : !defaultJavaImage
+                                                      ? "未识别到常见 Java 镜像，请确认所选镜像包含 Java 运行环境。"
+                                                      : buildJarTarget
+                                                        ? "构建成功后自动替换当前镜像。"
+                                                        : "选择 Java 运行环境。"}
+                                            </FieldDescription>
+                                            {invalid && <FieldError errors={field.state.meta.errors} />}
+                                        </Field>
+                                    )
+                                }}
+                            </buildJarForm.Field>
+                            {!buildJarTarget && (
+                                <buildJarForm.Field
+                                    name="imageName"
+                                    validators={{ onBlur: getOnBlurValidator(dockerImageNameSchema), onSubmit: dockerImageNameSchema }}
+                                >
+                                    {field => (
+                                        <Field data-invalid={field.state.meta.isTouched && !field.state.meta.isValid}>
+                                            <FieldLabel>镜像名</FieldLabel>
+                                            <Input
+                                                value={field.state.value}
+                                                placeholder="例如: my-app:latest"
+                                                onBlur={field.handleBlur}
+                                                onChange={event => field.handleChange(event.target.value)}
+                                            />
+                                            <FieldError errors={field.state.meta.errors} />
+                                        </Field>
+                                    )}
+                                </buildJarForm.Field>
+                            )}
+                            <buildJarForm.Field
+                                name="startCommand"
+                                validators={{ onBlur: getOnBlurValidator(dockerStartCommandSchema), onSubmit: dockerStartCommandSchema }}
+                            >
+                                {field => (
+                                    <Field data-invalid={field.state.meta.isTouched && !field.state.meta.isValid}>
+                                        <FieldLabel>启动命令</FieldLabel>
+                                        <Input
+                                            value={field.state.value}
+                                            placeholder={DEFAULT_JAR_START_COMMAND}
+                                            onBlur={field.handleBlur}
+                                            onChange={event => field.handleChange(event.target.value)}
+                                        />
+                                        <FieldError errors={field.state.meta.errors} />
+                                    </Field>
+                                )}
+                            </buildJarForm.Field>
+                        </div>
+                    </DialogBody>
+                    <DialogFooter>
+                        <Button variant="outline" disabled={isBuildJarPending} onClick={resetBuildJarDialog}>
+                            取消
+                        </Button>
+                        <Button disabled={isBuildJarPending || imageNames.length === 0} onClick={() => void buildJarForm.handleSubmit()}>
+                            {isBuildJarPending && <LoaderCircleIcon className="animate-spin" />}
+                            确认
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog
+                open={isRenameOpen}
+                onOpenChange={open => {
+                    if (open) setIsRenameOpen(true)
+                    else if (!isRenamePending) resetRenameDialog()
+                }}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{renameTarget ? `重命名 ${renameTarget.name}` : "重命名镜像"}</DialogTitle>
+                        <DialogDescription>
+                            {renameTarget?.isDangling
+                                ? "悬空镜像没有可复用的仓库名，请直接输入完整镜像名。"
+                                : `仓库名保持为 ${renameTarget?.repository ?? "-"}。`}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogBody>
+                        {renameTarget?.isDangling ? (
+                            <renameForm.Field
+                                name="targetName"
+                                validators={{ onBlur: getOnBlurValidator(dockerImageNameSchema), onSubmit: dockerImageNameSchema }}
+                            >
+                                {field => (
+                                    <Field data-invalid={field.state.meta.isTouched && !field.state.meta.isValid}>
+                                        <FieldLabel>新镜像名</FieldLabel>
+                                        <Input
+                                            value={field.state.value}
+                                            autoComplete="off"
+                                            placeholder="例如：my-app:latest"
+                                            onBlur={field.handleBlur}
+                                            onChange={event => field.handleChange(event.target.value)}
+                                        />
+                                        <FieldError errors={field.state.meta.errors} />
+                                    </Field>
+                                )}
+                            </renameForm.Field>
+                        ) : (
+                            <renameForm.Field name="tag" validators={{ onBlur: getOnBlurValidator(dockerImageTagSchema), onSubmit: dockerImageTagSchema }}>
+                                {field => (
+                                    <Field data-invalid={field.state.meta.isTouched && !field.state.meta.isValid}>
+                                        <FieldLabel>新 tag</FieldLabel>
+                                        <Input
+                                            value={field.state.value}
+                                            autoComplete="off"
+                                            placeholder="请输入新的 tag"
+                                            onBlur={field.handleBlur}
+                                            onChange={event => field.handleChange(event.target.value)}
+                                        />
+                                        <FieldError errors={field.state.meta.errors} />
+                                    </Field>
+                                )}
+                            </renameForm.Field>
+                        )}
+                    </DialogBody>
+                    <DialogFooter>
+                        <Button variant="outline" disabled={isRenamePending} onClick={resetRenameDialog}>
+                            取消
+                        </Button>
+                        <Button disabled={isRenamePending} onClick={() => void renameForm.handleSubmit()}>
+                            {isRenamePending && <LoaderCircleIcon className="animate-spin" />}
+                            确认
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <AlertDialog open={isRenameConfirmOpen} onOpenChange={setIsRenameConfirmOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>确认重命名镜像</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            当前镜像已关联容器：{getDockerContainerNamesText(renameTarget?.containerItems ?? [])}
+                            。重命名后，相关容器后续重建或重新创建时可能受到影响。
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isRenamePending}>取消</AlertDialogCancel>
+                        <AlertDialogAction disabled={isRenamePending} onClick={() => pendingRenameValues && void onRename(pendingRenameValues)}>
+                            确认重命名
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            <Dialog
+                open={isCopyOpen}
+                onOpenChange={open => {
+                    if (open) setIsCopyOpen(true)
+                    else if (!isCopyPending) resetCopyDialog()
+                }}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{copyTarget ? `复制 ${copyTarget.name}` : "复制镜像"}</DialogTitle>
+                        <DialogDescription>仓库名保持为 {copyTarget?.repository ?? "-"}，请输入新的 tag。</DialogDescription>
+                    </DialogHeader>
+                    <DialogBody>
+                        <copyForm.Field name="tag" validators={{ onBlur: getOnBlurValidator(dockerImageTagSchema), onSubmit: dockerImageTagSchema }}>
+                            {field => (
+                                <Field data-invalid={field.state.meta.isTouched && !field.state.meta.isValid}>
+                                    <FieldLabel>新 tag</FieldLabel>
+                                    <Input
+                                        value={field.state.value}
+                                        autoComplete="off"
+                                        placeholder="请输入新的 tag"
+                                        onBlur={field.handleBlur}
+                                        onChange={event => field.handleChange(event.target.value)}
+                                    />
+                                    <FieldError errors={field.state.meta.errors} />
+                                </Field>
+                            )}
+                        </copyForm.Field>
+                    </DialogBody>
+                    <DialogFooter>
+                        <Button variant="outline" disabled={isCopyPending} onClick={resetCopyDialog}>
+                            取消
+                        </Button>
+                        <Button disabled={isCopyPending} onClick={() => void copyForm.handleSubmit()}>
+                            {isCopyPending && <LoaderCircleIcon className="animate-spin" />}
+                            确认
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog
+                open={isRestartProjectsOpen}
+                onOpenChange={open => {
+                    if (open) setIsRestartProjectsOpen(true)
+                    else if (!isRestartProjectsPending) resetRestartProjectsDialog()
+                }}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{restartProjectsState.imageName ? `重启 ${restartProjectsState.imageName} 关联项目` : "重启关联项目"}</DialogTitle>
+                        <DialogDescription>选中的项目会依次执行 docker compose down 和 docker compose up -d。</DialogDescription>
+                    </DialogHeader>
+                    <DialogBody className="space-y-2">
+                        {restartProjectsState.projectItems.map(item => (
+                            <label key={item.name} className="flex items-center gap-3 rounded-2xl border px-3 py-2 text-sm">
+                                <input
+                                    className="size-4 accent-primary"
+                                    type="checkbox"
+                                    checked={selectedRestartProjectNames.includes(item.name)}
+                                    disabled={isRestartProjectsPending}
+                                    onChange={event =>
+                                        setSelectedRestartProjectNames(previous =>
+                                            event.target.checked ? Array.from(new Set([...previous, item.name])) : previous.filter(name => name !== item.name))
+                                    }
+                                />
+                                {item.displayName}
+                            </label>
+                        ))}
+                    </DialogBody>
+                    <DialogFooter>
+                        <Button variant="outline" disabled={isRestartProjectsPending} onClick={resetRestartProjectsDialog}>
+                            取消
+                        </Button>
+                        <Button disabled={isRestartProjectsPending || selectedRestartProjectNames.length === 0} onClick={() => void onRestartProjects()}>
+                            {isRestartProjectsPending && <LoaderCircleIcon className="animate-spin" />}
+                            确认
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <AlertDialog open={isBatchDeleteConfirmOpen} onOpenChange={setIsBatchDeleteConfirmOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>以下 {selectedImageReferences.length} 个镜像将被删除</AlertDialogTitle>
+                        <AlertDialogDescription>删除后可能影响相关容器。</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <div className="max-h-60 space-y-2 overflow-y-auto rounded-2xl border bg-muted/30 p-3 text-sm">
+                        {selectedImageReferences.map(item => (
+                            <div key={item} className="break-all">
+                                {item}
+                            </div>
+                        ))}
                     </div>
-                </Form>
-            </div>
-            <div ref={container} className="px-4 fill-y">
-                <Table<DockerImageItem>
-                    columns={columns}
-                    dataSource={pagedData}
-                    loading={isLoading || isBatchDeletePending}
-                    onChange={onTableChange}
-                    pagination={{
-                        current: pageNum,
-                        pageSize,
-                        total: sortedData.length,
-                        showTotal,
-                        showSizeChanger: true,
-                    }}
-                    rowKey={({ reference }) => reference}
-                    rowSelection={rowSelection}
-                    scroll={{ x: "max-content", y }}
-                />
-            </div>
-            <Modal
-                title={buildStaticTarget ? `上传静态文件制作镜像并替换 ${buildStaticTarget.name}` : "上传静态文件制作镜像"}
-                open={isBuildStaticModalOpen}
-                onOk={() => buildStaticForm.submit()}
-                okText="确认"
-                cancelText="取消"
-                okButtonProps={{ loading: isBuildStaticPending, disabled: nginxImageOptions.length === 0 }}
-                cancelButtonProps={{ disabled: isBuildStaticPending }}
-                onCancel={onCloseBuildStaticModal}
-            >
-                <Form<StaticDockerImageFormParams> form={buildStaticForm} layout="vertical" disabled={isBuildStaticPending} onFinish={onBuildStaticFinish}>
-                    {buildStaticTarget ? (
-                        <FormItem label="当前镜像">
-                            <Input value={buildStaticTarget.name} readOnly />
-                        </FormItem>
-                    ) : null}
-                    <FormItem label="静态文件" required extra="请上传 dist 文件夹压缩后的 zip 或 7z 文件">
-                        <div className="flex items-center gap-2">
-                            <InputFileButton
-                                as={Button}
-                                disabled={isBuildStaticPending}
-                                accept=".zip,.7z,application/zip,application/x-7z-compressed"
-                                onValueChange={onStaticFileChange}
-                                clearAfterChange
-                            >
-                                选择文件
-                            </InputFileButton>
-                            <div className="min-w-0 flex-1 truncate text-sm text-neutral-500">{staticFile?.name ?? "未选择文件"}</div>
-                        </div>
-                    </FormItem>
-                    <FormItem<StaticDockerImageFormParams>
-                        name="nginxImage"
-                        label="nginx 镜像"
-                        rules={[schemaToRule(dockerImageNameSchema)]}
-                        extra={
-                            nginxImageOptions.length === 0
-                                ? "本机暂无 nginx 镜像，请先拉取 nginx 镜像"
-                                : buildStaticTarget
-                                  ? "新镜像会先使用当前镜像名加上传时间标签构建，成功后自动替换当前镜像"
-                                  : undefined
-                        }
-                    >
-                        <Select allowClear showSearch options={nginxImageOptions} placeholder="请选择 nginx 镜像" notFoundContent="暂无 nginx 镜像" />
-                    </FormItem>
-                    {buildStaticTarget ? null : (
-                        <FormItem<StaticDockerImageFormParams> name="imageName" label="镜像名" rules={[schemaToRule(dockerImageNameSchema)]}>
-                            <Input allowClear placeholder="例如: my-spa:latest" />
-                        </FormItem>
-                    )}
-                </Form>
-            </Modal>
-            <Modal
-                title={buildJarTarget ? `上传 Jar 文件制作镜像并替换 ${buildJarTarget.name}` : "上传 Jar 文件制作镜像"}
-                open={isBuildJarModalOpen}
-                onOk={() => buildJarForm.submit()}
-                okText="确认"
-                cancelText="取消"
-                okButtonProps={{ loading: isBuildJarPending, disabled: imageOptions.length === 0 }}
-                cancelButtonProps={{ disabled: isBuildJarPending }}
-                onCancel={onCloseBuildJarModal}
-            >
-                <Form<JarDockerImageFormParams> form={buildJarForm} layout="vertical" disabled={isBuildJarPending} onFinish={onBuildJarFinish}>
-                    {buildJarTarget ? (
-                        <FormItem label="当前镜像">
-                            <Input value={buildJarTarget.name} readOnly />
-                        </FormItem>
-                    ) : null}
-                    <FormItem label="Jar 文件" required extra="请上传可直接运行的 Jar 文件">
-                        <div className="flex items-center gap-2">
-                            <InputFileButton
-                                as={Button}
-                                disabled={isBuildJarPending}
-                                accept=".jar,application/java-archive,application/x-java-archive"
-                                onValueChange={onJarFileChange}
-                                clearAfterChange
-                            >
-                                选择文件
-                            </InputFileButton>
-                            <div className="min-w-0 flex-1 truncate text-sm text-neutral-500">{jarFile?.name ?? "未选择文件"}</div>
-                        </div>
-                    </FormItem>
-                    <FormItem<JarDockerImageFormParams>
-                        name="javaImage"
-                        label="Java 镜像"
-                        rules={[schemaToRule(dockerImageNameSchema)]}
-                        extra={
-                            imageOptions.length === 0
-                                ? "本机暂无基础镜像，请先拉取包含 Java 运行环境的镜像"
-                                : !defaultJavaImage
-                                  ? "未识别到常见 Java 镜像，请确认所选镜像已包含 Java 运行环境"
-                                  : buildJarTarget
-                                    ? "新镜像会先使用当前镜像名加上传时间标签构建，成功后自动替换当前镜像"
-                                    : undefined
-                        }
-                    >
-                        <Select allowClear showSearch options={imageOptions} placeholder="请选择 Java 镜像" notFoundContent="暂无基础镜像" />
-                    </FormItem>
-                    {buildJarTarget ? null : (
-                        <FormItem<JarDockerImageFormParams> name="imageName" label="镜像名" rules={[schemaToRule(dockerImageNameSchema)]}>
-                            <Input allowClear placeholder="例如: my-app:latest" />
-                        </FormItem>
-                    )}
-                    <FormItem<JarDockerImageFormParams> name="startCommand" label="启动命令" rules={[schemaToRule(dockerStartCommandSchema)]}>
-                        <Input allowClear placeholder={DEFAULT_JAR_START_COMMAND} />
-                    </FormItem>
-                </Form>
-            </Modal>
-            <Modal
-                title={renameTarget ? `重命名 ${renameTarget.name}` : "重命名镜像"}
-                open={isRenameModalOpen}
-                onOk={() => renameForm.submit()}
-                okText="确认"
-                cancelText="取消"
-                okButtonProps={{ loading: isRenamePending }}
-                cancelButtonProps={{ disabled: isRenamePending }}
-                onCancel={onCloseRenameModal}
-            >
-                <Form<ImageTagFormParams> form={renameForm} layout="vertical" disabled={isRenamePending} onFinish={onRenameFinish}>
-                    {renameTarget?.isDangling ? (
-                        <FormItem<ImageTagFormParams>
-                            name="targetName"
-                            label="新镜像名"
-                            extra="悬空镜像没有可复用的仓库名，请直接输入完整镜像名，例如：nginx:latest"
-                            rules={[schemaToRule(dockerImageNameSchema)]}
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isBatchDeletePending}>取消</AlertDialogCancel>
+                        <AlertDialogAction
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            disabled={isBatchDeletePending}
+                            onClick={() => void onBatchDelete()}
                         >
-                            <Input autoComplete="off" allowClear placeholder="例如：my-app:latest" />
-                        </FormItem>
-                    ) : (
-                        <FormItem<ImageTagFormParams>
-                            name="tag"
-                            label="新 tag"
-                            extra={renameTarget ? `仓库名保持为 ${renameTarget.repository}` : undefined}
-                            rules={[schemaToRule(dockerImageTagSchema)]}
-                        >
-                            <Input autoComplete="off" allowClear placeholder="请输入新的 tag" />
-                        </FormItem>
-                    )}
-                </Form>
-            </Modal>
-            <Modal
-                title={copyTarget ? `复制 ${copyTarget.name}` : "复制镜像"}
-                open={isCopyModalOpen}
-                onOk={() => copyForm.submit()}
-                okText="确认"
-                cancelText="取消"
-                okButtonProps={{ loading: isCopyPending }}
-                cancelButtonProps={{ disabled: isCopyPending }}
-                onCancel={onCloseCopyModal}
-            >
-                <Form<ImageTagFormParams> form={copyForm} layout="vertical" disabled={isCopyPending} onFinish={onCopyFinish}>
-                    <FormItem<ImageTagFormParams>
-                        name="tag"
-                        label="新 tag"
-                        extra={copyTarget ? `仓库名保持为 ${copyTarget.repository}` : undefined}
-                        rules={[schemaToRule(dockerImageTagSchema)]}
-                    >
-                        <Input autoComplete="off" allowClear placeholder="请输入新的 tag" />
-                    </FormItem>
-                </Form>
-            </Modal>
-            <Modal
-                title={restartProjectsState.imageName ? `重启 ${restartProjectsState.imageName} 关联项目` : "重启关联项目"}
-                open={isRestartProjectsModalOpen}
-                onOk={onRestartProjects}
-                okText="确认"
-                cancelText="取消"
-                okButtonProps={{ loading: isRestartProjectsPending }}
-                cancelButtonProps={{ disabled: isRestartProjectsPending }}
-                onCancel={onCloseRestartProjectsModal}
-            >
-                <Form layout="vertical" disabled={isRestartProjectsPending}>
-                    <FormItem label="关联项目" extra="选中的项目会依次执行 docker compose down 和 docker compose up -d">
-                        <Checkbox.Group
-                            className="flex flex-col gap-2"
-                            value={selectedRestartProjectNames}
-                            options={restartProjectsState.projectItems.map(item => ({
-                                label: item.displayName,
-                                value: item.name,
-                            }))}
-                            onChange={value => setSelectedRestartProjectNames(value as string[])}
-                        />
-                    </FormItem>
-                </Form>
-            </Modal>
+                            确认删除
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            <Dialog open={batchDeleteErrors.length > 0} onOpenChange={open => !open && setBatchDeleteErrors([])}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>镜像删除失败</DialogTitle>
+                        <DialogDescription>以下镜像未能删除，请根据错误信息处理后重试。</DialogDescription>
+                    </DialogHeader>
+                    <DialogBody className="space-y-2">
+                        {batchDeleteErrors.map(item => (
+                            <div key={item.name} className="rounded-2xl border bg-muted/30 px-3 py-2 text-sm">
+                                <div className="break-all font-medium">{item.name}</div>
+                                <div className="mt-1 text-muted-foreground">{item.message}</div>
+                            </div>
+                        ))}
+                    </DialogBody>
+                    <DialogFooter>
+                        <Button onClick={() => setBatchDeleteErrors([])}>知道了</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

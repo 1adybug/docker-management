@@ -6,6 +6,8 @@ import { DockerContainerCommandLabel } from "@/schemas/dockerContainerCommand"
 
 import type { runDockerContainer } from "@/shared/runDockerContainer"
 
+import { toast } from "@/utils/toast"
+
 export const createUseRunDockerContainer = withUseMutationDefaults<typeof runDockerContainer>(() => {
     const key = useId()
 
@@ -13,26 +15,17 @@ export const createUseRunDockerContainer = withUseMutationDefaults<typeof runDoc
         onMutate(variables, context) {
             const actionName = DockerContainerCommandLabel[variables.command] ?? "操作"
 
-            message.open({
-                key,
-                type: "loading",
-                content: `${actionName} 容器中...`,
-                duration: 0,
-            })
+            toast.loading(`${actionName} 容器中...`, { id: key })
         },
         onSuccess(data, variables, onMutateResult, context) {
             const actionName = DockerContainerCommandLabel[variables.command] ?? "操作"
 
             context.client.invalidateQueries({ queryKey: ["query-docker-container"] })
 
-            message.open({
-                key,
-                type: "success",
-                content: `${actionName} 容器成功`,
-            })
+            toast.success(`${actionName} 容器成功`, { id: key })
         },
         onError(error, variables, onMutateResult, context) {
-            message.destroy(key)
+            toast.dismiss(key)
         },
         onSettled(data, error, variables, onMutateResult, context) {},
     }

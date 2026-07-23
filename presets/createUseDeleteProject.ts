@@ -4,6 +4,8 @@ import { withUseMutationDefaults } from "soda-tanstack-query"
 
 import type { deleteProject } from "@/shared/deleteProject"
 
+import { toast } from "@/utils/toast"
+
 /** 删除项目提示文本 */
 export interface DeleteProjectNotice {
     loading: string
@@ -33,12 +35,7 @@ export const createUseDeleteProject = withUseMutationDefaults<typeof deleteProje
         onMutate(variables, context) {
             const notice = getDeleteProjectNotice(variables)
 
-            message.open({
-                key,
-                type: "loading",
-                content: notice.loading,
-                duration: 0,
-            })
+            toast.loading(notice.loading, { id: key })
         },
         onSuccess(data, variables, onMutateResult, context) {
             const notice = getDeleteProjectNotice(variables)
@@ -48,14 +45,10 @@ export const createUseDeleteProject = withUseMutationDefaults<typeof deleteProje
             context.client.invalidateQueries({ queryKey: ["query-docker-image-detail"] })
             context.client.invalidateQueries({ queryKey: ["query-docker-container"] })
 
-            message.open({
-                key,
-                type: "success",
-                content: notice.success,
-            })
+            toast.success(notice.success, { id: key })
         },
         onError(error, variables, onMutateResult, context) {
-            message.destroy(key)
+            toast.dismiss(key)
         },
         onSettled(data, error, variables, onMutateResult, context) {},
     }

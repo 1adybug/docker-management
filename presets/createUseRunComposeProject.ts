@@ -6,6 +6,8 @@ import { ComposeProjectCommand, ComposeProjectCommandLabel } from "@/schemas/com
 
 import type { runComposeProject } from "@/shared/runComposeProject"
 
+import { toast } from "@/utils/toast"
+
 export const createUseRunComposeProject = withUseMutationDefaults<typeof runComposeProject>(() => {
     const key = useId()
 
@@ -13,12 +15,7 @@ export const createUseRunComposeProject = withUseMutationDefaults<typeof runComp
         onMutate(variables, context) {
             const actionName = ComposeProjectCommandLabel[variables.command] ?? "操作"
 
-            message.open({
-                key,
-                type: "loading",
-                content: `${actionName} 项目中...`,
-                duration: 0,
-            })
+            toast.loading(`${actionName} 项目中...`, { id: key })
         },
         onSuccess(data, variables, onMutateResult, context) {
             const actionName = ComposeProjectCommandLabel[variables.command] ?? "操作"
@@ -30,14 +27,10 @@ export const createUseRunComposeProject = withUseMutationDefaults<typeof runComp
                 context.client.invalidateQueries({ queryKey: ["query-docker-image-detail"] })
             }
 
-            message.open({
-                key,
-                type: "success",
-                content: `${actionName} 项目成功`,
-            })
+            toast.success(`${actionName} 项目成功`, { id: key })
         },
         onError(error, variables, onMutateResult, context) {
-            message.destroy(key)
+            toast.dismiss(key)
         },
         onSettled(data, error, variables, onMutateResult, context) {},
     }

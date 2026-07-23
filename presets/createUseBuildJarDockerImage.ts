@@ -4,17 +4,14 @@ import { withUseMutationDefaults } from "soda-tanstack-query"
 
 import type { buildJarDockerImage } from "@/shared/buildJarDockerImage"
 
+import { toast } from "@/utils/toast"
+
 export const createUseBuildJarDockerImage = withUseMutationDefaults<typeof buildJarDockerImage>(() => {
     const key = useId()
 
     return {
         onMutate(variables, context) {
-            message.open({
-                key,
-                type: "loading",
-                content: "制作 Jar 镜像中...",
-                duration: 0,
-            })
+            toast.loading("制作 Jar 镜像中...", { id: key })
         },
         onSuccess(data, variables, onMutateResult, context) {
             if (!data.skipFollowUp) {
@@ -22,14 +19,11 @@ export const createUseBuildJarDockerImage = withUseMutationDefaults<typeof build
                 context.client.invalidateQueries({ queryKey: ["query-docker-image-detail"] })
             }
 
-            message.open({
-                key,
-                type: data.skipMessage ? "warning" : "success",
-                content: data.skipMessage ?? "制作 Jar 镜像成功",
-            })
+            const notify = data.skipMessage ? toast.warning : toast.success
+            notify(data.skipMessage ?? "制作 Jar 镜像成功", { id: key })
         },
         onError(error, variables, onMutateResult, context) {
-            message.destroy(key)
+            toast.dismiss(key)
         },
         onSettled(data, error, variables, onMutateResult, context) {},
     }

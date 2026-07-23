@@ -6,6 +6,8 @@ import { ProjectCommand, ProjectCommandLabel } from "@/schemas/projectCommand"
 
 import type { runProject } from "@/shared/runProject"
 
+import { toast } from "@/utils/toast"
+
 export const createUseRunProject = withUseMutationDefaults<typeof runProject>(() => {
     const key = useId()
 
@@ -13,12 +15,7 @@ export const createUseRunProject = withUseMutationDefaults<typeof runProject>(()
         onMutate(variables, context) {
             const actionName = ProjectCommandLabel[variables.command] ?? "操作"
 
-            message.open({
-                key,
-                type: "loading",
-                content: `${actionName} 项目中...`,
-                duration: 0,
-            })
+            toast.loading(`${actionName} 项目中...`, { id: key })
         },
         onSuccess(data, variables, onMutateResult, context) {
             const actionName = ProjectCommandLabel[variables.command] ?? "操作"
@@ -30,14 +27,10 @@ export const createUseRunProject = withUseMutationDefaults<typeof runProject>(()
                 context.client.invalidateQueries({ queryKey: ["query-docker-image-detail"] })
             }
 
-            message.open({
-                key,
-                type: "success",
-                content: `${actionName} 项目成功`,
-            })
+            toast.success(`${actionName} 项目成功`, { id: key })
         },
         onError(error, variables, onMutateResult, context) {
-            message.destroy(key)
+            toast.dismiss(key)
         },
         onSettled(data, error, variables, onMutateResult, context) {},
     }

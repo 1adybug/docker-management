@@ -12,6 +12,7 @@ import {
     type SortingState,
     flexRender,
     getCoreRowModel,
+    getExpandedRowModel,
     useReactTable,
 } from "@tanstack/react-table"
 import { ArrowDownIcon, ArrowUpIcon, ChevronLeftIcon, ChevronRightIcon, ChevronsLeftIcon, ChevronsRightIcon, ChevronsUpDownIcon } from "lucide-react"
@@ -40,6 +41,8 @@ export interface DataTableProps<TData extends RowData> {
     sorting: SortingState
     total?: number
     getRowId?: (row: TData) => string
+    getRowCanExpand?: (row: TData) => boolean
+    getSubRows?: (row: TData) => TData[] | undefined
     onPageChange: (pageNum: number, pageSize: number) => void
     onSortingChange: OnChangeFn<SortingState>
 }
@@ -129,6 +132,8 @@ export function DataTable<TData extends RowData>({
     sorting,
     total = 0,
     getRowId,
+    getRowCanExpand,
+    getSubRows,
     onPageChange,
     onSortingChange,
 }: DataTableProps<TData>) {
@@ -151,7 +156,10 @@ export function DataTable<TData extends RowData>({
         columnResizeMode: "onChange",
         enableColumnResizing,
         getCoreRowModel: getCoreRowModel(),
+        getExpandedRowModel: getExpandedRowModel(),
+        getRowCanExpand: row => getRowCanExpand?.(row.original) ?? !!row.subRows.length,
         getRowId,
+        getSubRows,
         manualPagination: true,
         manualSorting: true,
         onColumnSizingChange: setColumnSizing,
