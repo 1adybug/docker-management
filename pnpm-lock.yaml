@@ -74,6 +74,9 @@ importers:
       '@radix-ui/react-tooltip':
         specifier: ^1.2.12
         version: 1.2.13(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      '@tabler/icons-react':
+        specifier: ^3.45.0
+        version: 3.45.0(react@19.2.7)
       '@tanstack/react-form':
         specifier: ^1.33.2
         version: 1.33.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -1829,6 +1832,14 @@ packages:
 
   '@swc/helpers@0.5.15':
     resolution: {integrity: sha512-JQ5TuMi45Owi4/BIMAJBoSQoOJu12oOk/gADqlcUL9JEdHB8vyjUSsxqeNXnmXHjYKMi2WcYtezGEEhqUI/E2g==, tarball: https://registry.npmjs.org/@swc/helpers/-/helpers-0.5.15.tgz}
+
+  '@tabler/icons-react@3.45.0':
+    resolution: {integrity: sha512-t/AuKs7ALMDDTY+B9IvfZnlO0mbLlP/lJxP/HnGC49QkM8mCsTN38kYyxjXxgrb1+TeK53ioVBJqIV7n/eysXQ==, tarball: https://registry.npmjs.org/@tabler/icons-react/-/icons-react-3.45.0.tgz}
+    peerDependencies:
+      react: '>= 16'
+
+  '@tabler/icons@3.45.0':
+    resolution: {integrity: sha512-jiATwV8+zGYLTZ7gMLGivCic+KtsMZXcDmufIG8umlLxoHhI6902hGYIEt0Oa9Y9SXblNzUlrisHm5jOFMxOQA==, tarball: https://registry.npmjs.org/@tabler/icons/-/icons-3.45.0.tgz}
 
   '@tanstack/devtools-event-client@0.4.4':
     resolution: {integrity: sha512-6T5Yop/793YI+H+5J8Hsyj4kCih9sl4t3ElLgKioW5hk3ocn+ZdSJ94tT7vL7uabxSugWYBZlOTMPzEw2puvQw==, tarball: https://registry.npmjs.org/@tanstack/devtools-event-client/-/devtools-event-client-0.4.4.tgz}
@@ -7018,6 +7029,13 @@ snapshots:
   '@swc/helpers@0.5.15':
     dependencies:
       tslib: 2.8.1
+
+  '@tabler/icons-react@3.45.0(react@19.2.7)':
+    dependencies:
+      '@tabler/icons': 3.45.0
+      react: 19.2.7
+
+  '@tabler/icons@3.45.0': {}
 
   '@tanstack/devtools-event-client@0.4.4': {}
 

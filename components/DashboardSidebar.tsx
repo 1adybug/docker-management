@@ -58,6 +58,11 @@ const accountNavs: NavItem[] = [
 
 const dockerNavs: NavItem[] = [
     {
+        href: "/project",
+        name: "项目管理",
+        icon: FolderKanbanIcon,
+    },
+    {
         href: "/container",
         name: "容器管理",
         icon: BoxesIcon,
@@ -66,11 +71,6 @@ const dockerNavs: NavItem[] = [
         href: "/image",
         name: "镜像管理",
         icon: ImagesIcon,
-    },
-    {
-        href: "/project",
-        name: "项目管理",
-        icon: FolderKanbanIcon,
     },
 ]
 

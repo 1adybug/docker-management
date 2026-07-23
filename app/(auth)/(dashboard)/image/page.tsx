@@ -2,11 +2,12 @@
 
 import { type FC, useEffect, useMemo, useState } from "react"
 
+import { IconBrandReact, IconCoffee } from "@tabler/icons-react"
 import { useForm } from "@tanstack/react-form"
 import { useQueryClient } from "@tanstack/react-query"
 import type { ColumnDef, SortingState, Updater } from "@tanstack/react-table"
 import { formatTime } from "deepsea-tools"
-import { CoffeeIcon, CopyIcon, DownloadIcon, LoaderCircleIcon, PanelsTopLeftIcon, PencilIcon, RefreshCwIcon, Trash2Icon, UploadIcon } from "lucide-react"
+import { CopyIcon, DownloadIcon, LoaderCircleIcon, PencilIcon, RefreshCwIcon, Trash2Icon, UploadIcon } from "lucide-react"
 import Link from "next/link"
 import { useQueryState } from "soda-next"
 
@@ -794,7 +795,7 @@ const Page: FC = () => {
                                 disabled={isRequesting}
                                 onClick={() => onOpenBuildStaticDialog(record)}
                             >
-                                <PanelsTopLeftIcon />
+                                <IconBrandReact />
                             </Button>
                         )}
                         {!record.isDangling && (
@@ -805,7 +806,7 @@ const Page: FC = () => {
                                 disabled={isRequesting}
                                 onClick={() => onOpenBuildJarDialog(record)}
                             >
-                                <CoffeeIcon />
+                                <IconCoffee />
                             </Button>
                         )}
                         {!record.isDangling && (
@@ -828,10 +829,11 @@ const Page: FC = () => {
                             </Button>
                         )}
                         <ConfirmButton
+                            className="text-destructive hover:text-destructive"
                             title={`确认删除镜像：${record.reference}`}
                             description="删除后可能影响相关容器。"
                             size="icon-xs"
-                            variant="destructive"
+                            variant="ghost"
                             pending={isDeletePending}
                             disabled={isRequesting}
                             onConfirm={() => onDelete(record.reference)}
@@ -886,11 +888,11 @@ const Page: FC = () => {
                 <div className="flex flex-wrap items-center gap-2">
                     <FilePicker accept=".tar,application/x-tar" disabled={isRequesting} title="上传镜像" onValueChange={file => onFileChange({ file })} />
                     <Button variant="outline" disabled={isRequesting} onClick={() => onOpenBuildStaticDialog()}>
-                        <PanelsTopLeftIcon />
+                        <IconBrandReact />
                         构建静态镜像
                     </Button>
                     <Button variant="outline" disabled={isRequesting} onClick={() => onOpenBuildJarDialog()}>
-                        <CoffeeIcon />
+                        <IconCoffee />
                         构建 Jar 镜像
                     </Button>
                     <Button variant="outline" disabled={isRequesting} onClick={() => void refetch()}>
@@ -898,7 +900,8 @@ const Page: FC = () => {
                         刷新
                     </Button>
                     <Button
-                        variant="destructive"
+                        className="text-destructive hover:text-destructive"
+                        variant="outline"
                         disabled={isRequesting || selectedImageReferences.length === 0}
                         onClick={() => setIsBatchDeleteConfirmOpen(true)}
                     >
