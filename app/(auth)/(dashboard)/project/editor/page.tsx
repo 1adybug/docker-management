@@ -379,10 +379,10 @@ const Page: FC = () => {
         try {
             const compose = parseComposeYaml(content)
             setComposeData(compose)
-            form.reset(getComposeFormData(compose, formName))
+            form.reset(getComposeFormData(compose, formName), { keepDefaultValues: true })
         } catch {
             setComposeData(undefined)
-            form.reset({ name: formName })
+            form.reset({ name: formName }, { keepDefaultValues: true })
         }
     }, [form, isUpdate, projectData, searchName])
 
@@ -450,7 +450,7 @@ const Page: FC = () => {
         if (!validateProjectValues(nextValues)) return
         const content = formDataToYaml(nextValues, original)
         const nextCompose = formDataToCompose(nextValues, original)
-        form.reset(nextValues)
+        form.reset(nextValues, { keepDefaultValues: true })
         setComposeData(nextCompose)
         setYamlValue(content)
         const projectName = isUpdate ? searchName : nextValues.name
@@ -464,7 +464,7 @@ const Page: FC = () => {
         try {
             const compose = parseComposeYaml(yamlValue)
             setComposeData(compose)
-            form.reset(getComposeFormData(compose, isUpdate ? searchName : undefined))
+            form.reset(getComposeFormData(compose, isUpdate ? searchName : undefined), { keepDefaultValues: true })
             toast.success("YAML 已同步到表单")
         } catch {
             toast.error("YAML 解析失败，请检查内容")
