@@ -285,7 +285,7 @@ const Page: FC = () => {
     const startCheckRequestId = useRef(0)
 
     const [query, setQuery] = useQueryState({
-        keys: ["name", "xName", "contentKeyword"],
+        keys: ["id", "name", "xName", "contentKeyword"],
         parse: queryParsers,
         stringify: queryStringifiers,
     })
@@ -306,6 +306,7 @@ const Page: FC = () => {
         onSubmit({ value }) {
             setQuery(previous => ({
                 ...previous,
+                id: undefined,
                 name: value.name.trim() || undefined,
                 xName: value.xName.trim() || undefined,
                 contentKeyword: value.contentKeyword.trim() || undefined,
@@ -319,6 +320,7 @@ const Page: FC = () => {
     })
 
     const { data, isLoading } = useQueryProject({
+        id: query.id,
         createdAfter: query.createdAfter,
         createdBefore: query.createdBefore,
         updatedAfter: query.updatedAfter,

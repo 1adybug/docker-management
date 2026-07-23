@@ -620,7 +620,7 @@ const Page: FC = () => {
                 const record = row.original
                 if (!record.projectName) return record.rowType === DockerContainerRowType.项目 ? <Badge variant="outline">未归属项目</Badge> : "-"
                 const badge = <Badge variant={record.isManagedProject ? "default" : "secondary"}>{record.isManagedProject ? "平台项目" : "非平台项目"}</Badge>
-                return record.projectId ? <Link href={`/project?id=${record.projectId}`}>{badge}</Link> : badge
+                return record.isManagedProject && record.projectId ? <Link href={`/project?id=${record.projectId}`}>{badge}</Link> : badge
             },
         },
         {

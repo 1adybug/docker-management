@@ -95,9 +95,8 @@ export const queryDockerContainer = createSharedFn<never>({
             const projectName = getComposeProjectNameByLabels(item.Labels)
             const composeFiles = getComposeConfigFilesByLabels(item.Labels)
             const projectInfo = projectName ? managedProjectMap.get(projectName) : undefined
-            const projectId = projectInfo?.id
-            const isManagedProject =
-                composeFiles.length > 0 ? isComposeFileManaged(composeFiles, projectRoot) : projectName ? managedProjectMap.has(projectName) : false
+            const isManagedProject = !!projectInfo && (composeFiles.length === 0 || isComposeFileManaged(composeFiles, projectRoot))
+            const projectId = isManagedProject ? projectInfo.id : undefined
 
             return {
                 id: item.ID ?? "",
