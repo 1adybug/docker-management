@@ -1,7 +1,7 @@
 import { genericOAuthClient, phoneNumberClient } from "better-auth/client/plugins"
 import { createAuthClient } from "better-auth/react"
 
-import { IsBrowser, IsDevelopment, NextPublicBetterAuthUrl } from "@/constants"
+import { IsBrowser, NextPublicBetterAuthUrl } from "@/constants"
 
 function getAuthClientBaseUrl() {
     if (IsBrowser) return window.location.origin
@@ -9,7 +9,6 @@ function getAuthClientBaseUrl() {
     const baseUrl = NextPublicBetterAuthUrl?.trim()
 
     if (baseUrl) return baseUrl
-    if (IsDevelopment) return "http://localhost:3000"
     return undefined
 }
 

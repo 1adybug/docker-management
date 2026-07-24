@@ -10,13 +10,17 @@ export const IsBrowser = typeof window !== "undefined" && typeof window.document
 
 export const IsServer = !IsBrowser
 
+export const DevelopmentPort = process.env.PORT?.trim() || "3000"
+
+export const DevelopmentUrl = `http://localhost:${DevelopmentPort}`
+
 export const CookiePrefix = process.env.COOKIE_PREFIX
 
 export const BetterAuthSecret = process.env.BETTER_AUTH_SECRET
 
-export const BetterAuthUrl = process.env.BETTER_AUTH_URL
+export const BetterAuthUrl = IsDevelopment ? DevelopmentUrl : process.env.BETTER_AUTH_URL
 
-export const NextPublicBetterAuthUrl = process.env.NEXT_PUBLIC_BETTER_AUTH_URL
+export const NextPublicBetterAuthUrl = IsDevelopment ? DevelopmentUrl : process.env.NEXT_PUBLIC_BETTER_AUTH_URL
 
 export const NextPublicTimeZone = process.env.NEXT_PUBLIC_TIME_ZONE
 

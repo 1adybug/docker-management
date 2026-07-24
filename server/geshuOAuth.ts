@@ -2,7 +2,7 @@ import { createHash } from "node:crypto"
 
 import type { GenericOAuthConfig } from "better-auth/plugins/generic-oauth"
 
-import { GeshuOAuthProviderId, IsDevelopment } from "@/constants"
+import { DevelopmentUrl, GeshuOAuthProviderId, IsDevelopment } from "@/constants"
 
 import { prisma } from "@/prisma"
 
@@ -57,7 +57,7 @@ function getBooleanEnv(name: string, defaultValue: boolean) {
 function getConfiguredIssuer() {
     const issuer = getEnv("GESHU_OAUTH_ISSUER")
     if (issuer) return issuer.replace(/\/$/, "")
-    if (IsDevelopment) return "http://localhost:3000/api/auth"
+    if (IsDevelopment) return `${DevelopmentUrl}/api/auth`
     return undefined
 }
 

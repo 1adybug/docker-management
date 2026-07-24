@@ -29,7 +29,6 @@ export interface PrintAuthOtpParams {
 function getAuthBaseUrl() {
     const baseUrl = BetterAuthUrl?.trim()
     if (baseUrl) return baseUrl
-    if (IsDevelopment) return "http://localhost:3000"
     return undefined
 }
 

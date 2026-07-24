@@ -736,9 +736,3 @@ export const usernameParser = getParser(usernameSchema)
 - 只有成功响应不是 JSON 时，才允许直接定义独立 `route.ts`。
 - 文件下载、二进制流、图片流、上游流式透传等场景，可以保留独立 `route.ts`。
 - 即使保留独立 `route.ts`，核心业务逻辑也应尽量复用 `@/shared`。
-
-## 用户规则
-
-### Style Rules
-
-- 弹窗内容溢出时，应保持原有 header 和 footer 固定，仅允许 body 使用 `overflow-y-auto` 纵向滚动；原本不存在的 header 或 footer 不得额外添加。若 body 包含宽表格，横向滚动只能发生在表格容器内，并根据空间固定关键列；窄屏下可能发生固定列重叠时，应自动取消固定列。
