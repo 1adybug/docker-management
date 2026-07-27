@@ -3,7 +3,7 @@ export interface RedactSensitiveValueParams {
     seen: WeakSet<object>
 }
 
-const SensitiveKeyPattern = /(secret|password|token|access[_-]?key|credential)/i
+const SensitiveKeyPattern = /(secret|password|token|otp|authorization|cookie|api[_-]?key|access[_-]?key|private[_-]?key|credential)/i
 
 export function isSensitiveKey(key: string) {
     return SensitiveKeyPattern.test(key)

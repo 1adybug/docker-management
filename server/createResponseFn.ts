@@ -42,6 +42,7 @@ export interface ResponseFnMetadata<TParams extends [arg?: unknown], TPathname e
     schema?: TParams extends [] ? undefined : $ZodType<TParams[0]>
     filter?: FilterConfig
     rateLimit?: boolean | RateLimitConfig
+    operationLog?: boolean
     route?: RouteConfig<TPathname, TRouteBodyType>
 }
 
@@ -114,6 +115,7 @@ export function defineResponseFnMetadata<
     Object.defineProperty(target, "schema", { value: metadata.schema })
     Object.defineProperty(target, "filter", { value: metadata.filter })
     Object.defineProperty(target, "rateLimit", { value: metadata.rateLimit })
+    Object.defineProperty(target, "operationLog", { value: metadata.operationLog })
     Object.defineProperty(target, "route", { value: metadata.route })
     return target as OriginalResponseFn<TParams, TData, TPathname, TRouteBodyType>
 }
@@ -269,6 +271,11 @@ const schemaMiddleware: ResponseMiddleware = async function schemaMiddleware(con
 }
 
 const operationLogMiddleware: ResponseMiddleware = async function operationLogMiddleware(context, next) {
+    if (context.fn.operationLog === false) {
+        await next()
+        return
+    }
+
     await addOperationLog({
         action: context.fn.name,
         args: context.args,
@@ -334,6 +341,14 @@ export function createResponseFn<TParams extends [arg?: unknown], TData, TPathna
     return newResponse
 }
 
+function createNoStoreJsonResponse(data: unknown, init?: ResponseInit) {
+    const headers = new Headers(init?.headers)
+    headers.set("Cache-Control", "no-store")
+    headers.set("Pragma", "no-cache")
+
+    return NextResponse.json(data, { ...init, headers })
+}
+
 export function createRouteFn<TParams extends [arg?: unknown], TData, TPathname extends string = never, TRouteBodyType extends RouteBodyType = "json">(
     fn: OriginalResponseFn<TParams, TData, TPathname, TRouteBodyType>,
 ): RouteHandler {
@@ -351,12 +366,12 @@ export function createRouteFn<TParams extends [arg?: unknown], TData, TPathname 
     defineResponseFnMetadata(newRoute, fn)
 
     async function POST(request: Request) {
-        if (!fn.route) return NextResponse.json({ success: false, data: undefined, message: "Not Found", code: 404 }, { status: 404 })
+        if (!fn.route) return createNoStoreJsonResponse({ success: false, data: undefined, message: "Not Found", code: 404 }, { status: 404 })
 
         try {
             const args = await getRouteArgs(request, fn)
             const result = await newRoute(...args)
-            return NextResponse.json(result, { status: 200 })
+            return createNoStoreJsonResponse(result, { status: 200 })
         } catch (error) {
             const result = await handleResponseError(
                 {
@@ -367,7 +382,7 @@ export function createRouteFn<TParams extends [arg?: unknown], TData, TPathname 
                 error,
             )
 
-            return NextResponse.json(result, { status: 200 })
+            return createNoStoreJsonResponse(result, { status: 200 })
         }
     }
 

@@ -10,6 +10,7 @@ export interface CreateSharedFnParams<TParam = never, TPathname extends string =
     schema?: $ZodType<TParam>
     filter?: FilterConfig
     rateLimit?: boolean | RateLimitConfig
+    operationLog?: boolean
     route?: RouteConfig<TPathname, TRouteBodyType>
 }
 

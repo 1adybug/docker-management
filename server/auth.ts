@@ -57,6 +57,7 @@ function printAuthOtp({ phoneNumber, code }: PrintAuthOtpParams) {
 const authBaseUrl = getAuthBaseUrl()
 const authSecret = getAuthSecret()
 const geshuOAuthConfig = getGeshuOAuthConfig()
+const trustedClientIpHeader = process.env.TRUSTED_CLIENT_IP_HEADER?.trim().toLowerCase()
 
 export const auth = betterAuth({
     secret: authSecret,
@@ -72,6 +73,9 @@ export const auth = betterAuth({
     },
     advanced: {
         cookiePrefix: CookiePrefix,
+        ipAddress: {
+            ipAddressHeaders: trustedClientIpHeader ? [trustedClientIpHeader] : [],
+        },
     },
     emailAndPassword: {
         enabled: false,

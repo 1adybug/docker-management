@@ -20,6 +20,7 @@ export const login = createSharedFn({
     name: "login",
     schema: loginSchema,
     filter: false,
+    operationLog: false,
     rateLimit: createRateLimit({
         limit: 5,
         windowMs: 60_000,
