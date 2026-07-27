@@ -1,6 +1,4 @@
-import { NextResponse } from "next/server"
-
-import { createResponseFn } from "@/server/createResponseFn"
+import { createNoStoreJsonResponse, createResponseFn } from "@/server/createResponseFn"
 
 import { importUser } from "@/shared/importUser"
 
@@ -15,9 +13,9 @@ function getErrorMessage(error: unknown) {
 export async function POST(request: Request) {
     try {
         const result = await importUserResponse(await request.formData())
-        return NextResponse.json(result, { status: 200 })
+        return createNoStoreJsonResponse(result, { status: 200 })
     } catch (error) {
-        return NextResponse.json(
+        return createNoStoreJsonResponse(
             {
                 success: false,
                 data: undefined,

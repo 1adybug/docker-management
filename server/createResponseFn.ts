@@ -341,7 +341,7 @@ export function createResponseFn<TParams extends [arg?: unknown], TData, TPathna
     return newResponse
 }
 
-function createNoStoreJsonResponse(data: unknown, init?: ResponseInit) {
+export function createNoStoreJsonResponse(data: unknown, init?: ResponseInit) {
     const headers = new Headers(init?.headers)
     headers.set("Cache-Control", "no-store")
     headers.set("Pragma", "no-cache")
