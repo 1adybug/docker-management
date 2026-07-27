@@ -583,7 +583,7 @@ export const addUserParser = getParser(addUserSchema)
 - `shared` 文件不写 `"use server"`。
 - `schema` 必须传给 `createSharedFn`。
 - 如果需要权限控制，使用 `filter`。
-- 默认操作日志会记录参数；参数包含密码、验证码、secret、令牌等敏感数据时，必须设置 `operationLog: false`，并按需使用专用脱敏安全审计。
+- 默认操作日志和错误日志会记录参数；参数包含密码、验证码、secret、令牌等敏感数据时，必须设置 `logParams: false`。只有已经使用专用脱敏安全审计替代通用事件时，才设置 `operationLog: false`。
 - 如果需要暴露为 `API Route`，使用 `route`；`bodyType` 必须和实际请求体类型一致。
 - 函数内部需要向客户端暴露错误时，使用 `ClientError`。
 

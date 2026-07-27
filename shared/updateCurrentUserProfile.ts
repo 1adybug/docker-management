@@ -23,7 +23,7 @@ function getUpdateCurrentUserProfileRateLimitKey(context: RateLimitContext) {
 export const updateCurrentUserProfile = createSharedFn({
     name: "updateCurrentUserProfile",
     schema: updateCurrentUserProfileSchema,
-    operationLog: false,
+    logParams: false,
     rateLimit: createRateLimit({
         limit: 10,
         windowMs: 60_000,

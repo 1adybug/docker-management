@@ -11,6 +11,7 @@ export interface CreateSharedFnParams<TParam = never, TPathname extends string =
     filter?: FilterConfig
     rateLimit?: boolean | RateLimitConfig
     operationLog?: boolean
+    logParams?: boolean
     route?: RouteConfig<TPathname, TRouteBodyType>
 }
 
