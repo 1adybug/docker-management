@@ -43,6 +43,7 @@ export interface ResponseFnMetadata<TParams extends [arg?: unknown], TPathname e
     filter?: FilterConfig
     rateLimit?: boolean | RateLimitConfig
     operationLog?: boolean
+    logParams?: boolean
     route?: RouteConfig<TPathname, TRouteBodyType>
 }
 
@@ -116,6 +117,7 @@ export function defineResponseFnMetadata<
     Object.defineProperty(target, "filter", { value: metadata.filter })
     Object.defineProperty(target, "rateLimit", { value: metadata.rateLimit })
     Object.defineProperty(target, "operationLog", { value: metadata.operationLog })
+    Object.defineProperty(target, "logParams", { value: metadata.logParams })
     Object.defineProperty(target, "route", { value: metadata.route })
     return target as OriginalResponseFn<TParams, TData, TPathname, TRouteBodyType>
 }
@@ -127,6 +129,7 @@ async function getCachedCurrentUser(context: ResponseFnContext) {
 
 export interface ErrorResponseContextFn {
     name: string
+    logParams?: boolean
 }
 
 export interface ErrorResponseContext extends ResponseFnContext {
@@ -185,7 +188,7 @@ async function handleResponseError(context: ErrorResponseContext, error: unknown
 
     void addErrorLog({
         action: context.fn.name,
-        args: context.args,
+        args: context.fn.logParams === false ? undefined : context.args,
         error,
     })
 
@@ -255,7 +258,7 @@ const responseErrorMiddleware: ResponseMiddleware = async function responseError
 
         void addErrorLog({
             action: context.fn.name,
-            args: context.args,
+            args: context.fn.logParams === false ? undefined : context.args,
             error: getResponseError(context, context.result),
         })
     } catch (error) {
@@ -278,7 +281,7 @@ const operationLogMiddleware: ResponseMiddleware = async function operationLogMi
 
     await addOperationLog({
         action: context.fn.name,
-        args: context.args,
+        args: context.fn.logParams === false ? undefined : context.args,
     })
 
     await next()

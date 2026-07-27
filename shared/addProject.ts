@@ -15,6 +15,7 @@ import { defaultComposeContent, getComposeXName, normalizeComposeProjectContent 
 export const addProject = createSharedFn({
     name: "addProject",
     schema: addProjectSchema,
+    logParams: false,
 })(async function addProject({ name, content }) {
     await ensureProjectRoot()
     const projectDir = getProjectDir(name)

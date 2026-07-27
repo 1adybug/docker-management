@@ -15,6 +15,7 @@ import { getComposeXName, normalizeComposeProjectContent } from "@/utils/compose
 export const updateProject = createSharedFn({
     name: "updateProject",
     schema: updateProjectSchema,
+    logParams: false,
 })(async function updateProject({ name, content }) {
     await ensureProjectRoot()
     const projectDir = getProjectDir(name)
