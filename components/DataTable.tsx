@@ -27,6 +27,7 @@ import { cn } from "@/utils/shadcn"
 const DataTableColumnPinningMinWidth = 960
 const DataTableColumnResizingMinWidth = 768
 const DataTableFinePointerMediaQuery = "(hover: hover) and (pointer: fine)"
+const DataTableSelectionColumnId = "selection"
 
 export interface DataTableProps<TData extends RowData> {
     columns: ColumnDef<TData>[]
@@ -117,6 +118,14 @@ function getPinnedColumnClassName<TData extends RowData>(column: Column<TData>) 
     )
 }
 
+function getSelectionColumnClassName(columnId: string) {
+    return columnId === DataTableSelectionColumnId ? "[&:has([role=checkbox])]:pl-0" : undefined
+}
+
+function renderColumnContent(columnId: string, content: ReactNode) {
+    return columnId === DataTableSelectionColumnId ? <div className="flex w-full justify-center">{content}</div> : content
+}
+
 export function DataTable<TData extends RowData>({
     columns,
     columnPinning = {},
@@ -204,21 +213,26 @@ export function DataTable<TData extends RowData>({
                                 <TableRow key={headerGroup.id}>
                                     {headerGroup.headers.map(header => {
                                         const sorted = header.column.getIsSorted()
+                                        const content = header.isPlaceholder ? null : header.column.getCanSort() ? (
+                                            <Button className="mx-auto h-8 px-2" variant="ghost" onClick={header.column.getToggleSortingHandler()}>
+                                                {flexRender(header.column.columnDef.header, header.getContext())}
+                                                {sorted === "asc" ? <ArrowUpIcon /> : sorted === "desc" ? <ArrowDownIcon /> : <ChevronsUpDownIcon />}
+                                            </Button>
+                                        ) : (
+                                            flexRender(header.column.columnDef.header, header.getContext())
+                                        )
 
                                         return (
                                             <TableHead
                                                 key={header.id}
-                                                className={cn("relative h-11 whitespace-nowrap text-center", getPinnedColumnClassName(header.column))}
+                                                className={cn(
+                                                    "relative h-11 whitespace-nowrap text-center",
+                                                    getSelectionColumnClassName(header.column.id),
+                                                    getPinnedColumnClassName(header.column),
+                                                )}
                                                 style={{ ...getTableColumnStyle(header.column), zIndex: header.column.getIsPinned() ? 2 : undefined }}
                                             >
-                                                {header.isPlaceholder ? null : header.column.getCanSort() ? (
-                                                    <Button className="mx-auto h-8 px-2" variant="ghost" onClick={header.column.getToggleSortingHandler()}>
-                                                        {flexRender(header.column.columnDef.header, header.getContext())}
-                                                        {sorted === "asc" ? <ArrowUpIcon /> : sorted === "desc" ? <ArrowDownIcon /> : <ChevronsUpDownIcon />}
-                                                    </Button>
-                                                ) : (
-                                                    flexRender(header.column.columnDef.header, header.getContext())
-                                                )}
+                                                {renderColumnContent(header.column.id, content)}
                                                 {header.column.getCanResize() && (
                                                     <button
                                                         className={cn(
@@ -246,7 +260,7 @@ export function DataTable<TData extends RowData>({
                                         {table.getVisibleLeafColumns().map(column => (
                                             <TableCell
                                                 key={column.id}
-                                                className={cn("text-center", getPinnedColumnClassName(column))}
+                                                className={cn("text-center", getSelectionColumnClassName(column.id), getPinnedColumnClassName(column))}
                                                 style={getTableColumnStyle(column)}
                                             >
                                                 <Skeleton className="h-5 w-full min-w-16" />
@@ -260,10 +274,14 @@ export function DataTable<TData extends RowData>({
                                         {row.getVisibleCells().map(cell => (
                                             <TableCell
                                                 key={cell.id}
-                                                className={cn("truncate text-center [&>div]:justify-center", getPinnedColumnClassName(cell.column))}
+                                                className={cn(
+                                                    "truncate text-center [&>div]:justify-center",
+                                                    getSelectionColumnClassName(cell.column.id),
+                                                    getPinnedColumnClassName(cell.column),
+                                                )}
                                                 style={getTableColumnStyle(cell.column)}
                                             >
-                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                {renderColumnContent(cell.column.id, flexRender(cell.column.columnDef.cell, cell.getContext()))}
                                             </TableCell>
                                         ))}
                                     </TableRow>
