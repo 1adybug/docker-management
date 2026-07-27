@@ -683,7 +683,7 @@ const Page: FC = () => {
 
     const columns: ColumnDef<DockerImageItem>[] = [
         {
-            id: "select",
+            id: "selection",
             header: () => (
                 <input
                     className="size-4 accent-primary"
@@ -963,7 +963,7 @@ const Page: FC = () => {
             </Card>
             <DataTable
                 columns={columns}
-                columnPinning={{ left: ["select", "repository", "tag"], right: ["actions"] }}
+                columnPinning={{ left: ["selection", "repository", "tag"], right: ["actions"] }}
                 columnSizingKey="docker-image"
                 data={pagedData}
                 loading={isLoading || isBatchDeletePending}
