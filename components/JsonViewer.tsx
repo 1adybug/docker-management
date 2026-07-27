@@ -31,7 +31,7 @@ export const JsonViewer: FC<JsonViewerProps> = ({ className, style, value, ...re
 
     if (value === null || typeof value !== "object") {
         return (
-            <div className={clsx("whitespace-pre-wrap break-all !font-sans", className)} style={style}>
+            <div className={clsx("whitespace-pre-wrap break-all !font-['Inter_Variable','Noto_Sans_SC_Variable']", className)} style={style}>
                 {String(value)}
             </div>
         )
@@ -39,7 +39,7 @@ export const JsonViewer: FC<JsonViewerProps> = ({ className, style, value, ...re
 
     return (
         <JsonView
-            className={clsx("!font-sans", className)}
+            className={clsx("!font-['Inter_Variable','Noto_Sans_SC_Variable']", className)}
             style={{ ...(resolvedTheme === "dark" ? darkTheme : lightTheme), ...style }}
             value={value}
             displayDataTypes={false}
