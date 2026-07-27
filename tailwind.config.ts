@@ -76,8 +76,8 @@ const config: Config = {
                 "4xl": "var(--radius-4xl)",
             },
             fontFamily: {
-                heading: ["var(--font-noto-sans-sc)"],
-                sans: ["var(--font-noto-sans-sc)"],
+                heading: ["var(--font-inter)"],
+                sans: ["var(--font-inter)"],
             },
             keyframes: {
                 "accordion-down": {
