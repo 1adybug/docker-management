@@ -13,7 +13,7 @@ git remote set-url --push template no_push://template
 
 ## env 文件
 
-项目将启动、构建、认证核心配置、格数账号平台 OAuth Client 配置，以及首次登录前就必须可用的默认邮箱域名和短信通道配置放在 `.env` 或部署平台环境变量中。验证码日志打印、限流、用户资料开关、自动备份等运行时配置请登录后台后在“系统设置”页面维护。
+项目将启动、构建、认证核心配置、格数账号平台与 geshu-agent OAuth Client 配置，以及首次登录前就必须可用的默认邮箱域名和短信通道配置放在 `.env` 或部署平台环境变量中。验证码日志打印、限流、用户资料开关、自动备份等运行时配置请登录后台后在“系统设置”页面维护。
 
 说明：
 
@@ -23,7 +23,7 @@ git remote set-url --push template no_push://template
 - 开发环境的 `BETTER_AUTH_URL` 和 `NEXT_PUBLIC_BETTER_AUTH_URL` 自动使用 `http://localhost:<PORT>`，无需手动同步端口
 - 开发环境未设置 `GESHU_OAUTH_ISSUER` 时，默认使用 `http://localhost:<PORT>/api/auth`
 - `BETTER_AUTH_SECRET` 在生产环境是强制项，未配置会导致服务启动失败；开发环境会使用仅本地可用的兜底值
-- 格数账号平台登录由环境变量配置，因为 Better Auth 的 `genericOAuth` Provider 配置在当前版本中是启动时静态配置
+- 格数账号平台与 geshu-agent 登录由环境变量配置，因为 Better Auth 的 `genericOAuth` Provider 配置在当前版本中是启动时静态配置
 - `NEXT_PUBLIC_TIME_ZONE` 用于页面展示和自动备份窗口，留空时默认 `Asia/Shanghai`；该变量会进入浏览器构建产物，修改后需要重新构建镜像或前端资源，避免服务端 HTML 和浏览器 hydration 使用不同配置
 - 默认邮箱域名、短信通道和密钥不会进入系统设置，避免首次进入系统时因无法登录而无法配置基础能力
 - 系统设置中的“短信设置”只控制是否在服务端系统日志中打印验证码
@@ -31,28 +31,32 @@ git remote set-url --push template no_push://template
 
 ### 变量清单
 
-| 变量名                          | 必填 | 说明                                    | 示例 / 默认值              |
-| ------------------------------- | ---- | --------------------------------------- | -------------------------- |
-| `COOKIE_PREFIX`                 | 是   | 登录相关 Cookie 前缀                    | `geshu`                    |
-| `BETTER_AUTH_SECRET`            | 是   | Better Auth 签名密钥                    | `your_better_auth_secret`  |
-| `PORT`                          | 否   | 开发服务端口                            | `3000`                     |
-| `BETTER_AUTH_URL`               | 按需 | 生产环境服务端 Better Auth 基础地址     | `https://example.com`      |
-| `NEXT_PUBLIC_BETTER_AUTH_URL`   | 按需 | 生产环境客户端 Better Auth 基础地址     | `https://example.com`      |
-| `GESHU_OAUTH_LOGIN_ENABLED`     | 否   | 是否启用格数账号平台登录                | `0`                        |
-| `GESHU_OAUTH_ISSUER`            | 按需 | 格数账号平台地址或 OpenID Configuration | `https://auth.example.com` |
-| `GESHU_OAUTH_CLIENT_ID`         | 按需 | 格数账号平台 OAuth Client ID            | `your_client_id`           |
-| `GESHU_OAUTH_CLIENT_SECRET`     | 按需 | 格数账号平台 OAuth Client Secret        | `your_client_secret`       |
-| `GESHU_OAUTH_ALLOW_CREATE_USER` | 否   | 手机号未匹配本地用户时是否创建普通用户  | `0`                        |
-| `NEXT_OUTPUT`                   | 否   | Next 构建输出模式                       | `standalone` / `export`    |
-| `NEXT_TELEMETRY_DISABLED`       | 否   | 是否关闭 Next 遥测上报                  | `1`                        |
-| `NEXT_PUBLIC_TIME_ZONE`         | 否   | 应用时间时区，留空默认上海              | `Asia/Shanghai`            |
-| `REDIS_URL`                     | 按需 | Redis 地址（仅接入 Redis 限流存储时用） | `redis://127.0.0.1:6379`   |
-| `TRUSTED_CLIENT_IP_HEADER`      | 按需 | 指定可信反向代理覆盖写入的客户端 IP 头  | `x-real-ip`                |
-| `DEFAULT_EMAIL_DOMAIN`          | 否   | 手机号注册时生成临时邮箱所使用的域名    | `example.com`              |
-| `IS_INTRANET`                   | 否   | 是否使用内网短信通道                    | `0`                        |
-| `QJP_SMS_URL`                   | 按需 | 内网短信服务地址                        | `http://sms.example.com`   |
-| `ALIYUN_ACCESS_KEY_ID`          | 按需 | 阿里云短信 AccessKey ID                 | `your_access_key_id`       |
-| `ALIYUN_ACCESS_KEY_SECRET`      | 按需 | 阿里云短信 AccessKey Secret             | `your_access_key_secret`   |
+| 变量名                            | 必填 | 说明                                        | 示例 / 默认值                        |
+| --------------------------------- | ---- | ------------------------------------------- | ------------------------------------ |
+| `COOKIE_PREFIX`                   | 是   | 登录相关 Cookie 前缀                        | `geshu`                              |
+| `BETTER_AUTH_SECRET`              | 是   | Better Auth 签名密钥                        | `your_better_auth_secret`            |
+| `PORT`                            | 否   | 开发服务端口                                | `3000`                               |
+| `BETTER_AUTH_URL`                 | 按需 | 生产环境服务端 Better Auth 基础地址         | `https://example.com`                |
+| `NEXT_PUBLIC_BETTER_AUTH_URL`     | 按需 | 生产环境客户端 Better Auth 基础地址         | `https://example.com`                |
+| `GESHU_OAUTH_LOGIN_ENABLED`       | 否   | 是否启用格数账号平台登录                    | `0`                                  |
+| `GESHU_OAUTH_ISSUER`              | 按需 | 格数账号平台地址或 OpenID Configuration     | `https://auth.example.com`           |
+| `GESHU_OAUTH_CLIENT_ID`           | 按需 | 格数账号平台 OAuth Client ID                | `your_client_id`                     |
+| `GESHU_OAUTH_CLIENT_SECRET`       | 按需 | 格数账号平台 OAuth Client Secret            | `your_client_secret`                 |
+| `GESHU_OAUTH_ALLOW_CREATE_USER`   | 否   | 手机号未匹配本地用户时是否创建普通用户      | `0`                                  |
+| `GESHU_AGENT_OAUTH_LOGIN_ENABLED` | 否   | 是否启用 geshu-agent 登录与绑定入口         | `0`                                  |
+| `GESHU_AGENT_OAUTH_ISSUER`        | 按需 | geshu-agent issuer，必须以 `/api/auth` 结尾 | `https://agent.example.com/api/auth` |
+| `GESHU_AGENT_OAUTH_CLIENT_ID`     | 按需 | geshu-agent OAuth Client ID                 | `your_agent_client_id`               |
+| `GESHU_AGENT_OAUTH_CLIENT_SECRET` | 按需 | geshu-agent OAuth Client Secret             | `your_agent_client_secret`           |
+| `NEXT_OUTPUT`                     | 否   | Next 构建输出模式                           | `standalone` / `export`              |
+| `NEXT_TELEMETRY_DISABLED`         | 否   | 是否关闭 Next 遥测上报                      | `1`                                  |
+| `NEXT_PUBLIC_TIME_ZONE`           | 否   | 应用时间时区，留空默认上海                  | `Asia/Shanghai`                      |
+| `REDIS_URL`                       | 按需 | Redis 地址（仅接入 Redis 限流存储时用）     | `redis://127.0.0.1:6379`             |
+| `TRUSTED_CLIENT_IP_HEADER`        | 按需 | 指定可信反向代理覆盖写入的客户端 IP 头      | `x-real-ip`                          |
+| `DEFAULT_EMAIL_DOMAIN`            | 否   | 手机号注册时生成临时邮箱所使用的域名        | `example.com`                        |
+| `IS_INTRANET`                     | 否   | 是否使用内网短信通道                        | `0`                                  |
+| `QJP_SMS_URL`                     | 按需 | 内网短信服务地址                            | `http://sms.example.com`             |
+| `ALIYUN_ACCESS_KEY_ID`            | 按需 | 阿里云短信 AccessKey ID                     | `your_access_key_id`                 |
+| `ALIYUN_ACCESS_KEY_SECRET`        | 按需 | 阿里云短信 AccessKey Secret                 | `your_access_key_secret`             |
 
 ### 推荐的本地 `.env` 示例
 
@@ -72,6 +76,12 @@ GESHU_OAUTH_ISSUER="https://auth.example.com"
 GESHU_OAUTH_CLIENT_ID="your_client_id"
 GESHU_OAUTH_CLIENT_SECRET="your_client_secret"
 GESHU_OAUTH_ALLOW_CREATE_USER="0"
+
+# geshu-agent 登录与显式绑定
+GESHU_AGENT_OAUTH_LOGIN_ENABLED="0"
+GESHU_AGENT_OAUTH_ISSUER="https://agent.example.com/api/auth"
+GESHU_AGENT_OAUTH_CLIENT_ID="your_agent_client_id"
+GESHU_AGENT_OAUTH_CLIENT_SECRET="your_agent_client_secret"
 
 # 构建与运行
 NEXT_OUTPUT="standalone"
@@ -128,6 +138,22 @@ pnpm dev
 `GESHU_OAUTH_LOGIN_ENABLED` 默认关闭。设置为 `1`，并同时配置 `GESHU_OAUTH_ISSUER`、`GESHU_OAUTH_CLIENT_ID` 和 `GESHU_OAUTH_CLIENT_SECRET` 后，登录页的“格数账号登录”才会显示并可用。这些 OAuth 环境变量在应用启动时读取，修改后需要重启应用。
 
 登录成功后会优先使用账号平台返回的手机号匹配本地已有用户并自动绑定 OAuth 账号。`GESHU_OAUTH_ALLOW_CREATE_USER` 默认关闭；开启后，手机号未匹配本地用户时会使用账号平台用户信息创建普通用户。
+
+## geshu-agent 登录
+
+本项目还可以作为独立 OAuth Client 接入 geshu-agent。该 Provider ID 固定为 `geshu-agent-oauth`，不会替换上面的 `geshu-oauth`。在 geshu-agent 注册客户端时配置：
+
+- 应用主页：`BETTER_AUTH_URL`
+- 回调地址：`{BETTER_AUTH_URL}/api/auth/oauth2/callback/geshu-agent-oauth`
+- issuer：必须以 `/api/auth` 结尾
+- 授权范围：`openid offline_access`
+- 授权流程：`authorization_code`
+- Token Endpoint 认证方式：`client_secret_basic`
+- PKCE：开启
+
+`GESHU_AGENT_OAUTH_LOGIN_ENABLED` 默认关闭。只有设置为 `1`，并完整配置 issuer、Client ID 和 Client Secret 后，登录页与个人中心才会显示 geshu-agent 入口。
+
+geshu-agent 使用显式绑定模型：未绑定的账户不能直接登录，也不会按手机号、邮箱或昵称自动匹配或创建本地用户。用户需要先使用本地手机号登录，再完成 geshu-agent 授权绑定。绑定不会覆盖本地昵称、邮箱、手机号或权限；解除绑定只删除本地 OAuth 映射和保存的令牌，不删除任何本地资料。
 
 ## 系统设置
 

@@ -40,6 +40,7 @@ import { formatDateTime } from "@/utils/formatDateTime"
 import { getOnBlurValidator } from "@/utils/getOnBlurValidator"
 
 import { CurrentUserPhoneNumberEditor } from "./CurrentUserPhoneNumberEditor"
+import { GeshuAgentAccountLinking } from "./GeshuAgentAccountLinking"
 
 const nicknameFormSchema = z.object({
     nickname: nicknameSchema,
@@ -69,6 +70,7 @@ export interface CurrentUserProfileProps extends StrictOmit<ComponentProps<"div"
     data: User
     allowUpdateNickname: boolean
     allowUpdatePhoneNumber: boolean
+    isGeshuAgentOAuthLinked: boolean
 }
 
 function getAvatarText(user: User) {
@@ -76,7 +78,14 @@ function getAvatarText(user: User) {
     return name.slice(0, 1).toUpperCase()
 }
 
-export const CurrentUserProfile: FC<CurrentUserProfileProps> = ({ className, data, allowUpdateNickname, allowUpdatePhoneNumber, ...rest }) => {
+export const CurrentUserProfile: FC<CurrentUserProfileProps> = ({
+    className,
+    data,
+    allowUpdateNickname,
+    allowUpdatePhoneNumber,
+    isGeshuAgentOAuthLinked,
+    ...rest
+}) => {
     const router = useRouter()
     const [currentUser, setCurrentUser] = useState(data)
     const [isEditingNickname, setIsEditingNickname] = useState(false)
@@ -170,6 +179,8 @@ export const CurrentUserProfile: FC<CurrentUserProfileProps> = ({ className, dat
                     </div>
                 </CardContent>
             </Card>
+
+            <GeshuAgentAccountLinking linked={isGeshuAgentOAuthLinked} />
 
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(300px,0.8fr)]">
                 <Card>
