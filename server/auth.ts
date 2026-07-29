@@ -106,7 +106,7 @@ export const auth = betterAuth({
             phoneNumberValidator(phoneNumber) {
                 return phoneNumberRegex.test(phoneNumber)
             },
-            sendOTP({ phoneNumber, code }) {
+            async sendOTP({ phoneNumber, code }) {
                 if (IsDevelopment) {
                     printAuthOtp({ phoneNumber, code: DevPhoneOtp })
                     setDevOtp({ phoneNumber }, DevPhoneOtp)
@@ -115,7 +115,7 @@ export const auth = betterAuth({
 
                 printAuthOtp({ phoneNumber, code })
 
-                void sendOtp({ phoneNumber, code }).catch(error => void console.error("发送手机号验证码失败", error))
+                await sendOtp({ phoneNumber, code })
             },
             signUpOnVerification: {
                 getTempEmail,
