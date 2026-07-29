@@ -34,24 +34,21 @@ const GeshuOAuthLoginErrorMessage = {
 } as const
 
 const GeshuAgentOAuthLoginErrorMessage = {
-    signup_disabled: "该 geshu-agent 账户尚未绑定本平台账户。请先使用手机号登录，再完成绑定。",
-    account_not_linked: "该 geshu-agent 账户尚未绑定本平台账户。请先使用手机号登录，再完成绑定。",
-    unable_to_link_account: "geshu-agent 账户关联没有成功，请稍后再试。",
+    signup_disabled: "该格数智能体账户尚未绑定本平台账户。请先使用手机号登录，再完成绑定。",
+    account_not_linked: "该格数智能体账户尚未绑定本平台账户。请先使用手机号登录，再完成绑定。",
+    unable_to_link_account: "格数智能体账户关联没有成功，请稍后再试。",
     oauth_code_verification_failed: "本次登录已失效，请重新尝试登录。",
-    user_info_is_missing: "geshu-agent 没有返回账户标识，请重新登录。",
-    email_is_missing: "geshu-agent 登录返回的数据不完整，请联系管理员处理。",
-    id_is_missing: "geshu-agent 没有返回标准 sub，请联系管理员处理。",
-    name_is_missing: "geshu-agent 登录返回的数据不完整，请联系管理员处理。",
-    issuer_mismatch: "geshu-agent 登录响应来源不正确，请联系管理员处理。",
-    issuer_missing: "geshu-agent 登录响应缺少来源标识，请联系管理员处理。",
+    user_info_is_missing: "格数智能体没有返回账户标识，请重新登录。",
+    email_is_missing: "格数智能体登录返回的数据不完整，请联系管理员处理。",
+    id_is_missing: "格数智能体没有返回标准 sub，请联系管理员处理。",
+    name_is_missing: "格数智能体登录返回的数据不完整，请联系管理员处理。",
+    issuer_mismatch: "格数智能体登录响应来源不正确，请联系管理员处理。",
+    issuer_missing: "格数智能体登录响应缺少来源标识，请联系管理员处理。",
 } as const
 
 function getOAuthLoginErrorMessage(providerId: string | null, error: string, description?: string) {
-    if (providerId === GeshuAgentOAuthProviderId) {
-        return (
-            GeshuAgentOAuthLoginErrorMessage[error as keyof typeof GeshuAgentOAuthLoginErrorMessage] || description || "geshu-agent 登录没有成功，请重新尝试。"
-        )
-    }
+    if (providerId === GeshuAgentOAuthProviderId)
+        return GeshuAgentOAuthLoginErrorMessage[error as keyof typeof GeshuAgentOAuthLoginErrorMessage] || description || "格数智能体登录没有成功，请重新尝试。"
 
     return GeshuOAuthLoginErrorMessage[error as keyof typeof GeshuOAuthLoginErrorMessage] || description || "格数账号登录没有成功，请重新尝试。"
 }
@@ -90,12 +87,12 @@ const Page: FC = () => {
         const status = isAgent ? geshuAgentOAuthLoginStatus : geshuOAuthLoginStatus
 
         if (!status?.ready) {
-            toast.error(isAgent ? "暂时无法使用 geshu-agent 登录，请联系管理员处理。" : "暂时无法使用格数账号登录，请联系管理员处理。")
+            toast.error(isAgent ? "暂时无法使用格数智能体登录，请联系管理员处理。" : "暂时无法使用格数账号登录，请联系管理员处理。")
             return
         }
 
         setPendingProviderId(providerId)
-        toast.loading(isAgent ? "正在跳转 geshu-agent..." : "正在跳转账号平台...", { id: toastId })
+        toast.loading(isAgent ? "正在跳转格数智能体..." : "正在跳转账号平台...", { id: toastId })
 
         try {
             const callbackURL = getSafeInternalCallbackUrl(searchParams.get("from"))
@@ -112,7 +109,7 @@ const Page: FC = () => {
                 errorCallbackURL: errorSearch ? `${errorCallbackPathname}?${errorSearch}` : errorCallbackPathname,
             })
 
-            if (response.error) throw new Error(response.error.message || (isAgent ? "geshu-agent 登录失败" : "账号平台登录失败"))
+            if (response.error) throw new Error(response.error.message || (isAgent ? "格数智能体登录失败" : "账号平台登录失败"))
             toast.dismiss(toastId)
         } catch (error) {
             toast.error(getErrorMessage(error), { id: toastId })
@@ -129,7 +126,7 @@ const Page: FC = () => {
         <Card>
             <CardHeader>
                 <CardTitle>登录</CardTitle>
-                <CardDescription>使用手机号验证码、格数账号或 geshu-agent 进入系统。</CardDescription>
+                <CardDescription>使用手机号验证码、格数账号或格数智能体进入系统。</CardDescription>
             </CardHeader>
             <CardContent>
                 <PhoneLoginForm onLoginSuccess={() => router.refresh()}>
@@ -155,7 +152,7 @@ const Page: FC = () => {
                             onClick={() => void onOAuthLogin(GeshuAgentOAuthProviderId)}
                         >
                             {pendingProviderId === GeshuAgentOAuthProviderId && <LoaderCircleIcon className="animate-spin" />}
-                            geshu-agent 登录
+                            使用格数智能体登录
                         </Button>
                     )}
                 </PhoneLoginForm>
