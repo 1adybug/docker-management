@@ -38,7 +38,7 @@ git remote set-url --push template no_push://template
 | `PORT`                          | 否   | 开发服务端口                            | `3000`                     |
 | `BETTER_AUTH_URL`               | 按需 | 生产环境服务端 Better Auth 基础地址     | `https://example.com`      |
 | `NEXT_PUBLIC_BETTER_AUTH_URL`   | 按需 | 生产环境客户端 Better Auth 基础地址     | `https://example.com`      |
-| `GESHU_OAUTH_LOGIN_ENABLED`     | 否   | 是否启用格数账号平台登录                | `1`                        |
+| `GESHU_OAUTH_LOGIN_ENABLED`     | 否   | 是否启用格数账号平台登录                | `0`                        |
 | `GESHU_OAUTH_ISSUER`            | 按需 | 格数账号平台地址或 OpenID Configuration | `https://auth.example.com` |
 | `GESHU_OAUTH_CLIENT_ID`         | 按需 | 格数账号平台 OAuth Client ID            | `your_client_id`           |
 | `GESHU_OAUTH_CLIENT_SECRET`     | 按需 | 格数账号平台 OAuth Client Secret        | `your_client_secret`       |
@@ -67,7 +67,7 @@ BETTER_AUTH_URL=""
 NEXT_PUBLIC_BETTER_AUTH_URL=""
 
 # 格数账号平台登录
-GESHU_OAUTH_LOGIN_ENABLED="1"
+GESHU_OAUTH_LOGIN_ENABLED="0"
 GESHU_OAUTH_ISSUER="https://auth.example.com"
 GESHU_OAUTH_CLIENT_ID="your_client_id"
 GESHU_OAUTH_CLIENT_SECRET="your_client_secret"
@@ -125,7 +125,7 @@ pnpm dev
 - Token Endpoint 认证方式：`client_secret_basic`
 - PKCE：开启
 
-`GESHU_OAUTH_LOGIN_ENABLED` 默认开启。只有同时配置了 `GESHU_OAUTH_ISSUER`、`GESHU_OAUTH_CLIENT_ID` 和 `GESHU_OAUTH_CLIENT_SECRET` 后，登录页的“格数账号登录”才可用。这些 OAuth 环境变量在应用启动时读取，修改后需要重启应用。
+`GESHU_OAUTH_LOGIN_ENABLED` 默认关闭。设置为 `1`，并同时配置 `GESHU_OAUTH_ISSUER`、`GESHU_OAUTH_CLIENT_ID` 和 `GESHU_OAUTH_CLIENT_SECRET` 后，登录页的“格数账号登录”才会显示并可用。这些 OAuth 环境变量在应用启动时读取，修改后需要重启应用。
 
 登录成功后会优先使用账号平台返回的手机号匹配本地已有用户并自动绑定 OAuth 账号。`GESHU_OAUTH_ALLOW_CREATE_USER` 默认关闭；开启后，手机号未匹配本地用户时会使用账号平台用户信息创建普通用户。
 

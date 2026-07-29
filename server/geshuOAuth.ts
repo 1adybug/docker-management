@@ -112,7 +112,7 @@ function getPhoneNumber(profile: GeshuOAuthProfile) {
 }
 
 export function isGeshuOAuthLoginEnabled() {
-    return getBooleanEnv("GESHU_OAUTH_LOGIN_ENABLED", true)
+    return getBooleanEnv("GESHU_OAUTH_LOGIN_ENABLED", false)
 }
 
 export function isGeshuOAuthCreateUserEnabled() {
