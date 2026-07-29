@@ -4,7 +4,10 @@ import type { Metadata } from "next"
 
 import { CurrentUserProfile } from "@/components/CurrentUserProfile"
 
+import { GeshuAgentOAuthProviderId } from "@/constants"
 import { SystemSettingKey } from "@/constants/systemSettings"
+
+import { prisma } from "@/prisma"
 
 import { getCurrentUser } from "@/server/getCurrentUser"
 import { getBooleanSystemSettingValue } from "@/server/systemSettings"
@@ -22,7 +25,22 @@ const Page: FC = async () => {
 
     if (!user) return null
 
-    return <CurrentUserProfile data={user} allowUpdateNickname={allowUpdateNickname} allowUpdatePhoneNumber={allowUpdatePhoneNumber} />
+    const isGeshuAgentOAuthLinked =
+        (await prisma.account.count({
+            where: {
+                userId: user.id,
+                providerId: GeshuAgentOAuthProviderId,
+            },
+        })) > 0
+
+    return (
+        <CurrentUserProfile
+            data={user}
+            allowUpdateNickname={allowUpdateNickname}
+            allowUpdatePhoneNumber={allowUpdatePhoneNumber}
+            isGeshuAgentOAuthLinked={isGeshuAgentOAuthLinked}
+        />
+    )
 }
 
 export default Page

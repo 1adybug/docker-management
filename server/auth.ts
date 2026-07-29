@@ -13,6 +13,7 @@ import { prisma } from "@/prisma"
 import { phoneNumberRegex } from "@/schemas/phoneNumber"
 
 import { setDevOtp } from "@/server/devOtpStore"
+import { getGeshuAgentOAuthConfig } from "@/server/geshuAgentOAuth"
 import { getGeshuOAuthConfig } from "@/server/geshuOAuth"
 import { getTempEmail } from "@/server/getTempEmail"
 import { getCachedSystemSettingValue, normalizeBooleanValue } from "@/server/systemSettings"
@@ -57,6 +58,7 @@ function printAuthOtp({ phoneNumber, code }: PrintAuthOtpParams) {
 const authBaseUrl = getAuthBaseUrl()
 const authSecret = getAuthSecret()
 const geshuOAuthConfig = getGeshuOAuthConfig()
+const geshuAgentOAuthConfig = getGeshuAgentOAuthConfig()
 const trustedClientIpHeader = process.env.TRUSTED_CLIENT_IP_HEADER?.trim().toLowerCase()
 
 export const auth = betterAuth({
@@ -84,13 +86,15 @@ export const auth = betterAuth({
         accountLinking: {
             trustedProviders: [GeshuOAuthProviderId],
             requireLocalEmailVerified: false,
-            updateUserInfoOnLink: true,
+            allowDifferentEmails: true,
+            allowUnlinkingAll: true,
+            updateUserInfoOnLink: false,
         },
     },
     plugins: [
         admin(),
         genericOAuth({
-            config: geshuOAuthConfig,
+            config: [...geshuOAuthConfig, ...geshuAgentOAuthConfig],
         }),
         phoneNumber({
             otpLength: 4,

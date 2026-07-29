@@ -12,6 +12,7 @@ import { getUserImportTemplate } from "@/shared/getUserImportTemplate"
 import { importUser } from "@/shared/importUser"
 import { login } from "@/shared/login"
 import { queryErrorLog } from "@/shared/queryErrorLog"
+import { queryGeshuAgentOAuthLoginStatus } from "@/shared/queryGeshuAgentOAuthLoginStatus"
 import { queryGeshuOAuthLoginStatus } from "@/shared/queryGeshuOAuthLoginStatus"
 import { queryOperationLog } from "@/shared/queryOperationLog"
 import { querySystemSettings } from "@/shared/querySystemSettings"
@@ -44,6 +45,7 @@ registerRoute(getUserImportTemplate)
 registerRoute(importUser)
 registerRoute(login)
 registerRoute(queryErrorLog)
+registerRoute(queryGeshuAgentOAuthLoginStatus)
 registerRoute(queryGeshuOAuthLoginStatus)
 registerRoute(queryOperationLog)
 registerRoute(querySystemSettings)
