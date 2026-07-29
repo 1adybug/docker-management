@@ -9,7 +9,7 @@ export interface StartupLayoutProps {
 
 export const StartupLayout: FC<StartupLayoutProps> = ({ children }) => (
     <main className="grid min-h-full grid-cols-1 bg-background lg:grid-cols-2">
-        <div className="flex min-h-svh flex-col p-5 sm:p-8">
+        <div className="flex min-h-screen flex-col p-5 supports-[min-height:100svh]:min-h-svh sm:p-8">
             <div className="flex items-center justify-between gap-4">
                 <Brand />
                 <ThemeSwitcher variant="outline" />
@@ -18,6 +18,6 @@ export const StartupLayout: FC<StartupLayoutProps> = ({ children }) => (
                 <div className="w-full max-w-sm">{children}</div>
             </div>
         </div>
-        <div className="hidden bg-[linear-gradient(to_bottom,transparent,oklch(0_0_0/0.1)),url('/login.webp')] bg-cover bg-bottom lg:block" />
+        <div className="hidden bg-[linear-gradient(to_bottom,transparent,rgba(0,0,0,0.1)),url('/login.webp')] bg-cover bg-bottom lg:block" />
     </main>
 )
