@@ -22,13 +22,13 @@ import { toast } from "@/utils/toast"
 const LinkResultSearchParam = "geshu_agent_link"
 
 const OAuthLinkErrorMessage = {
-    account_already_linked_to_different_user: "该 geshu-agent 账户已绑定其他本平台账户，不能重复绑定。",
-    unable_to_link_account: "geshu-agent 账户绑定失败，请稍后重试。",
+    account_already_linked_to_different_user: "该格数智能体账户已绑定其他本平台账户，不能重复绑定。",
+    unable_to_link_account: "格数智能体账户绑定失败，请稍后重试。",
     oauth_code_verification_failed: "本次授权已失效，请重新绑定。",
-    user_info_is_missing: "geshu-agent 没有返回账户标识，请重新绑定。",
-    id_is_missing: "geshu-agent 没有返回标准 sub，请联系管理员处理。",
-    issuer_mismatch: "geshu-agent 授权响应来源不正确，请联系管理员处理。",
-    issuer_missing: "geshu-agent 授权响应缺少来源标识，请联系管理员处理。",
+    user_info_is_missing: "格数智能体没有返回账户标识，请重新绑定。",
+    id_is_missing: "格数智能体没有返回标准 sub，请联系管理员处理。",
+    issuer_mismatch: "格数智能体授权响应来源不正确，请联系管理员处理。",
+    issuer_missing: "格数智能体授权响应缺少来源标识，请联系管理员处理。",
 } as const
 
 export interface GeshuAgentAccountLinkingProps {
@@ -36,7 +36,7 @@ export interface GeshuAgentAccountLinkingProps {
 }
 
 function getOAuthLinkErrorMessage(error: string, description?: string) {
-    return OAuthLinkErrorMessage[error as keyof typeof OAuthLinkErrorMessage] || description || "geshu-agent 账户绑定没有成功，请重新尝试。"
+    return OAuthLinkErrorMessage[error as keyof typeof OAuthLinkErrorMessage] || description || "格数智能体账户绑定没有成功，请重新尝试。"
 }
 
 export const GeshuAgentAccountLinking: FC<GeshuAgentAccountLinkingProps> = ({ linked: initialLinked }) => {
@@ -55,11 +55,11 @@ export const GeshuAgentAccountLinking: FC<GeshuAgentAccountLinkingProps> = ({ li
         const result = searchParams.get(LinkResultSearchParam)
         if (!result) return
 
-        if (result === "success") toast.success("geshu-agent 账户绑定成功", { id: toastId })
+        if (result === "success") toast.success("格数智能体账户绑定成功", { id: toastId })
         else {
             const error = searchParams.get("error")
             const description = searchParams.get("error_description") ?? undefined
-            toast.error(error ? getOAuthLinkErrorMessage(error, description) : "geshu-agent 账户绑定没有成功，请重新尝试。", { id: toastId })
+            toast.error(error ? getOAuthLinkErrorMessage(error, description) : "格数智能体账户绑定没有成功，请重新尝试。", { id: toastId })
         }
 
         const nextSearchParams = new URLSearchParams(searchParams)
@@ -75,7 +75,7 @@ export const GeshuAgentAccountLinking: FC<GeshuAgentAccountLinkingProps> = ({ li
         if (isLinkPending || !loginStatus?.ready) return
 
         setIsLinkPending(true)
-        toast.loading("正在跳转 geshu-agent...", { id: toastId })
+        toast.loading("正在跳转格数智能体...", { id: toastId })
 
         try {
             const response = await authClient.oauth2.link({
@@ -84,7 +84,7 @@ export const GeshuAgentAccountLinking: FC<GeshuAgentAccountLinkingProps> = ({ li
                 errorCallbackURL: `/profile?${LinkResultSearchParam}=error`,
             })
 
-            if (response.error) throw new Error(response.error.message || "geshu-agent 账户绑定失败")
+            if (response.error) throw new Error(response.error.message || "格数智能体账户绑定失败")
             toast.dismiss(toastId)
         } catch (error) {
             toast.error(getErrorMessage(error), { id: toastId })
@@ -103,10 +103,10 @@ export const GeshuAgentAccountLinking: FC<GeshuAgentAccountLinkingProps> = ({ li
                 providerId: GeshuAgentOAuthProviderId,
             })
 
-            if (response.error) throw new Error(response.error.message || "解除 geshu-agent 账户绑定失败")
+            if (response.error) throw new Error(response.error.message || "解除格数智能体账户绑定失败")
 
             setLinked(false)
-            toast.success("已解除 geshu-agent 账户绑定")
+            toast.success("已解除格数智能体账户绑定")
             router.refresh()
         } catch (error) {
             toast.error(getErrorMessage(error))
@@ -121,8 +121,8 @@ export const GeshuAgentAccountLinking: FC<GeshuAgentAccountLinkingProps> = ({ li
         <Card>
             <CardHeader className="flex-row items-start justify-between space-y-0 border-b">
                 <div className="space-y-1.5">
-                    <CardTitle>geshu-agent 账户</CardTitle>
-                    <CardDescription>使用显式授权维护本平台账户与 geshu-agent 的一对一绑定。</CardDescription>
+                    <CardTitle>格数智能体账户</CardTitle>
+                    <CardDescription>使用显式授权维护本平台账户与格数智能体的一对一绑定。</CardDescription>
                 </div>
                 <Badge variant={linked ? "default" : "outline"}>{linked ? "已绑定" : "未绑定"}</Badge>
             </CardHeader>
@@ -131,18 +131,18 @@ export const GeshuAgentAccountLinking: FC<GeshuAgentAccountLinkingProps> = ({ li
                     {linked ? <ShieldCheckIcon className="size-6 text-primary" /> : <LinkIcon className="size-6" />}
                 </div>
                 <div className="min-w-0 flex-auto">
-                    <div className="font-medium">{linked ? "当前本平台账户已关联 geshu-agent" : "尚未关联 geshu-agent"}</div>
+                    <div className="font-medium">{linked ? "当前本平台账户已关联格数智能体" : "尚未关联格数智能体"}</div>
                     <p className="mt-1 text-sm text-muted-foreground">
                         {linked
-                            ? "解除绑定只会删除本平台的账户映射和令牌，不会删除本地账户资料，也不会更改 geshu-agent 账户。"
-                            : "绑定时会跳转到 geshu-agent 完成授权。本平台不会使用手机号、邮箱或昵称自动匹配账户。"}
+                            ? "解除绑定只会删除本平台的账户映射和令牌，不会删除本地账户资料，也不会更改格数智能体账户。"
+                            : "绑定时会跳转到格数智能体完成授权。本平台不会使用手机号、邮箱或昵称自动匹配账户。"}
                     </p>
                 </div>
                 {linked ? (
                     <ConfirmButton
                         className="flex-none"
                         variant="outline"
-                        title="解除 geshu-agent 账户绑定？"
+                        title="解除格数智能体账户绑定？"
                         description="解除后将不能使用该账户登录；手机号登录和本平台资料不受影响。"
                         pending={isUnlinkPending}
                         confirmText="解除绑定"
@@ -154,7 +154,7 @@ export const GeshuAgentAccountLinking: FC<GeshuAgentAccountLinkingProps> = ({ li
                 ) : (
                     <Button className="flex-none" disabled={isLinkPending} onClick={() => void linkAccount()}>
                         {isLinkPending ? <LoaderCircleIcon className="animate-spin" /> : <LinkIcon />}
-                        绑定 geshu-agent
+                        绑定格数智能体
                     </Button>
                 )}
             </CardContent>
