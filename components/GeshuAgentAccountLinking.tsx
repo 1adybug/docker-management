@@ -10,7 +10,7 @@ import { ConfirmButton } from "@/components/ConfirmButton"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 import { GeshuAgentOAuthProviderId } from "@/constants"
 
@@ -119,12 +119,12 @@ export const GeshuAgentAccountLinking: FC<GeshuAgentAccountLinkingProps> = ({ li
 
     return (
         <Card>
-            <CardHeader className="border-b">
-                <CardTitle>geshu-agent 账户</CardTitle>
-                <CardDescription>使用显式授权维护本平台账户与 geshu-agent 的一对一绑定。</CardDescription>
-                <CardAction>
-                    <Badge variant={linked ? "default" : "outline"}>{linked ? "已绑定" : "未绑定"}</Badge>
-                </CardAction>
+            <CardHeader className="flex-row items-start justify-between space-y-0 border-b">
+                <div className="space-y-1.5">
+                    <CardTitle>geshu-agent 账户</CardTitle>
+                    <CardDescription>使用显式授权维护本平台账户与 geshu-agent 的一对一绑定。</CardDescription>
+                </div>
+                <Badge variant={linked ? "default" : "outline"}>{linked ? "已绑定" : "未绑定"}</Badge>
             </CardHeader>
             <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center">
                 <div className="flex size-12 flex-none items-center justify-center rounded-2xl bg-muted text-muted-foreground">

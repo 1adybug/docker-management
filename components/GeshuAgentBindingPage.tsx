@@ -130,8 +130,8 @@ export const GeshuAgentBindingPage: FC = () => {
                             {isLinkPending && <LoaderCircleIcon className="animate-spin" />}
                             继续绑定
                         </Button>
-                        <Button className="w-full" variant="ghost" render={<Link href="/" />} nativeButton={false}>
-                            暂不绑定，进入系统
+                        <Button asChild className="w-full" variant="ghost">
+                            <Link href="/">暂不绑定，进入系统</Link>
                         </Button>
                     </div>
                 ) : (
