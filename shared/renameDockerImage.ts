@@ -14,7 +14,7 @@ export const renameDockerImage = createSharedFn({
     name: "renameDockerImage",
     schema: renameDockerImageSchema,
     route: {
-        pathname: "cli/v1/image/rename",
+        pathname: "rename-docker-image",
     },
 })(async function renameDockerImage({ name, targetName }) {
     const currentImage = await inspectDockerImage(name)

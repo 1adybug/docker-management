@@ -20,7 +20,7 @@ export const copyDockerImage = createSharedFn({
     name: "copyDockerImage",
     schema: copyDockerImageSchema,
     route: {
-        pathname: "cli/v1/image/copy",
+        pathname: "copy-docker-image",
     },
 })(async function copyDockerImage({ name, tag }) {
     const currentImage = await inspectDockerImage(name)

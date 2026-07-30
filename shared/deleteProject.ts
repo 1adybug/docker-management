@@ -21,7 +21,7 @@ export const deleteProject = createSharedFn({
     name: "deleteProject",
     schema: deleteProjectSchema,
     route: {
-        pathname: "cli/v1/project/delete",
+        pathname: "delete-project",
     },
 })(async function deleteProject({ name, cleanup, deleteDirectory = true }) {
     await ensureProjectRoot()

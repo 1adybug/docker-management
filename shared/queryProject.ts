@@ -166,7 +166,7 @@ export const queryProject = createSharedFn({
     name: "queryProject",
     schema: queryProjectSchema,
     route: {
-        pathname: "cli/v1/project/query",
+        pathname: "query-project",
     },
 })(async function queryProject({
     id,

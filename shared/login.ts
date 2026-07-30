@@ -21,7 +21,7 @@ export const login = createSharedFn({
     schema: loginSchema,
     filter: false,
     route: {
-        pathname: "cli/v1/auth/login",
+        pathname: "login",
     },
     logParams: false,
     rateLimit: createRateLimit({

@@ -11,7 +11,7 @@ export const deleteDockerImage = createSharedFn({
     name: "deleteDockerImage",
     schema: deleteDockerImageSchema,
     route: {
-        pathname: "cli/v1/image/delete",
+        pathname: "delete-docker-image",
     },
 })(async function deleteDockerImage({ name }) {
     await runDockerCommand({

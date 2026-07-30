@@ -14,7 +14,7 @@ export const checkProjectStart = createSharedFn({
     name: "checkProjectStart",
     schema: checkProjectStartSchema,
     route: {
-        pathname: "cli/v1/project/check-start",
+        pathname: "check-project-start",
     },
 })(async function checkProjectStart({ name, mountPathOptions }) {
     await ensureProjectRoot()

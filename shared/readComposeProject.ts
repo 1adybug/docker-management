@@ -18,7 +18,7 @@ export const readComposeProject = createSharedFn({
     name: "readComposeProject",
     schema: readComposeProjectSchema,
     route: {
-        pathname: "cli/v1/compose/read",
+        pathname: "read-compose-project",
     },
 })(async function readComposeProject({ composeFiles }) {
     const resolvedComposeFiles = await resolveComposeFiles(composeFiles)

@@ -16,7 +16,7 @@ export const getProject = createSharedFn({
     name: "getProject",
     schema: getProjectSchema,
     route: {
-        pathname: "cli/v1/project/get",
+        pathname: "get-project",
     },
 })(async function getProject({ name }) {
     const project = await prisma.project.findUnique({ where: { name } })

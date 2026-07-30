@@ -110,7 +110,7 @@ export const runProject = createSharedFn({
     name: "runProject",
     schema: runProjectSchema,
     route: {
-        pathname: "cli/v1/project/run",
+        pathname: "run-project",
     },
 })(async function runProject({ name, command, mountPathOptions }) {
     await ensureProjectRoot()

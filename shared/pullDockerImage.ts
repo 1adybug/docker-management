@@ -20,7 +20,7 @@ export const pullDockerImage = createSharedFn({
     name: "pullDockerImage",
     schema: pullDockerImageSchema,
     route: {
-        pathname: "cli/v1/image/pull",
+        pathname: "pull-docker-image",
     },
 })(async function pullDockerImage({ name }) {
     const currentImage = await inspectDockerImage(name)
