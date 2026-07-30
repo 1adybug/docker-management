@@ -165,6 +165,9 @@ function getProjectOrderBy(sortBy: ProjectSortByParams, sortOrder: SortOrderPara
 export const queryProject = createSharedFn({
     name: "queryProject",
     schema: queryProjectSchema,
+    route: {
+        pathname: "cli/v1/project/query",
+    },
 })(async function queryProject({
     id,
     name = "",

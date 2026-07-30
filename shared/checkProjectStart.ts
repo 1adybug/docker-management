@@ -13,6 +13,9 @@ import { normalizeComposeProjectContent } from "@/utils/compose"
 export const checkProjectStart = createSharedFn({
     name: "checkProjectStart",
     schema: checkProjectStartSchema,
+    route: {
+        pathname: "cli/v1/project/check-start",
+    },
 })(async function checkProjectStart({ name, mountPathOptions }) {
     await ensureProjectRoot()
     const project = await prisma.project.findUnique({ where: { name } })

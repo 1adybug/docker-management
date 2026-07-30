@@ -19,6 +19,9 @@ function getContainerArgs(command: DockerContainerCommand, id: string) {
 export const runDockerContainer = createSharedFn({
     name: "runDockerContainer",
     schema: runDockerContainerSchema,
+    route: {
+        pathname: "cli/v1/container/run",
+    },
 })(async function runDockerContainer({ id, command }) {
     ensureNotCurrentDockerContainer(id)
 

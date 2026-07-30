@@ -10,6 +10,7 @@
         "build": "sdnext build next build",
         "build:docker": "node ./scripts/buildDocker.mjs",
         "start": "next start",
+        "check:cli-routes": "node scripts/checkCliRoutes.mjs",
         "auth:secret": "node -e \"console.log(require('node:crypto').randomBytes(32).toString('hex'))\"",
         "lint": "eslint .",
         "format": "prettier --write .",

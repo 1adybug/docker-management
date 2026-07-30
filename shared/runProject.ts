@@ -109,6 +109,9 @@ export async function ensureProjectComposeFile({ projectDir, composePath, conten
 export const runProject = createSharedFn({
     name: "runProject",
     schema: runProjectSchema,
+    route: {
+        pathname: "cli/v1/project/run",
+    },
 })(async function runProject({ name, command, mountPathOptions }) {
     await ensureProjectRoot()
     const composePath = getProjectComposePath(name)

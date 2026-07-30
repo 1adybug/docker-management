@@ -178,8 +178,11 @@ function normalizeImageName(repository: string, tag: string) {
     return `${repository}:${tag}`
 }
 
-export const queryDockerImageDetail = createSharedFn<never>({
+export const queryDockerImageDetail = createSharedFn<never, "cli/v1/image/query-detail">({
     name: "queryDockerImageDetail",
+    route: {
+        pathname: "cli/v1/image/query-detail",
+    },
 })(async function queryDockerImageDetail() {
     const result = await runDockerCommand({
         args: ["images", "--format", "{{json .}}"],

@@ -20,6 +20,9 @@ function getDockerComposeDownArgs(composePath: string, projectHostDir: string) {
 export const deleteProject = createSharedFn({
     name: "deleteProject",
     schema: deleteProjectSchema,
+    route: {
+        pathname: "cli/v1/project/delete",
+    },
 })(async function deleteProject({ name, cleanup, deleteDirectory = true }) {
     await ensureProjectRoot()
     const projectDir = getProjectDir(name)

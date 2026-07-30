@@ -15,6 +15,9 @@ export interface ProjectDetail {
 export const getProject = createSharedFn({
     name: "getProject",
     schema: getProjectSchema,
+    route: {
+        pathname: "cli/v1/project/get",
+    },
 })(async function getProject({ name }) {
     const project = await prisma.project.findUnique({ where: { name } })
     if (!project) throw new ClientError("项目不存在")

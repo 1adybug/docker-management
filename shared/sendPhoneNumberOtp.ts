@@ -23,6 +23,9 @@ export const sendPhoneNumberOtp = createSharedFn({
     name: "sendPhoneNumberOtp",
     schema: accountSchema,
     filter: false,
+    route: {
+        pathname: "cli/v1/auth/send-phone-number-otp",
+    },
     rateLimit: createRateLimit({
         limit: 1,
         windowMs: 60_000,

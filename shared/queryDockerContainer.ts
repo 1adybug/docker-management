@@ -67,8 +67,11 @@ function isComposeFileManaged(files: string[], projectRoot: string) {
     return files.some(file => normalizePath(mapDockerHostPath(file)).startsWith(rootWithSeparator))
 }
 
-export const queryDockerContainer = createSharedFn<never>({
+export const queryDockerContainer = createSharedFn<never, "cli/v1/container/query">({
     name: "queryDockerContainer",
+    route: {
+        pathname: "cli/v1/container/query",
+    },
 })(async function queryDockerContainer() {
     const result = await runDockerCommand({
         args: ["ps", "-a", "--format", "{{json .}}"],

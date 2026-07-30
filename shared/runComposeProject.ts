@@ -24,6 +24,9 @@ function getDockerComposeArgs(command: ComposeProjectCommand, composeFiles: stri
 export const runComposeProject = createSharedFn({
     name: "runComposeProject",
     schema: runComposeProjectSchema,
+    route: {
+        pathname: "cli/v1/compose/run",
+    },
 })(async function runComposeProject({ composeFiles, command }) {
     if (command === ComposeProjectCommand.停止 || command === ComposeProjectCommand.重启 || command === ComposeProjectCommand.删除)
         await ensureNotCurrentDockerComposeProject(composeFiles)
