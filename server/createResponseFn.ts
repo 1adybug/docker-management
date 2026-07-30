@@ -18,6 +18,7 @@ import type { FilterConfig } from "@/server/createFilter"
 import { type RateLimitConfig, checkRateLimit, isGlobalRateLimitEnabled } from "@/server/createRateLimit"
 import { getCurrentUser } from "@/server/getCurrentUser"
 import { getIp } from "@/server/getIp"
+import { isSkillAuthorizationRequest, runWithSkillAuthorizationRequest } from "@/server/skillAuthorizationRequestContext"
 
 import { ClientError } from "@/utils/clientError"
 
@@ -192,7 +193,7 @@ async function handleResponseError(context: ErrorResponseContext, error: unknown
         error,
     })
 
-    if (error instanceof ClientError && error.code === 401) redirect(LoginPathname)
+    if (error instanceof ClientError && error.code === 401 && !isSkillAuthorizationRequest()) redirect(LoginPathname)
 
     return createErrorResponse(context, error)
 }
@@ -368,25 +369,27 @@ export function createRouteFn<TParams extends [arg?: unknown], TData, TPathname 
 
     defineResponseFnMetadata(newRoute, fn)
 
-    async function POST(request: Request) {
-        if (!fn.route) return createNoStoreJsonResponse({ success: false, data: undefined, message: "Not Found", code: 404 }, { status: 404 })
+    function POST(request: Request) {
+        return runWithSkillAuthorizationRequest(request, async () => {
+            if (!fn.route) return createNoStoreJsonResponse({ success: false, data: undefined, message: "Not Found", code: 404 }, { status: 404 })
 
-        try {
-            const args = await getRouteArgs(request, fn)
-            const result = await newRoute(...args)
-            return createNoStoreJsonResponse(result, { status: 200 })
-        } catch (error) {
-            const result = await handleResponseError(
-                {
-                    fn: newRoute,
-                    args: [],
-                    request,
-                },
-                error,
-            )
+            try {
+                const args = await getRouteArgs(request, fn)
+                const result = await newRoute(...args)
+                return createNoStoreJsonResponse(result, { status: 200 })
+            } catch (error) {
+                const result = await handleResponseError(
+                    {
+                        fn: newRoute,
+                        args: [],
+                        request,
+                    },
+                    error,
+                )
 
-            return createNoStoreJsonResponse(result, { status: 200 })
-        }
+                return createNoStoreJsonResponse(result, { status: 200 })
+            }
+        })
     }
 
     return POST

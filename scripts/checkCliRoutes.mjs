@@ -22,6 +22,7 @@ const expectedRoutes = new Map([
 ])
 
 const sharedDirectory = join(process.cwd(), "shared")
+const responseFnPath = join(process.cwd(), "server", "createResponseFn.ts")
 const filenames = (await readdir(sharedDirectory)).filter(filename => filename.endsWith(".ts"))
 const actualRoutes = new Map()
 
@@ -45,4 +46,8 @@ for (const [filename, pathname] of expectedRoutes) {
     if (actualRoutes.get(pathname) !== filename) throw new Error(`CLI 路由不匹配：${filename} 应声明 ${pathname}`)
 }
 
-console.log(`CLI 路由检查通过，共 ${actualRoutes.size} 条`)
+const responseFnSource = await readFile(responseFnPath, "utf8")
+if (!responseFnSource.includes("runWithSkillAuthorizationRequest(request, async () =>")) throw new Error("CLI 路由未启用 geshu-agent Skill 授权上下文")
+if (!responseFnSource.includes("error.code === 401 && !isSkillAuthorizationRequest()")) throw new Error("geshu-agent Skill 授权失败仍会被重定向到网页登录")
+
+console.log(`CLI 路由检查通过，共 ${actualRoutes.size} 条；geshu-agent Skill 授权入口已启用`)

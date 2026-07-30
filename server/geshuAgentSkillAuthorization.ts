@@ -8,6 +8,8 @@ import type { User } from "@/prisma/generated/client"
 
 import { getGeshuAgentOAuthClientId, getGeshuAgentOAuthIssuer } from "@/server/geshuAgentOAuth"
 
+import { ClientError } from "@/utils/clientError"
+
 interface OpenIdConfiguration {
     issuer?: unknown
     jwks_uri?: unknown
@@ -109,7 +111,7 @@ function hasValidRequiredClaims(payload: Awaited<ReturnType<typeof jwtVerify>>["
     )
 }
 
-async function queryLinkedUser(subject: string): Promise<User | undefined> {
+async function queryLinkedUser(subject: string): Promise<User> {
     const account = await prisma.account.findUnique({
         where: {
             providerId_accountId: {
@@ -122,14 +124,51 @@ async function queryLinkedUser(subject: string): Promise<User | undefined> {
         },
     })
 
-    if (!account?.user || account.user.banned === true) return undefined
+    if (!account?.user) {
+        throw new ClientError({
+            message: "当前格数智能体账号尚未绑定本平台账号",
+            code: 401,
+        })
+    }
+
+    if (account.user.banned === true) {
+        throw new ClientError({
+            message: "当前平台账号已被禁用",
+            code: 403,
+        })
+    }
+
     return account.user
 }
 
-export async function getGeshuAgentSkillAccessTokenUser(authorization: string): Promise<User | undefined> {
+export async function getGeshuAgentSkillAccessTokenUser(authorization: string): Promise<User> {
     const token = queryBearerToken(authorization)
-    const config = getGeshuAgentSkillAuthorizationConfig()
-    if (!token || !config) return undefined
+
+    if (!token) {
+        throw new ClientError({
+            message: "geshu-agent Skill 访问令牌格式无效",
+            code: 401,
+        })
+    }
+
+    let config: GeshuAgentSkillAuthorizationConfig | undefined
+
+    try {
+        config = getGeshuAgentSkillAuthorizationConfig()
+    } catch (error) {
+        throw new ClientError({
+            message: "平台 geshu-agent Skill 授权配置无效",
+            code: 503,
+            origin: error,
+        })
+    }
+
+    if (!config) {
+        throw new ClientError({
+            message: "平台未完整配置 geshu-agent Skill 授权",
+            code: 503,
+        })
+    }
 
     try {
         const remoteJwkSet = await getRemoteJwkSet(config)
@@ -139,10 +178,22 @@ export async function getGeshuAgentSkillAccessTokenUser(authorization: string): 
             issuer: config.issuer,
         })
 
-        if (!hasValidRequiredClaims(result.payload, config)) return undefined
+        if (!hasValidRequiredClaims(result.payload, config)) {
+            throw new ClientError({
+                message: "geshu-agent Skill 访问令牌声明无效",
+                code: 401,
+            })
+        }
+
         return await queryLinkedUser(result.payload.sub as string)
     } catch (error) {
+        if (error instanceof ClientError) throw error
+
         console.warn("验证 geshu-agent Skill 访问令牌失败", error instanceof Error ? error.message : String(error))
-        return undefined
+        throw new ClientError({
+            message: "geshu-agent Skill 访问令牌校验失败",
+            code: 401,
+            origin: error,
+        })
     }
 }
