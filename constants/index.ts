@@ -4,6 +4,8 @@ export const GeshuOAuthProviderId = "geshu-oauth"
 
 export const GeshuAgentOAuthProviderId = "geshu-agent-oauth"
 
+export const GeshuAgentSkillKey = "docker-management"
+
 export const IsProduction = process.env.NODE_ENV === "production"
 
 export const IsDevelopment = process.env.NODE_ENV === "development"

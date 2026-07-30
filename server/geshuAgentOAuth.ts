@@ -81,6 +81,14 @@ export function isGeshuAgentOAuthConfigured() {
     return !!getConfiguredIssuer() && !!getConfiguredClientId() && !!getConfiguredClientSecret()
 }
 
+export function getGeshuAgentOAuthIssuer() {
+    return getConfiguredIssuer()
+}
+
+export function getGeshuAgentOAuthClientId() {
+    return getConfiguredClientId()
+}
+
 export function getGeshuAgentOAuthLoginStatus(): GeshuAgentOAuthLoginStatus {
     const enabled = isGeshuAgentOAuthLoginEnabled()
 

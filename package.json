@@ -63,6 +63,7 @@
         "deepsea-components": "^5.18.11",
         "deepsea-tools": "^5.48.5",
         "iconv-lite": "^0.7.2",
+        "jose": "6.2.1",
         "lucide-react": "^1.24.0",
         "monaco-editor": "^0.55.1",
         "next": "^16.2.10",

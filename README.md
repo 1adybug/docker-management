@@ -51,6 +51,7 @@ git remote set-url --push template no_push://template
 | `GESHU_AGENT_OAUTH_ISSUER`        | 按需 | geshu-agent issuer，必须以 `/api/auth` 结尾 | `https://agent.example.com/api/auth` |
 | `GESHU_AGENT_OAUTH_CLIENT_ID`     | 按需 | geshu-agent OAuth Client ID                 | `your_agent_client_id`               |
 | `GESHU_AGENT_OAUTH_CLIENT_SECRET` | 按需 | geshu-agent OAuth Client Secret             | `your_agent_client_secret`           |
+| `GESHU_AGENT_SKILL_AUTH_AUDIENCE` | 按需 | Skill 短期令牌的精确 audience               | `https://example.com/api/action`     |
 | `NEXT_OUTPUT`                     | 否   | Next 构建输出模式                           | `standalone` / `export`              |
 | `NEXT_TELEMETRY_DISABLED`         | 否   | 是否关闭 Next 遥测上报                      | `1`                                  |
 | `NEXT_PUBLIC_TIME_ZONE`           | 否   | 应用时间时区，留空默认上海                  | `Asia/Shanghai`                      |
@@ -262,6 +263,14 @@ pnpm dev
 `GESHU_AGENT_OAUTH_LOGIN_ENABLED` 默认关闭。只有设置为 `1`，并完整配置 issuer、Client ID 和 Client Secret 后，登录页与个人中心才会显示 geshu-agent 入口。
 
 geshu-agent 使用显式绑定模型：未绑定的账户不能直接登录，也不会按手机号、邮箱或昵称自动匹配或创建本地用户。用户需要先使用本地手机号登录，再完成 geshu-agent 授权绑定。绑定不会覆盖本地昵称、邮箱、手机号或权限；解除绑定只删除本地 OAuth 映射和保存的令牌，不删除任何本地资料。
+
+`dmc` 在 geshu-agent Skill 运行环境中可以使用短期 Bearer 令牌访问现有 `/api/action/*` 能力。启用时还需要：
+
+- 将 `GESHU_AGENT_SKILL_AUTH_AUDIENCE` 配置为当前平台 API 的稳定 HTTPS audience，例如 `https://docker.example.com/api/action`。
+- Skill bundle 的 `authorization.resources[]` 使用同一个 audience、`GESHU_AGENT_OAUTH_CLIENT_ID` 和资源键 `docker-management`。
+- Skill key 固定为 `docker-management`。
+
+平台会从 geshu-agent Discovery 获取 JWKS，并严格校验 `RS256`、`iss`、`aud`、有效期、`jti`、`token_use=skill_access`、`client_id` 和 `skill_key`。验证通过后，使用已绑定的 geshu-agent `sub` 找回本地用户，业务权限、限流、审计日志和 Docker 自保护规则保持不变。未配置 audience 时，网页登录和账号绑定仍可使用，但 Skill Bearer 访问不可用。
 
 ## 系统设置
 

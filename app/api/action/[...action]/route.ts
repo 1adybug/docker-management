@@ -20,6 +20,7 @@ import { getUserImportTemplate } from "@/shared/getUserImportTemplate"
 import { importUser } from "@/shared/importUser"
 import { login } from "@/shared/login"
 import { pullDockerImage } from "@/shared/pullDockerImage"
+import { queryCurrentUser } from "@/shared/queryCurrentUser"
 import { queryDockerContainer } from "@/shared/queryDockerContainer"
 import { queryDockerImage } from "@/shared/queryDockerImage"
 import { queryDockerImageDetail } from "@/shared/queryDockerImageDetail"
@@ -73,6 +74,7 @@ registerRoute(getUserImportTemplate)
 registerRoute(importUser)
 registerRoute(login)
 registerRoute(pullDockerImage)
+registerRoute(queryCurrentUser)
 registerRoute(queryDockerContainer)
 registerRoute(queryDockerImage)
 registerRoute(queryDockerImageDetail)

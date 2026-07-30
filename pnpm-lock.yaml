@@ -128,6 +128,9 @@ importers:
       iconv-lite:
         specifier: ^0.7.2
         version: 0.7.2
+      jose:
+        specifier: 6.2.1
+        version: 6.2.1
       lucide-react:
         specifier: ^1.24.0
         version: 1.25.0(react@19.2.7)

@@ -9,6 +9,7 @@ const expectedRoutes = new Map([
     ["getProject.ts", "get-project"],
     ["login.ts", "login"],
     ["pullDockerImage.ts", "pull-docker-image"],
+    ["queryCurrentUser.ts", "query-current-user"],
     ["queryDockerContainer.ts", "query-docker-container"],
     ["queryDockerImageDetail.ts", "query-docker-image-detail"],
     ["queryProject.ts", "query-project"],
