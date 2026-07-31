@@ -127,16 +127,16 @@ export const CurrentUserPhoneNumberEditor: FC<CurrentUserPhoneNumberEditorProps>
         }
     }
 
-    function onOpenChange(nextOpen: boolean) {
-        if (!nextOpen && !isUpdateCurrentUserProfilePending) onClose?.()
-    }
-
     const isSendingOtp = isSendOldPhoneNumberOtpPending || isSendNewPhoneNumberOtpPending
     const isPending = isSendingOtp || isUpdateCurrentUserProfilePending
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent showCloseButton={!isUpdateCurrentUserProfilePending}>
+        <Dialog open={open} onOpenChange={nextOpen => !nextOpen && !isUpdateCurrentUserProfilePending && onClose?.()}>
+            <DialogContent
+                showCloseButton={!isUpdateCurrentUserProfilePending}
+                onEscapeKeyDown={event => event.preventDefault()}
+                onPointerDownOutside={event => event.preventDefault()}
+            >
                 <DialogHeader>
                     <DialogTitle>修改手机号</DialogTitle>
                     <DialogDescription>需要分别验证当前手机号和新手机号。</DialogDescription>

@@ -126,7 +126,7 @@ export const GeshuAgentAccountLinking: FC<GeshuAgentAccountLinkingProps> = ({ li
                 </div>
                 <Badge variant={linked ? "default" : "outline"}>{linked ? "已绑定" : "未绑定"}</Badge>
             </CardHeader>
-            <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center">
+            <CardContent className="flex flex-col gap-4 pt-6 sm:flex-row sm:items-center">
                 <div className="flex size-12 flex-none items-center justify-center rounded-2xl bg-muted text-muted-foreground">
                     {linked ? <ShieldCheckIcon className="size-6 text-primary" /> : <LinkIcon className="size-6" />}
                 </div>

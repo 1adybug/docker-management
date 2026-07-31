@@ -1,6 +1,6 @@
 "use client"
 
-import { type FC, useEffect } from "react"
+import { type FC, useEffect, useRef } from "react"
 
 import { useForm } from "@tanstack/react-form"
 import { LoaderCircleIcon } from "lucide-react"
@@ -16,14 +16,21 @@ import { useAddUser } from "@/hooks/useAddUser"
 import { useGetUser } from "@/hooks/useGetUser"
 import { useUpdateUser } from "@/hooks/useUpdateUser"
 
-import { addUserParser, addUserSchema } from "@/schemas/addUser"
+import { type AddUserParams, addUserParser, addUserSchema } from "@/schemas/addUser"
 import { nicknameSchema } from "@/schemas/nickname"
 import { phoneNumberSchema } from "@/schemas/phoneNumber"
 import { updateUserParser } from "@/schemas/updateUser"
 import { usernameSchema } from "@/schemas/username"
-import { type UserRoleParams, UserRole, UserRoleSchema } from "@/schemas/userRole"
+import { UserRole, UserRoleSchema } from "@/schemas/userRole"
 
 import { getOnBlurValidator } from "@/utils/getOnBlurValidator"
+
+const addUserInitialValues: AddUserParams = {
+    name: "",
+    nickname: "",
+    phoneNumber: "",
+    role: UserRole.用户,
+}
 
 export interface UserEditorProps {
     id?: string
@@ -33,13 +40,10 @@ export interface UserEditorProps {
 
 export const UserEditor: FC<UserEditorProps> = ({ id, open = false, onClose }) => {
     const isUpdate = !!id
+    const addUserDraft = useRef<AddUserParams>({ ...addUserInitialValues })
     const { data, isLoading } = useGetUser(id, { enabled: open })
 
-    const { mutateAsync: addUser, isPending: isAddUserPending } = useAddUser({
-        onSuccess() {
-            onClose?.()
-        },
-    })
+    const { mutateAsync: addUser, isPending: isAddUserPending } = useAddUser()
 
     const { mutateAsync: updateUser, isPending: isUpdateUserPending } = useUpdateUser({
         onSuccess() {
@@ -48,46 +52,59 @@ export const UserEditor: FC<UserEditorProps> = ({ id, open = false, onClose }) =
     })
 
     const form = useForm({
-        defaultValues: {
-            name: "",
-            nickname: "",
-            phoneNumber: "",
-            role: UserRole.用户 as UserRoleParams,
-        },
+        defaultValues: { ...addUserInitialValues },
         validators: {
             onSubmit: addUserSchema,
         },
         async onSubmit({ value }) {
             const values = addUserParser(value)
 
-            if (id) await updateUser(updateUserParser({ id, ...values }))
-            else await addUser(values)
+            if (id) {
+                await updateUser(updateUserParser({ id, ...values }))
+                return
+            }
+
+            await addUser(values)
+            addUserDraft.current = { ...addUserInitialValues }
+            form.reset({ ...addUserInitialValues })
+            onClose?.()
         },
     })
 
     useEffect(() => {
-        if (!open) {
-            form.reset({ name: "", nickname: "", phoneNumber: "", role: UserRole.用户 })
+        if (!open) return
+
+        if (!isUpdate) {
+            form.reset({ ...addUserDraft.current })
             return
         }
 
-        form.reset({
-            name: data?.name ?? "",
-            nickname: data?.nickname ?? "",
-            phoneNumber: data?.phoneNumber ?? "",
-            role: data?.role ?? UserRole.用户,
-        })
-    }, [data, form, open])
+        form.reset(
+            data?.id === id
+                ? {
+                      name: data.name,
+                      nickname: data.nickname ?? "",
+                      phoneNumber: data.phoneNumber ?? "",
+                      role: data.role,
+                  }
+                : { ...addUserInitialValues },
+        )
+    }, [data, form, id, isUpdate, open])
 
     const isPending = isLoading || isAddUserPending || isUpdateUserPending
 
-    function onOpenChange(nextOpen: boolean) {
-        if (!nextOpen && !isPending) onClose?.()
+    function updateAddUserDraft<TKey extends keyof AddUserParams>(key: TKey, value: AddUserParams[TKey]) {
+        if (isUpdate) return
+        addUserDraft.current = { ...addUserDraft.current, [key]: value }
     }
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent showCloseButton={!isPending}>
+        <Dialog open={open} onOpenChange={nextOpen => !nextOpen && !isPending && onClose?.()}>
+            <DialogContent
+                showCloseButton={!isPending}
+                onEscapeKeyDown={event => event.preventDefault()}
+                onPointerDownOutside={event => event.preventDefault()}
+            >
                 <DialogHeader>
                     <DialogTitle>{isUpdate ? "修改用户" : "新增用户"}</DialogTitle>
                     <DialogDescription>填写用户基础信息并选择系统角色。</DialogDescription>
@@ -116,7 +133,11 @@ export const UserEditor: FC<UserEditorProps> = ({ id, open = false, onClose }) =
                                                 aria-invalid={isInvalid}
                                                 value={field.state.value}
                                                 onBlur={field.handleBlur}
-                                                onChange={event => field.handleChange(event.target.value)}
+                                                onChange={event => {
+                                                    const value = event.target.value
+                                                    field.handleChange(value)
+                                                    updateAddUserDraft("name", value)
+                                                }}
                                             />
                                             {isInvalid && <FieldError errors={field.state.meta.errors} />}
                                         </Field>
@@ -137,7 +158,11 @@ export const UserEditor: FC<UserEditorProps> = ({ id, open = false, onClose }) =
                                                 aria-invalid={isInvalid}
                                                 value={field.state.value}
                                                 onBlur={field.handleBlur}
-                                                onChange={event => field.handleChange(event.target.value)}
+                                                onChange={event => {
+                                                    const value = event.target.value
+                                                    field.handleChange(value)
+                                                    updateAddUserDraft("nickname", value)
+                                                }}
                                             />
                                             {isInvalid && <FieldError errors={field.state.meta.errors} />}
                                         </Field>
@@ -158,7 +183,11 @@ export const UserEditor: FC<UserEditorProps> = ({ id, open = false, onClose }) =
                                                 aria-invalid={isInvalid}
                                                 value={field.state.value}
                                                 onBlur={field.handleBlur}
-                                                onChange={event => field.handleChange(event.target.value)}
+                                                onChange={event => {
+                                                    const value = event.target.value
+                                                    field.handleChange(value)
+                                                    updateAddUserDraft("phoneNumber", value)
+                                                }}
                                             />
                                             {isInvalid && <FieldError errors={field.state.meta.errors} />}
                                         </Field>
@@ -177,7 +206,10 @@ export const UserEditor: FC<UserEditorProps> = ({ id, open = false, onClose }) =
                                                 disabled={isPending}
                                                 invalid={isInvalid}
                                                 onBlur={field.handleBlur}
-                                                onValueChange={field.handleChange}
+                                                onValueChange={value => {
+                                                    field.handleChange(value)
+                                                    updateAddUserDraft("role", value)
+                                                }}
                                             />
                                             {isInvalid && <FieldError errors={field.state.meta.errors} />}
                                         </Field>

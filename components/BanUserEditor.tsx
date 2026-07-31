@@ -72,10 +72,6 @@ export const BanUserEditor: FC<BanUserEditorProps> = ({ id, open = false, onClos
 
     useEffect(() => void form.reset({ banReason: "", banDate: "" }), [form, id, open])
 
-    function onOpenChange(nextOpen: boolean) {
-        if (!nextOpen && !isPending) onClose?.()
-    }
-
     function setBanDate(amount: number, unit: "day" | "week" | "month" | "year") {
         form.setFieldValue("banDate", getDateTime().add(amount, unit).format("YYYY-MM-DDTHH:mm"))
     }
@@ -83,8 +79,12 @@ export const BanUserEditor: FC<BanUserEditorProps> = ({ id, open = false, onClos
     const isRequesting = isLoading || isPending
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent showCloseButton={!isPending}>
+        <Dialog open={open} onOpenChange={nextOpen => !nextOpen && !isPending && onClose?.()}>
+            <DialogContent
+                showCloseButton={!isPending}
+                onEscapeKeyDown={event => event.preventDefault()}
+                onPointerDownOutside={event => event.preventDefault()}
+            >
                 <DialogHeader>
                     <DialogTitle>封禁用户 {data?.name}</DialogTitle>
                     <DialogDescription>可以设置到期时间，留空表示永久封禁。</DialogDescription>
