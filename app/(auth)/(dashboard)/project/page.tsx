@@ -683,7 +683,7 @@ const Page: FC = () => {
             />
             <ProjectLogDrawer name={logName} open={logOpen} content={logContent} onClose={onCloseLog} />
             <Dialog open={deleteOpen} onOpenChange={open => (!open ? onCloseDelete() : setDeleteOpen(true))}>
-                <DialogContent>
+                <DialogContent onEscapeKeyDown={event => event.preventDefault()} onPointerDownOutside={event => event.preventDefault()}>
                     <DialogHeader>
                         <DialogTitle>{getProjectDeleteTitle(deleteTarget)}</DialogTitle>
                         <DialogDescription>项目记录将从平台中删除，请选择是否同时清理关联资源。</DialogDescription>
@@ -756,7 +756,7 @@ const Page: FC = () => {
                 </DialogContent>
             </Dialog>
             <Dialog open={startCheckOpen} onOpenChange={open => (!open ? onCloseStartCheck() : setStartCheckOpen(true))}>
-                <DialogContent className="max-w-3xl">
+                <DialogContent className="max-w-3xl" onEscapeKeyDown={event => event.preventDefault()} onPointerDownOutside={event => event.preventDefault()}>
                     <DialogHeader>
                         <DialogTitle>{startCheck.name ? `启动预检查：${startCheck.name}` : "启动预检查"}</DialogTitle>
                         <DialogDescription>确认宿主机挂载路径可以安全创建后再启动 Compose 项目。</DialogDescription>

@@ -983,7 +983,7 @@ const Page: FC = () => {
                     else if (!isBuildStaticPending) resetBuildStaticDialog()
                 }}
             >
-                <DialogContent>
+                <DialogContent onEscapeKeyDown={event => event.preventDefault()} onPointerDownOutside={event => event.preventDefault()}>
                     <DialogHeader>
                         <DialogTitle>{buildStaticTarget ? `上传静态文件制作镜像并替换 ${buildStaticTarget.name}` : "上传静态文件制作镜像"}</DialogTitle>
                         <DialogDescription>将 dist 文件夹压缩为 zip 或 7z 后上传，并选择本机 nginx 基础镜像。</DialogDescription>
@@ -1086,7 +1086,7 @@ const Page: FC = () => {
                     else if (!isBuildJarPending) resetBuildJarDialog()
                 }}
             >
-                <DialogContent>
+                <DialogContent onEscapeKeyDown={event => event.preventDefault()} onPointerDownOutside={event => event.preventDefault()}>
                     <DialogHeader>
                         <DialogTitle>{buildJarTarget ? `上传 Jar 文件制作镜像并替换 ${buildJarTarget.name}` : "上传 Jar 文件制作镜像"}</DialogTitle>
                         <DialogDescription>上传可直接运行的 Jar 文件，并选择包含 Java 运行环境的基础镜像。</DialogDescription>
@@ -1203,7 +1203,7 @@ const Page: FC = () => {
                     else if (!isRenamePending) resetRenameDialog()
                 }}
             >
-                <DialogContent>
+                <DialogContent onEscapeKeyDown={event => event.preventDefault()} onPointerDownOutside={event => event.preventDefault()}>
                     <DialogHeader>
                         <DialogTitle>{renameTarget ? `重命名 ${renameTarget.name}` : "重命名镜像"}</DialogTitle>
                         <DialogDescription>
@@ -1287,7 +1287,7 @@ const Page: FC = () => {
                     else if (!isCopyPending) resetCopyDialog()
                 }}
             >
-                <DialogContent>
+                <DialogContent onEscapeKeyDown={event => event.preventDefault()} onPointerDownOutside={event => event.preventDefault()}>
                     <DialogHeader>
                         <DialogTitle>{copyTarget ? `复制 ${copyTarget.name}` : "复制镜像"}</DialogTitle>
                         <DialogDescription>仓库名保持为 {copyTarget?.repository ?? "-"}，请输入新的 tag。</DialogDescription>
@@ -1328,7 +1328,7 @@ const Page: FC = () => {
                     else if (!isRestartProjectsPending) resetRestartProjectsDialog()
                 }}
             >
-                <DialogContent>
+                <DialogContent onEscapeKeyDown={event => event.preventDefault()} onPointerDownOutside={event => event.preventDefault()}>
                     <DialogHeader>
                         <DialogTitle>{restartProjectsState.imageName ? `重启 ${restartProjectsState.imageName} 关联项目` : "重启关联项目"}</DialogTitle>
                         <DialogDescription>选中的项目会依次执行 docker compose down 和 docker compose up -d。</DialogDescription>
