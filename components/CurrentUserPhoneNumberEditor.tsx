@@ -131,19 +131,12 @@ export const CurrentUserPhoneNumberEditor: FC<CurrentUserPhoneNumberEditorProps>
     const isPending = isSendingOtp || isUpdateCurrentUserProfilePending
 
     return (
-        <Dialog
-            open={open}
-            disablePointerDismissal
-            onOpenChange={(nextOpen, eventDetails) => {
-                if (eventDetails.reason === "escape-key") {
-                    eventDetails.cancel()
-                    return
-                }
-
-                if (!nextOpen && !isUpdateCurrentUserProfilePending) onClose?.()
-            }}
-        >
-            <DialogContent showCloseButton={!isUpdateCurrentUserProfilePending}>
+        <Dialog open={open} onOpenChange={nextOpen => !nextOpen && !isUpdateCurrentUserProfilePending && onClose?.()}>
+            <DialogContent
+                showCloseButton={!isUpdateCurrentUserProfilePending}
+                onEscapeKeyDown={event => event.preventDefault()}
+                onPointerDownOutside={event => event.preventDefault()}
+            >
                 <DialogHeader>
                     <DialogTitle>修改手机号</DialogTitle>
                     <DialogDescription>需要分别验证当前手机号和新手机号。</DialogDescription>

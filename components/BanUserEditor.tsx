@@ -79,19 +79,12 @@ export const BanUserEditor: FC<BanUserEditorProps> = ({ id, open = false, onClos
     const isRequesting = isLoading || isPending
 
     return (
-        <Dialog
-            open={open}
-            disablePointerDismissal
-            onOpenChange={(nextOpen, eventDetails) => {
-                if (eventDetails.reason === "escape-key") {
-                    eventDetails.cancel()
-                    return
-                }
-
-                if (!nextOpen && !isPending) onClose?.()
-            }}
-        >
-            <DialogContent showCloseButton={!isPending}>
+        <Dialog open={open} onOpenChange={nextOpen => !nextOpen && !isPending && onClose?.()}>
+            <DialogContent
+                showCloseButton={!isPending}
+                onEscapeKeyDown={event => event.preventDefault()}
+                onPointerDownOutside={event => event.preventDefault()}
+            >
                 <DialogHeader>
                     <DialogTitle>封禁用户 {data?.name}</DialogTitle>
                     <DialogDescription>可以设置到期时间，留空表示永久封禁。</DialogDescription>

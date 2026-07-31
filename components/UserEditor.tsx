@@ -99,19 +99,12 @@ export const UserEditor: FC<UserEditorProps> = ({ id, open = false, onClose }) =
     }
 
     return (
-        <Dialog
-            open={open}
-            disablePointerDismissal
-            onOpenChange={(nextOpen, eventDetails) => {
-                if (eventDetails.reason === "escape-key") {
-                    eventDetails.cancel()
-                    return
-                }
-
-                if (!nextOpen && !isPending) onClose?.()
-            }}
-        >
-            <DialogContent showCloseButton={!isPending}>
+        <Dialog open={open} onOpenChange={nextOpen => !nextOpen && !isPending && onClose?.()}>
+            <DialogContent
+                showCloseButton={!isPending}
+                onEscapeKeyDown={event => event.preventDefault()}
+                onPointerDownOutside={event => event.preventDefault()}
+            >
                 <DialogHeader>
                     <DialogTitle>{isUpdate ? "修改用户" : "新增用户"}</DialogTitle>
                     <DialogDescription>填写用户基础信息并选择系统角色。</DialogDescription>
