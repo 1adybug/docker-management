@@ -127,15 +127,22 @@ export const CurrentUserPhoneNumberEditor: FC<CurrentUserPhoneNumberEditorProps>
         }
     }
 
-    function onOpenChange(nextOpen: boolean) {
-        if (!nextOpen && !isUpdateCurrentUserProfilePending) onClose?.()
-    }
-
     const isSendingOtp = isSendOldPhoneNumberOtpPending || isSendNewPhoneNumberOtpPending
     const isPending = isSendingOtp || isUpdateCurrentUserProfilePending
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog
+            open={open}
+            disablePointerDismissal
+            onOpenChange={(nextOpen, eventDetails) => {
+                if (eventDetails.reason === "escape-key") {
+                    eventDetails.cancel()
+                    return
+                }
+
+                if (!nextOpen && !isUpdateCurrentUserProfilePending) onClose?.()
+            }}
+        >
             <DialogContent showCloseButton={!isUpdateCurrentUserProfilePending}>
                 <DialogHeader>
                     <DialogTitle>修改手机号</DialogTitle>
