@@ -272,6 +272,8 @@ geshu-agent 使用显式绑定模型：未绑定的账户不能直接登录，�
 
 平台会从 geshu-agent Discovery 获取 JWKS，并严格校验 `RS256`、`iss`、`aud`、有效期、`jti`、`token_use=skill_access`、`client_id` 和 `skill_key`。验证通过后，使用已绑定的 geshu-agent `sub` 找回本地用户，业务权限、限流、审计日志和 Docker 自保护规则保持不变。未配置 audience 时，网页登录和账号绑定仍可使用，但 Skill Bearer 访问不可用。
 
+Skill Bearer 请求在 OAuth Client 尚未授权或本地平台账号尚未绑定时返回明确的 `428` 前置条件。Skill 应先在会话中询问用户；确认后由 geshu-agent 客户端再显示统一原生弹窗，随后 `dmc auth bind` 打开 `/bind-geshu-agent?auto=1`。已登录本平台时页面会自动开始 OAuth 绑定，未登录时先完成本地手机号登录；CLI 最终只以 Bearer 请求重新验证绑定是否生效。
+
 ## 系统设置
 
 管理员登录后可以在“系统设置”页面维护运行时配置。配置保存在数据库中，保存后无需重启即可影响后续请求或调度。

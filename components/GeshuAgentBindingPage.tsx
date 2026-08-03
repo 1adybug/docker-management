@@ -1,6 +1,6 @@
 "use client"
 
-import { type FC, useEffect, useId, useState } from "react"
+import { type FC, useEffect, useEffectEvent, useId, useRef, useState } from "react"
 
 import { getErrorMessage } from "deepsea-tools"
 import { LoaderCircleIcon } from "lucide-react"
@@ -41,6 +41,7 @@ function getOAuthBindingErrorMessage(error: string, description?: string) {
 
 export const GeshuAgentBindingPage: FC = () => {
     const toastId = useId()
+    const autoLinkStarted = useRef(false)
     const pathname = usePathname()
     const router = useRouter()
     const searchParams = useSearchParams()
@@ -52,6 +53,8 @@ export const GeshuAgentBindingPage: FC = () => {
         const error = searchParams.get("error")
         const linkResult = searchParams.get(LinkResultSearchParam)
         if (!error && !linkResult) return
+
+        autoLinkStarted.current = true
 
         const description = searchParams.get("error_description") ?? undefined
 
@@ -83,6 +86,8 @@ export const GeshuAgentBindingPage: FC = () => {
     async function linkAccount() {
         if (isLinkPending) return
 
+        autoLinkStarted.current = true
+
         if (!loginStatus?.ready) {
             toast.error("暂时无法绑定格数智能体，请联系管理员处理。")
             return
@@ -112,6 +117,15 @@ export const GeshuAgentBindingPage: FC = () => {
             setIsLinkPending(false)
         }
     }
+
+    const autoLinkAccount = useEffectEvent(linkAccount)
+
+    useEffect(() => {
+        if (searchParams.get("auto") !== "1" || !user || !loginStatus?.ready || autoLinkStarted.current) return
+
+        autoLinkStarted.current = true
+        void autoLinkAccount()
+    }, [loginStatus?.ready, searchParams, user])
 
     const isOAuthReady = loginStatus?.ready === true
 

@@ -127,7 +127,7 @@ async function queryLinkedUser(subject: string): Promise<User> {
     if (!account?.user) {
         throw new ClientError({
             message: "当前格数智能体账号尚未绑定本平台账号",
-            code: 401,
+            code: 428,
         })
     }
 
