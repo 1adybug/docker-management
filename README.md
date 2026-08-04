@@ -268,9 +268,9 @@ geshu-agent 使用显式绑定模型：未绑定的账户不能直接登录，�
 
 - 将 `GESHU_AGENT_SKILL_AUTH_AUDIENCE` 配置为当前平台 API 的稳定 HTTPS audience，例如 `https://docker.example.com/api/action`。
 - Skill bundle 的 `authorization.resources[]` 使用同一个 audience、`GESHU_AGENT_OAUTH_CLIENT_ID` 和资源键 `docker-management`。
-- Skill key 固定为 `docker-management`。
+- Skill slug 固定为 `docker-management`。
 
-平台会从 geshu-agent Discovery 获取 JWKS，并严格校验 `RS256`、`iss`、`aud`、有效期、`jti`、`token_use=skill_access`、`client_id` 和 `skill_key`。验证通过后，使用已绑定的 geshu-agent `sub` 找回本地用户，业务权限、限流、审计日志和 Docker 自保护规则保持不变。未配置 audience 时，网页登录和账号绑定仍可使用，但 Skill Bearer 访问不可用。
+平台会从 geshu-agent Discovery 获取 JWKS，并严格校验 `RS256`、`iss`、`aud`、有效期、`jti`、`token_use=skill_access`、`client_id` 和 `skill_slug`。验证通过后，使用已绑定的 geshu-agent `sub` 找回本地用户，业务权限、限流、审计日志和 Docker 自保护规则保持不变。未配置 audience 时，网页登录和账号绑定仍可使用，但 Skill Bearer 访问不可用。
 
 Skill Bearer 请求在 OAuth Client 尚未授权或本地平台账号尚未绑定时返回明确的 `428` 前置条件。Skill 应先在会话中询问用户；确认后由 geshu-agent 客户端再显示统一原生弹窗，随后 `dmc auth bind` 打开 `/bind-geshu-agent?auto=1`。已登录本平台时页面会自动开始 OAuth 绑定，未登录时先完成本地手机号登录；CLI 最终只以 Bearer 请求重新验证绑定是否生效。
 

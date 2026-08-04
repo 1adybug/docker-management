@@ -1,6 +1,6 @@
 import { createRemoteJWKSet, jwtVerify } from "jose"
 
-import { GeshuAgentOAuthProviderId, GeshuAgentSkillKey, IsDevelopment } from "@/constants"
+import { GeshuAgentOAuthProviderId, GeshuAgentSkillSlug, IsDevelopment } from "@/constants"
 
 import { prisma } from "@/prisma"
 
@@ -107,7 +107,7 @@ function hasValidRequiredClaims(payload: Awaited<ReturnType<typeof jwtVerify>>["
         Boolean(payload.jti.trim()) &&
         payload.token_use === "skill_access" &&
         payload.client_id === config.clientId &&
-        payload.skill_key === GeshuAgentSkillKey
+        payload.skill_slug === GeshuAgentSkillSlug
     )
 }
 
