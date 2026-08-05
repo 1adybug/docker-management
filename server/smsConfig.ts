@@ -20,3 +20,7 @@ export function getSmsConfig(): SmsConfig {
         qjpSmsUrl: getOptionalEnvValue("QJP_SMS_URL"),
     }
 }
+
+export function hasSmsSendingConfig({ aliyunAccessKeyId, aliyunAccessKeySecret, qjpSmsUrl }: SmsConfig) {
+    return !!(aliyunAccessKeyId || aliyunAccessKeySecret || qjpSmsUrl)
+}
