@@ -101,6 +101,53 @@ async function resolveIssuer(providerId, configuredIssuerMap, environment) {
     throw new Error(`账户 providerId ${providerId} 缺少可信 issuer 映射，请配置 BETTER_AUTH_ACCOUNT_ISSUER_MAP`)
 }
 
+function getTargetAccountIdentity(account, resolvedIssuers) {
+    if (account.providerId === "credential") {
+        return {
+            issuer: "local:credential",
+            accountId: account.userId,
+        }
+    }
+
+    const placeholderIssuer = `local:oauth:${account.providerId}`
+    return {
+        issuer: account.issuer === placeholderIssuer ? resolvedIssuers.get(account.providerId) || account.issuer : account.issuer,
+        accountId: account.accountId,
+    }
+}
+
+function assertAccountIdentityHasNoCollisions(accounts, resolvedIssuers) {
+    const identities = new Map()
+
+    for (const account of accounts) {
+        const identity = getTargetAccountIdentity(account, resolvedIssuers)
+        if (!identity.issuer || !identity.accountId) throw new Error(`Better Auth 账户 ${account.id} 缺少目标 issuer 或 accountId`)
+
+        const key = JSON.stringify([identity.issuer, identity.accountId])
+        const matches = identities.get(key) || []
+
+        matches.push({
+            id: account.id,
+            providerId: account.providerId,
+            userId: account.userId,
+        })
+
+        identities.set(key, matches)
+    }
+
+    const collisions = [...identities.entries()].filter(([, matches]) => matches.length > 1)
+    if (!collisions.length) return
+
+    const details = collisions
+        .map(([key, matches]) => {
+            const [issuer, accountId] = JSON.parse(key)
+            return `${issuer} + ${accountId}: ${matches.map(match => `${match.id}(${match.providerId}, user ${match.userId})`).join(", ")}`
+        })
+        .join("\n")
+
+    throw new Error(`Better Auth 账户身份存在碰撞，已在写入前停止。请根据可信 Provider 数据人工确认归属，禁止按邮箱合并：\n${details}`)
+}
+
 async function main() {
     const environment = getEnvironment()
     const databasePath = resolve("data", environment === "development" ? "development.db" : "production.db")
@@ -113,36 +160,33 @@ async function main() {
         const columns = database.prepare('PRAGMA table_info("account")').all()
         if (!columns.some(column => column.name === "issuer")) return
 
-        const credentialResult = database
-            .prepare(
-                `UPDATE "account"
-                 SET "issuer" = 'local:credential', "accountId" = "userId"
-                 WHERE "providerId" = 'credential'
-                   AND ("issuer" != 'local:credential' OR "accountId" != "userId")`,
-            )
-            .run()
+        const accounts = database.prepare(`SELECT "id", "issuer", "accountId", "providerId", "userId" FROM "account"`).all()
 
-        const pendingProviders = database
-            .prepare(
-                `SELECT DISTINCT "providerId"
-             FROM "account"
-             WHERE "providerId" != 'credential'
-               AND "issuer" = 'local:oauth:' || "providerId"`,
-            )
-            .all()
-            .map(row => row.providerId)
+        const pendingProviders = [
+            ...new Set(
+                accounts
+                    .filter(account => account.providerId !== "credential" && account.issuer === `local:oauth:${account.providerId}`)
+                    .map(account => account.providerId),
+            ),
+        ]
 
-        if (!pendingProviders.length) {
-            if (credentialResult.changes) console.log(`已完成 ${credentialResult.changes} 个 Better Auth credential 账户标识迁移`)
-            return
-        }
-
-        const configuredIssuerMap = getConfiguredIssuerMap(environment)
+        const configuredIssuerMap = pendingProviders.length ? getConfiguredIssuerMap(environment) : {}
         const resolvedIssuers = new Map()
 
         for (const providerId of pendingProviders) resolvedIssuers.set(providerId, await resolveIssuer(providerId, configuredIssuerMap, environment))
 
-        database.transaction(() => {
+        assertAccountIdentityHasNoCollisions(accounts, resolvedIssuers)
+
+        const migrateAccountIdentities = database.transaction(() => {
+            const credentialResult = database
+                .prepare(
+                    `UPDATE "account"
+                     SET "issuer" = 'local:credential', "accountId" = "userId"
+                     WHERE "providerId" = 'credential'
+                       AND ("issuer" != 'local:credential' OR "accountId" != "userId")`,
+                )
+                .run()
+
             const updateIssuer = database.prepare(
                 `UPDATE "account"
              SET "issuer" = ?
@@ -151,9 +195,14 @@ async function main() {
             )
 
             for (const [providerId, issuer] of resolvedIssuers) updateIssuer.run(issuer, providerId, `local:oauth:${providerId}`)
-        })()
 
-        console.log(`已完成 ${credentialResult.changes} 个 credential 账户标识迁移和 ${resolvedIssuers.size} 个 OAuth issuer 映射`)
+            return credentialResult.changes
+        })
+
+        const credentialChanges = migrateAccountIdentities.immediate()
+
+        if (credentialChanges || resolvedIssuers.size)
+            console.log(`已完成 ${credentialChanges} 个 credential 账户标识迁移和 ${resolvedIssuers.size} 个 OAuth issuer 映射`)
     } finally {
         database.close()
     }

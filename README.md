@@ -126,9 +126,11 @@ $env:PORT = "3100"
 pnpm dev
 ```
 
-Better Auth 1.7 使用 `issuer + accountId` 标识外部账户。升级已有数据库时，项目自己的迁移必须先为 credential 账户写入
-`local:credential`，并为 OAuth 账户写入可信 issuer。`db:dev`、`db:prod` 和 `migrate` 会在 Prisma 迁移完成后校准模板内置的
-`geshu-oauth` 与 `geshu-agent-oauth` 账户；项目新增的 Provider 通过 `BETTER_AUTH_ACCOUNT_ISSUER_MAP` 提供 JSON 映射。
+Better Auth 1.7 使用 `issuer + accountId` 标识外部账户，且不会重命名数据库中的 `accountId` 字段。升级已有数据库前必须停止认证写入，
+备份 `account` 与 `user` 表，并盘点每个 `providerId` 的可信 issuer。项目自己的迁移必须先为 credential 账户写入
+`local:credential + userId`，并为 OAuth 账户写入待校准的 issuer；`db:dev`、`db:prod` 和 `migrate` 会在 Prisma 迁移完成后校准模板内置的
+`geshu-oauth` 与 `geshu-agent-oauth` 账户，项目新增的 Provider 通过 `BETTER_AUTH_ACCOUNT_ISSUER_MAP` 提供 JSON 映射。校准脚本会先检查
+目标 `issuer + accountId` 是否碰撞，再在单个事务中写入；存在碰撞时必须根据可信 Provider 数据人工确认账户归属，禁止按邮箱自动合并。
 
 ## 格数账号平台登录
 
