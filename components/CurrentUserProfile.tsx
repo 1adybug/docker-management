@@ -70,7 +70,7 @@ export interface CurrentUserProfileProps extends StrictOmit<ComponentProps<"div"
     data: User
     allowUpdateNickname: boolean
     allowUpdatePhoneNumber: boolean
-    isGeshuAgentOAuthLinked: boolean
+    geshuAgentOAuthAccountId?: string
 }
 
 function getAvatarText(user: User) {
@@ -83,7 +83,7 @@ export const CurrentUserProfile: FC<CurrentUserProfileProps> = ({
     data,
     allowUpdateNickname,
     allowUpdatePhoneNumber,
-    isGeshuAgentOAuthLinked,
+    geshuAgentOAuthAccountId,
     ...rest
 }) => {
     const router = useRouter()
@@ -180,7 +180,7 @@ export const CurrentUserProfile: FC<CurrentUserProfileProps> = ({
                 </CardContent>
             </Card>
 
-            <GeshuAgentAccountLinking linked={isGeshuAgentOAuthLinked} />
+            <GeshuAgentAccountLinking accountId={geshuAgentOAuthAccountId} />
 
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(300px,0.8fr)]">
                 <Card>
