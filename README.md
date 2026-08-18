@@ -234,12 +234,37 @@ $env:PORT = "3100"
 pnpm dev
 ```
 
+### Better Auth 1.7 数据升级
+
+Better Auth 1.7 使用 `issuer + accountId` 标识 Provider 侧账户，且不会重命名数据库中的 `accountId` 字段；本地账户行仍由
+`account.id` 标识。升级已有数据库必须安排维护窗口并停止登录、绑定和解绑写入，然后按以下顺序执行：
+
+1. 单独备份 `account`、`user` 表和数据库文件，并清点所有 `providerId`；不要把定时备份是否恰好完成当作本次升级备份。
+2. 在项目自己的迁移中先把 `issuer` 增加为可空字段。credential 行写入 `issuer = local:credential` 且
+   `accountId = userId`；OAuth 行保留原 `accountId`，临时写入 `local:oauth:${encodeURIComponent(providerId)}`。
+3. 为有可信 issuer 的每个 Provider 建立明确映射。模板内置的 `geshu-oauth` 从受信任的 Discovery 文档读取 issuer，
+   `geshu-agent-oauth` 使用已校验的配置；项目新增 Provider 通过 `BETTER_AUTH_ACCOUNT_ISSUER_MAP` 提供 JSON 映射，不得从邮箱、昵称或请求参数推导。
+4. 在增加唯一索引前执行碰撞检查；任何结果都必须先依据可信 Provider 数据确定保留记录，不能按邮箱自动合并用户：
+
+    ```sql
+    SELECT issuer, accountId, COUNT(*) AS accountCount, COUNT(DISTINCT userId) AS userCount
+    FROM account
+    GROUP BY issuer, accountId
+    HAVING COUNT(*) > 1;
+    ```
+
+5. 确认每行都有非空 `issuer` 与 `accountId` 后，再把 `issuer` 设为必填并创建 `issuer + accountId` 唯一索引，然后运行对应环境的
+   `db:dev` 或 `db:prod`。启动前的 finalizer 会再次检查唯一索引、合成 issuer 格式和目标身份碰撞，并在安全条件不满足时停止启动。
+
+本模板不跟踪 `prisma/migrations`，派生项目必须手写并审查自己的兼容迁移。碰撞查询无结果、唯一索引存在且 finalizer 完成前，不要部署
+Better Auth 1.7。
+
 ## 格数账号平台登录
 
 本项目可以作为 OAuth Client 接入 `geshu-oauth` 账号平台。账号平台后台新增 OAuth 应用时，推荐配置：
 
 - 应用主页：`BETTER_AUTH_URL`
-- 回调地址：`{BETTER_AUTH_URL}/api/auth/oauth2/callback/geshu-oauth`
+- 回调地址：`{BETTER_AUTH_URL}/api/auth/callback/geshu-oauth`
 - 授权范围：`openid profile phone`
 - 授权流程：`authorization_code`
 - Token Endpoint 认证方式：`client_secret_basic`
@@ -254,7 +279,7 @@ pnpm dev
 本项目还可以作为独立 OAuth Client 接入 geshu-agent。该 Provider ID 固定为 `geshu-agent-oauth`，不会替换上面的 `geshu-oauth`。在 geshu-agent 注册客户端时配置：
 
 - 应用主页：`BETTER_AUTH_URL`
-- 回调地址：`{BETTER_AUTH_URL}/api/auth/oauth2/callback/geshu-agent-oauth`
+- 回调地址：`{BETTER_AUTH_URL}/api/auth/callback/geshu-agent-oauth`
 - issuer：必须以 `/api/auth` 结尾
 - 授权范围：`openid offline_access`
 - 授权流程：`authorization_code`

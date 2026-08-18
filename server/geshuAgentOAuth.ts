@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto"
 
-import type { GenericOAuthConfig } from "better-auth/plugins/generic-oauth"
+import type { GenericOAuthConfig, GenericOAuthUserInfo } from "better-auth/plugins/generic-oauth"
 
 import { GeshuAgentOAuthProviderId, IsDevelopment } from "@/constants"
 
@@ -8,12 +8,8 @@ import { getBooleanFromEnv } from "@/utils/getBooleanFromEnv"
 
 const GeshuAgentOAuthScopes = ["openid", "offline_access"] as const
 
-export interface GeshuAgentOAuthProfile {
-    sub?: string
-}
-
 export interface GeshuAgentOAuthMappedUser {
-    id: string
+    [key: string]: unknown
     name: string
     email: string
     emailVerified: boolean
@@ -67,8 +63,9 @@ function getHash(value: string) {
     return createHash("sha256").update(value).digest("hex")
 }
 
-function getSubject(profile: GeshuAgentOAuthProfile) {
-    const subject = profile.sub?.trim()
+function getSubject(profile: GenericOAuthUserInfo) {
+    const subjectValue = profile.sub
+    const subject = typeof subjectValue === "string" ? subjectValue.trim() : typeof subjectValue === "number" ? String(subjectValue) : undefined
     if (!subject) throw new Error("geshu-agent 未返回标准 sub")
     return subject
 }
@@ -109,12 +106,11 @@ export function getGeshuAgentOAuthLoginStatus(): GeshuAgentOAuthLoginStatus {
     }
 }
 
-export function mapGeshuAgentOAuthProfileToUser(profile: GeshuAgentOAuthProfile): GeshuAgentOAuthMappedUser {
+export function mapGeshuAgentOAuthProfileToUser(profile: GenericOAuthUserInfo): GeshuAgentOAuthMappedUser {
     const subject = getSubject(profile)
     const hash = getHash(subject)
 
     return {
-        id: subject,
         name: `geshu_agent_${hash.slice(0, 10)}`,
         email: `geshu-agent-${hash}@oauth.invalid`,
         emailVerified: false,
@@ -134,14 +130,14 @@ export function getGeshuAgentOAuthConfig(): GenericOAuthConfig[] {
         {
             providerId: GeshuAgentOAuthProviderId,
             discoveryUrl: `${issuer}/.well-known/openid-configuration`,
-            issuer,
+            accountIssuer: issuer,
             clientId,
             clientSecret,
             scopes: [...GeshuAgentOAuthScopes],
             pkce: true,
-            authentication: "basic",
+            tokenEndpointAuth: { method: "client_secret_basic" },
             mapProfileToUser: mapGeshuAgentOAuthProfileToUser,
-            requireIssuerValidation: true,
+            requireIdTokenVerification: true,
             overrideUserInfo: false,
             disableSignUp: true,
         },

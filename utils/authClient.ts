@@ -1,4 +1,4 @@
-import { genericOAuthClient, phoneNumberClient } from "better-auth/client/plugins"
+import { phoneNumberClient } from "better-auth/client/plugins"
 import { createAuthClient } from "better-auth/react"
 
 import { IsBrowser, NextPublicBetterAuthUrl } from "@/constants"
@@ -16,5 +16,5 @@ const authClientBaseUrl = getAuthClientBaseUrl()
 
 export const authClient = createAuthClient({
     ...(authClientBaseUrl ? { baseURL: authClientBaseUrl } : {}),
-    plugins: [phoneNumberClient(), genericOAuthClient()],
+    plugins: [phoneNumberClient()],
 })

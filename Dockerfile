@@ -58,6 +58,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
+COPY --from=builder /app/scripts/finalize-better-auth-account-issuers.mjs ./scripts/finalize-better-auth-account-issuers.mjs
 COPY --from=deps /app/node_modules/prisma/package.json ./prisma-package.json
 RUN find /app/node_modules/7zip-bin -type f -name 7za -exec chmod +x {} \;
 RUN mkdir -p /app/data /app/projects && chown -R nextjs:nodejs /app/data /app/projects
@@ -66,7 +67,7 @@ RUN npm install -g "prisma@$(node -p "require('./prisma-package.json').version")
     && rm ./prisma-package.json
 
 # 创建启动脚本，保持 root 运行应用，便于启动项目时修复宿主机挂载目录权限
-RUN printf '#!/bin/sh\nset -eu\nmkdir -p /app/data /app/projects\nchmod -R u+rwX,g+rwX /app/data /app/projects\nprisma migrate deploy\nchmod -R u+rwX,g+rwX /app/data /app/projects\nexec node server.js\n' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+RUN printf '#!/bin/sh\nset -eu\nmkdir -p /app/data /app/projects\nchmod -R u+rwX,g+rwX /app/data /app/projects\nprisma migrate deploy\nnode scripts/finalize-better-auth-account-issuers.mjs --environment production\nchmod -R u+rwX,g+rwX /app/data /app/projects\nexec node server.js\n' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
 
 EXPOSE 3000
 

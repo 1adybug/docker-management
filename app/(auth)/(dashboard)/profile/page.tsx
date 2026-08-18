@@ -25,20 +25,20 @@ const Page: FC = async () => {
 
     if (!user) return null
 
-    const isGeshuAgentOAuthLinked =
-        (await prisma.account.count({
-            where: {
-                userId: user.id,
-                providerId: GeshuAgentOAuthProviderId,
-            },
-        })) > 0
+    const geshuAgentOAuthAccount = await prisma.account.findFirst({
+        where: {
+            userId: user.id,
+            providerId: GeshuAgentOAuthProviderId,
+        },
+        select: { id: true },
+    })
 
     return (
         <CurrentUserProfile
             data={user}
             allowUpdateNickname={allowUpdateNickname}
             allowUpdatePhoneNumber={allowUpdatePhoneNumber}
-            isGeshuAgentOAuthLinked={isGeshuAgentOAuthLinked}
+            geshuAgentOAuthAccountId={geshuAgentOAuthAccount?.id}
         />
     )
 }

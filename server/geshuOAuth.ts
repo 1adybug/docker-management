@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto"
 
-import type { GenericOAuthConfig } from "better-auth/plugins/generic-oauth"
+import type { GenericOAuthConfig, GenericOAuthUserInfo } from "better-auth/plugins/generic-oauth"
 
 import { DevelopmentUrl, GeshuOAuthProviderId, IsDevelopment } from "@/constants"
 
@@ -14,21 +14,8 @@ import { getBooleanFromEnv } from "@/utils/getBooleanFromEnv"
 
 const GeshuOAuthScopes = ["openid", "profile", "phone"] as const
 
-export interface GeshuOAuthProfile {
-    sub?: string
-    id?: string
-    name?: string
-    nickname?: string
-    preferred_username?: string
-    phone_number?: string
-    phone_number_verified?: boolean
-    email?: string
-    email_verified?: boolean
-    picture?: string
-}
-
 export interface GeshuOAuthMappedUser {
-    id: string
+    [key: string]: unknown
     name: string
     email: string
     emailVerified: boolean
@@ -99,14 +86,21 @@ function getInternalName(subject: string) {
     return `oauth_${getHash(subject).slice(0, 10)}`
 }
 
-function getSubject(profile: GeshuOAuthProfile) {
-    const subject = profile.sub || profile.id
-    if (!subject) throw new Error("账号平台未返回用户 ID")
+function getStringClaim(profile: GenericOAuthUserInfo, key: string) {
+    const value = profile[key]
+    if (typeof value === "string") return value.trim() || undefined
+    if (typeof value === "number") return String(value)
+    return undefined
+}
+
+function getSubject(profile: GenericOAuthUserInfo) {
+    const subject = getStringClaim(profile, "sub")
+    if (!subject) throw new Error("账号平台未返回标准 sub")
     return subject
 }
 
-function getPhoneNumber(profile: GeshuOAuthProfile) {
-    const phoneNumber = profile.phone_number?.trim()
+function getPhoneNumber(profile: GenericOAuthUserInfo) {
+    const phoneNumber = getStringClaim(profile, "phone_number")
     if (!phoneNumber || !phoneNumberRegex.test(phoneNumber)) throw new Error("账号平台未返回有效手机号")
     return phoneNumber
 }
@@ -134,19 +128,18 @@ export function getGeshuOAuthLoginStatus(): GeshuOAuthLoginStatus {
     }
 }
 
-export async function mapGeshuOAuthProfileToUser(profile: GeshuOAuthProfile): Promise<GeshuOAuthMappedUser> {
+export async function mapGeshuOAuthProfileToUser(profile: GenericOAuthUserInfo): Promise<GeshuOAuthMappedUser> {
     const subject = getSubject(profile)
     const phoneNumber = getPhoneNumber(profile)
     const user = await prisma.user.findUnique({ where: { phoneNumber } })
     const fallbackName = getInternalName(subject)
-    const nickname = profile.nickname || profile.name || profile.preferred_username || phoneNumber
+    const nickname = getStringClaim(profile, "nickname") || getStringClaim(profile, "name") || getStringClaim(profile, "preferred_username") || phoneNumber
 
     return {
-        id: subject,
         name: user?.name || fallbackName,
-        email: user?.email || profile.email || getInternalEmail(subject),
-        emailVerified: profile.email_verified === true,
-        image: profile.picture,
+        email: user?.email || getStringClaim(profile, "email") || getInternalEmail(subject),
+        emailVerified: profile.email_verified === true || profile.emailVerified === true,
+        image: getStringClaim(profile, "picture") || profile.image,
         nickname,
         phoneNumber,
         phoneNumberVerified: profile.phone_number_verified !== false,
@@ -170,7 +163,8 @@ export function getGeshuOAuthConfig(): GenericOAuthConfig[] {
             clientSecret,
             scopes: [...GeshuOAuthScopes],
             pkce: true,
-            authentication: "basic",
+            tokenEndpointAuth: { method: "client_secret_basic" },
+            requireIdTokenVerification: true,
             mapProfileToUser: mapGeshuOAuthProfileToUser,
             overrideUserInfo: true,
             disableSignUp: !isGeshuOAuthCreateUserEnabled(),

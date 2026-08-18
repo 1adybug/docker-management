@@ -23,3 +23,11 @@ minimumReleaseAgeExclude:
     - soda-react
     - deepsea-components@5.18.11
     - soda-type
+    - "@better-auth/core@1.7.0"
+    - "@better-auth/drizzle-adapter@1.7.0"
+    - "@better-auth/kysely-adapter@1.7.0"
+    - "@better-auth/memory-adapter@1.7.0"
+    - "@better-auth/mongo-adapter@1.7.0"
+    - "@better-auth/prisma-adapter@1.7.0"
+    - "@better-auth/telemetry@1.7.0"
+    - better-auth@1.7.0
