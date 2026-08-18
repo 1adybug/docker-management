@@ -26,25 +26,25 @@ const OAuthLinkErrorMessage = {
 } as const
 
 export interface GeshuAgentAccountLinkingProps {
-    linked: boolean
+    accountId?: string
 }
 
 function getOAuthLinkErrorMessage(error: string, description?: string) {
     return OAuthLinkErrorMessage[error as keyof typeof OAuthLinkErrorMessage] || description || "格数智能体账户绑定没有成功，请重新尝试。"
 }
 
-export const GeshuAgentAccountLinking: FC<GeshuAgentAccountLinkingProps> = ({ linked: initialLinked }) => {
+export const GeshuAgentAccountLinking: FC<GeshuAgentAccountLinkingProps> = ({ accountId: initialAccountId }) => {
     const messageKey = useId()
     const pathname = usePathname()
     const router = useRouter()
     const searchParams = useSearchParams()
-    const [linked, setLinked] = useState(initialLinked)
+    const [accountId, setAccountId] = useState(initialAccountId)
     const [isLinkPending, setIsLinkPending] = useState(false)
     const [isUnlinkPending, setIsUnlinkPending] = useState(false)
 
     const { data: loginStatus } = useQueryGeshuAgentOAuthLoginStatus()
 
-    useEffect(() => void setLinked(initialLinked), [initialLinked])
+    useEffect(() => void setAccountId(initialAccountId), [initialAccountId])
 
     useEffect(() => {
         const result = searchParams.get(LinkResultSearchParam)
@@ -89,8 +89,8 @@ export const GeshuAgentAccountLinking: FC<GeshuAgentAccountLinkingProps> = ({ li
         })
 
         try {
-            const response = await authClient.oauth2.link({
-                providerId: GeshuAgentOAuthProviderId,
+            const response = await authClient.linkSocial({
+                provider: GeshuAgentOAuthProviderId,
                 callbackURL: `/profile?${LinkResultSearchParam}=success`,
                 errorCallbackURL: `/profile?${LinkResultSearchParam}=error`,
             })
@@ -109,18 +109,18 @@ export const GeshuAgentAccountLinking: FC<GeshuAgentAccountLinkingProps> = ({ li
     }
 
     async function unlinkAccount() {
-        if (isUnlinkPending) return
+        if (isUnlinkPending || !accountId) return
 
         setIsUnlinkPending(true)
 
         try {
             const response = await authClient.unlinkAccount({
-                providerId: GeshuAgentOAuthProviderId,
+                accountId,
             })
 
             if (response.error) throw new Error(response.error.message || "解除格数智能体账户绑定失败")
 
-            setLinked(false)
+            setAccountId(undefined)
             message.success("已解除格数智能体账户绑定")
             router.refresh()
         } catch (error) {
@@ -131,6 +131,8 @@ export const GeshuAgentAccountLinking: FC<GeshuAgentAccountLinkingProps> = ({ li
     }
 
     if (!loginStatus?.ready) return null
+
+    const linked = !!accountId
 
     return (
         <Card

@@ -43,9 +43,8 @@ const GeshuAgentOAuthLoginErrorMessage = {
 } as const
 
 function getOAuthLoginErrorMessage(providerId: string | null, error: string, description?: string) {
-    if (providerId === GeshuAgentOAuthProviderId) {
+    if (providerId === GeshuAgentOAuthProviderId)
         return GeshuAgentOAuthLoginErrorMessage[error as keyof typeof GeshuAgentOAuthLoginErrorMessage] || description || "格数智能体登录没有成功，请重新尝试。"
-    }
 
     return GeshuOAuthLoginErrorMessage[error as keyof typeof GeshuOAuthLoginErrorMessage] || description || "格数账号登录没有成功，请重新尝试。"
 }
@@ -113,8 +112,8 @@ const Page: FC = () => {
             const errorCallbackPathname = isAgent ? "/bind-geshu-agent" : "/login"
             const errorSearch = errorSearchParams.toString()
 
-            const response = await authClient.signIn.oauth2({
-                providerId,
+            const response = await authClient.signIn.social({
+                provider: providerId,
                 callbackURL,
                 errorCallbackURL: errorSearch ? `${errorCallbackPathname}?${errorSearch}` : errorCallbackPathname,
             })
