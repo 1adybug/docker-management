@@ -103,8 +103,9 @@ const Page: FC = () => {
 
             const errorCallbackPathname = isAgent ? "/bind-geshu-agent" : "/login"
             const errorSearch = errorSearchParams.toString()
-            const response = await authClient.signIn.oauth2({
-                providerId,
+
+            const response = await authClient.signIn.social({
+                provider: providerId,
                 callbackURL,
                 errorCallbackURL: errorSearch ? `${errorCallbackPathname}?${errorSearch}` : errorCallbackPathname,
             })

@@ -98,8 +98,8 @@ export const GeshuAgentBindingPage: FC = () => {
 
             if (callbackURL !== "/") errorSearchParams.set("from", callbackURL)
 
-            const response = await authClient.oauth2.link({
-                providerId: GeshuAgentOAuthProviderId,
+            const response = await authClient.linkSocial({
+                provider: GeshuAgentOAuthProviderId,
                 callbackURL,
                 errorCallbackURL: `/bind-geshu-agent?${errorSearchParams}`,
             })
