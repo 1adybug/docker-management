@@ -126,9 +126,30 @@ $env:PORT = "3100"
 pnpm dev
 ```
 
-Better Auth 1.7 使用 `issuer + accountId` 标识外部账户。升级已有数据库时，项目自己的迁移必须先为 credential 账户写入
-`local:credential`，并为 OAuth 账户写入可信 issuer。`db:dev`、`db:prod` 和 `migrate` 会在 Prisma 迁移完成后校准模板内置的
-`geshu-oauth` 与 `geshu-agent-oauth` 账户；项目新增的 Provider 通过 `BETTER_AUTH_ACCOUNT_ISSUER_MAP` 提供 JSON 映射。
+### Better Auth 1.7 数据升级
+
+Better Auth 1.7 使用 `issuer + accountId` 标识 Provider 侧账户，且不会重命名数据库中的 `accountId` 字段；本地账户行仍由
+`account.id` 标识。升级已有数据库必须安排维护窗口并停止登录、绑定和解绑写入，然后按以下顺序执行：
+
+1. 单独备份 `account`、`user` 表和数据库文件，并清点所有 `providerId`；不要把定时备份是否恰好完成当作本次升级备份。
+2. 在项目自己的迁移中先把 `issuer` 增加为可空字段。credential 行写入 `issuer = local:credential` 且
+   `accountId = userId`；OAuth 行保留原 `accountId`，临时写入 `local:oauth:${encodeURIComponent(providerId)}`。
+3. 为有可信 issuer 的每个 Provider 建立明确映射。模板内置的 `geshu-oauth` 从受信任的 Discovery 文档读取 issuer，
+   `geshu-agent-oauth` 使用已校验的配置；项目新增 Provider 通过 `BETTER_AUTH_ACCOUNT_ISSUER_MAP` 提供 JSON 映射，不得从邮箱、昵称或请求参数推导。
+4. 在增加唯一索引前执行碰撞检查；任何结果都必须先依据可信 Provider 数据确定保留记录，不能按邮箱自动合并用户：
+
+    ```sql
+    SELECT issuer, accountId, COUNT(*) AS accountCount, COUNT(DISTINCT userId) AS userCount
+    FROM account
+    GROUP BY issuer, accountId
+    HAVING COUNT(*) > 1;
+    ```
+
+5. 确认每行都有非空 `issuer` 与 `accountId` 后，再把 `issuer` 设为必填并创建 `issuer + accountId` 唯一索引，然后运行对应环境的
+   `db:dev` 或 `db:prod`。启动前的 finalizer 会再次检查唯一索引、合成 issuer 格式和目标身份碰撞，并在安全条件不满足时停止启动。
+
+本模板不跟踪 `prisma/migrations`，派生项目必须手写并审查自己的兼容迁移。碰撞查询无结果、唯一索引存在且 finalizer 完成前，不要部署
+Better Auth 1.7。
 
 ## 格数账号平台登录
 

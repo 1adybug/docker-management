@@ -163,7 +163,7 @@ export function getGeshuOAuthConfig(): GenericOAuthConfig[] {
             clientSecret,
             scopes: [...GeshuOAuthScopes],
             pkce: true,
-            authentication: "basic",
+            tokenEndpointAuth: { method: "client_secret_basic" },
             requireIdTokenVerification: true,
             mapProfileToUser: mapGeshuOAuthProfileToUser,
             overrideUserInfo: true,

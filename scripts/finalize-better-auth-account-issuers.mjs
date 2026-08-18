@@ -23,6 +23,10 @@ function isLocalhost(hostname) {
     return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1" || hostname === "[::1]"
 }
 
+function getSyntheticOAuthIssuer(providerId) {
+    return `local:oauth:${encodeURIComponent(providerId)}`
+}
+
 function validateIssuer(value, name, environment) {
     if (value.startsWith("local:oauth:")) return value
 
@@ -46,7 +50,10 @@ function getConfiguredIssuerMap(environment) {
     return Object.fromEntries(
         Object.entries(parsed).map(([providerId, issuer]) => {
             if (!providerId || typeof issuer !== "string" || !issuer.trim()) throw new Error("BETTER_AUTH_ACCOUNT_ISSUER_MAP 包含无效映射")
-            return [providerId, validateIssuer(issuer.trim(), `providerId ${providerId} 的 issuer`, environment)]
+            const normalizedIssuer = issuer.trim()
+            if (normalizedIssuer.startsWith("local:oauth:") && normalizedIssuer !== getSyntheticOAuthIssuer(providerId))
+                throw new Error(`providerId ${providerId} 的合成 issuer 必须是 ${getSyntheticOAuthIssuer(providerId)}`)
+            return [providerId, validateIssuer(normalizedIssuer, `providerId ${providerId} 的 issuer`, environment)]
         }),
     )
 }
@@ -101,6 +108,77 @@ async function resolveIssuer(providerId, configuredIssuerMap, environment) {
     throw new Error(`账户 providerId ${providerId} 缺少可信 issuer 映射，请配置 BETTER_AUTH_ACCOUNT_ISSUER_MAP`)
 }
 
+function hasUniqueAccountIdentityIndex(database) {
+    const uniqueIndexes = database.prepare(`SELECT "name" FROM pragma_index_list('account') WHERE "unique" = 1`).all()
+
+    return uniqueIndexes.some(({ name }) => {
+        const columns = database
+            .prepare(`SELECT "name" FROM pragma_index_info(?) ORDER BY "seqno"`)
+            .all(name)
+            .map(column => column.name)
+
+        return columns.length === 2 && columns.includes("issuer") && columns.includes("accountId")
+    })
+}
+
+function getTargetAccountIdentity(account, resolvedIssuers) {
+    if (account.providerId === "credential") {
+        return {
+            issuer: "local:credential",
+            accountId: account.userId,
+        }
+    }
+
+    const placeholderIssuer = getSyntheticOAuthIssuer(account.providerId)
+    return {
+        issuer: account.issuer === placeholderIssuer ? resolvedIssuers.get(account.providerId) || account.issuer : account.issuer,
+        accountId: account.accountId,
+    }
+}
+
+function assertCanonicalAccountIdentities(accounts) {
+    for (const account of accounts) {
+        if (!account.id || !account.providerId || !account.userId || !account.issuer || !account.accountId)
+            throw new Error("account 表存在缺少 id、providerId、userId、issuer 或 accountId 的记录，停止迁移")
+        if (account.providerId === "credential" || !account.issuer.startsWith("local:oauth:")) continue
+
+        const expectedIssuer = getSyntheticOAuthIssuer(account.providerId)
+        if (account.issuer !== expectedIssuer) throw new Error(`账户 ${account.id} 的合成 issuer 不符合 Better Auth 1.7 规范，应为 ${expectedIssuer}`)
+    }
+}
+
+function assertAccountIdentityHasNoCollisions(accounts, resolvedIssuers) {
+    const identities = new Map()
+
+    for (const account of accounts) {
+        const identity = getTargetAccountIdentity(account, resolvedIssuers)
+        if (!identity.issuer || !identity.accountId) throw new Error(`Better Auth 账户 ${account.id} 缺少目标 issuer 或 accountId`)
+
+        const key = JSON.stringify([identity.issuer, identity.accountId])
+        const matches = identities.get(key) || []
+
+        matches.push({
+            id: account.id,
+            providerId: account.providerId,
+            userId: account.userId,
+        })
+
+        identities.set(key, matches)
+    }
+
+    const collisions = [...identities.entries()].filter(([, matches]) => matches.length > 1)
+    if (!collisions.length) return
+
+    const details = collisions
+        .map(([key, matches]) => {
+            const [issuer, accountId] = JSON.parse(key)
+            return `${issuer} + ${accountId}: ${matches.map(match => `${match.id}(${match.providerId}, user ${match.userId})`).join(", ")}`
+        })
+        .join("\n")
+
+    throw new Error(`Better Auth 账户身份存在碰撞，已在写入前停止。请根据可信 Provider 数据人工确认归属，禁止按邮箱合并：\n${details}`)
+}
+
 async function main() {
     const environment = getEnvironment()
     const databasePath = resolve("data", environment === "development" ? "development.db" : "production.db")
@@ -111,38 +189,37 @@ async function main() {
 
     try {
         const columns = database.prepare('PRAGMA table_info("account")').all()
-        if (!columns.some(column => column.name === "issuer")) return
+        if (!columns.some(column => column.name === "issuer")) throw new Error("account 表缺少 Better Auth 1.7 必需的 issuer 字段")
+        if (!hasUniqueAccountIdentityIndex(database)) throw new Error("account 表缺少 issuer + accountId 唯一索引，不能启动 Better Auth 1.7")
 
-        const credentialResult = database
-            .prepare(
-                `UPDATE "account"
-                 SET "issuer" = 'local:credential', "accountId" = "userId"
-                 WHERE "providerId" = 'credential'
-                   AND ("issuer" != 'local:credential' OR "accountId" != "userId")`,
-            )
-            .run()
+        const accounts = database.prepare(`SELECT "id", "issuer", "accountId", "providerId", "userId" FROM "account"`).all()
+        assertCanonicalAccountIdentities(accounts)
 
-        const pendingProviders = database
-            .prepare(
-                `SELECT DISTINCT "providerId"
-             FROM "account"
-             WHERE "providerId" != 'credential'
-               AND "issuer" = 'local:oauth:' || "providerId"`,
-            )
-            .all()
-            .map(row => row.providerId)
+        const pendingProviders = [
+            ...new Set(
+                accounts
+                    .filter(account => account.providerId !== "credential" && account.issuer === getSyntheticOAuthIssuer(account.providerId))
+                    .map(account => account.providerId),
+            ),
+        ]
 
-        if (!pendingProviders.length) {
-            if (credentialResult.changes) console.log(`已完成 ${credentialResult.changes} 个 Better Auth credential 账户标识迁移`)
-            return
-        }
-
-        const configuredIssuerMap = getConfiguredIssuerMap(environment)
+        const configuredIssuerMap = pendingProviders.length ? getConfiguredIssuerMap(environment) : {}
         const resolvedIssuers = new Map()
 
         for (const providerId of pendingProviders) resolvedIssuers.set(providerId, await resolveIssuer(providerId, configuredIssuerMap, environment))
 
-        database.transaction(() => {
+        assertAccountIdentityHasNoCollisions(accounts, resolvedIssuers)
+
+        const migrateAccountIdentities = database.transaction(() => {
+            const credentialResult = database
+                .prepare(
+                    `UPDATE "account"
+                     SET "issuer" = 'local:credential', "accountId" = "userId"
+                     WHERE "providerId" = 'credential'
+                       AND ("issuer" != 'local:credential' OR "accountId" != "userId")`,
+                )
+                .run()
+
             const updateIssuer = database.prepare(
                 `UPDATE "account"
              SET "issuer" = ?
@@ -150,10 +227,21 @@ async function main() {
                AND "issuer" = ?`,
             )
 
-            for (const [providerId, issuer] of resolvedIssuers) updateIssuer.run(issuer, providerId, `local:oauth:${providerId}`)
-        })()
+            let oauthAccountChanges = 0
 
-        console.log(`已完成 ${credentialResult.changes} 个 credential 账户标识迁移和 ${resolvedIssuers.size} 个 OAuth issuer 映射`)
+            for (const [providerId, issuer] of resolvedIssuers)
+                oauthAccountChanges += updateIssuer.run(issuer, providerId, getSyntheticOAuthIssuer(providerId)).changes
+
+            return {
+                credentialAccountChanges: credentialResult.changes,
+                oauthAccountChanges,
+            }
+        })
+
+        const result = migrateAccountIdentities.immediate()
+
+        if (result.credentialAccountChanges || result.oauthAccountChanges)
+            console.log(`已完成 ${result.credentialAccountChanges} 个 credential 账户标识迁移和 ${result.oauthAccountChanges} 个 OAuth issuer 映射`)
     } finally {
         database.close()
     }
