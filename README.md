@@ -256,8 +256,20 @@ Better Auth 1.7 使用 `issuer + accountId` 标识 Provider 侧账户，且不�
 5. 确认每行都有非空 `issuer` 与 `accountId` 后，再把 `issuer` 设为必填并创建 `issuer + accountId` 唯一索引，然后运行对应环境的
    `db:dev` 或 `db:prod`。启动前的 finalizer 会再次检查唯一索引、合成 issuer 格式和目标身份碰撞，并在安全条件不满足时停止启动。
 
-本模板不跟踪 `prisma/migrations`，派生项目必须手写并审查自己的兼容迁移。碰撞查询无结果、唯一索引存在且 finalizer 完成前，不要部署
-Better Auth 1.7。
+本项目跟踪 `prisma/migrations`，兼容迁移位于
+`20260818090000_upgrade_better_auth_1_7_account_identity`：它先写入 canonical synthetic issuer、在写入唯一索引前阻断缺失身份和碰撞，再将
+`issuer` 收紧为必填。不要修改已经部署过的历史迁移，也不要手工把 synthetic issuer 当作可信 Provider issuer。
+
+生产升级顺序如下：
+
+1. 停止当前容器和所有可发起登录、绑定、解绑的实例，确认没有旧版本继续写 `account` 表。
+2. 在停写状态下单独复制生产 SQLite 文件，并额外导出 `account`、`user` 表；后台自动备份不能替代本次维护备份。
+3. 配齐生产 OAuth issuer 和必要的 `BETTER_AUTH_ACCOUNT_ISSUER_MAP`，再执行 `pnpm db:prod`。容器入口也按
+   `prisma migrate deploy` → issuer finalizer → 应用启动的顺序执行。
+4. 只有迁移与 finalizer 都成功、碰撞查询无结果后才恢复流量；任一步失败都保持停写，使用维护前备份恢复后再人工处理身份归属。
+
+升级后的运行时登录回归需要覆盖手机号登录、两个 OAuth 登录/回调、geshu-agent 显式绑定与按本地 `account.id` 解绑，以及 Skill Bearer 令牌按
+`issuer + accountId` 找回本地用户。本次静态同步不会替代这些带真实 IdP 和生产数据副本的回归。
 
 ## 格数账号平台登录
 

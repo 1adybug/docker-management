@@ -1,6 +1,6 @@
 import { createRemoteJWKSet, jwtVerify } from "jose"
 
-import { GeshuAgentOAuthProviderId, GeshuAgentSkillSlug, IsDevelopment } from "@/constants"
+import { GeshuAgentSkillSlug, IsDevelopment } from "@/constants"
 
 import { prisma } from "@/prisma"
 
@@ -19,6 +19,10 @@ interface GeshuAgentSkillAuthorizationConfig {
     audience: string
     clientId: string
     issuer: string
+}
+
+interface LinkedAccountIdentity {
+    userId: string
 }
 
 let remoteJwkSetPromise: Promise<ReturnType<typeof createRemoteJWKSet>> | undefined
@@ -111,34 +115,46 @@ function hasValidRequiredClaims(payload: Awaited<ReturnType<typeof jwtVerify>>["
     )
 }
 
-async function queryLinkedUser(subject: string): Promise<User> {
-    const account = await prisma.account.findUnique({
-        where: {
-            providerId_accountId: {
-                providerId: GeshuAgentOAuthProviderId,
-                accountId: subject,
-            },
-        },
-        include: {
-            user: true,
-        },
-    })
+async function queryLinkedUser(subject: string, issuer: string): Promise<User> {
+    const accounts = await prisma.$queryRaw<LinkedAccountIdentity[]>`
+        SELECT "userId"
+        FROM "account"
+        WHERE "issuer" = ${issuer} AND "accountId" = ${subject}
+        LIMIT 2
+    `
+    const account = accounts[0]
 
-    if (!account?.user) {
+    if (!account) {
         throw new ClientError({
             message: "当前格数智能体账号尚未绑定本平台账号",
             code: 428,
         })
     }
 
-    if (account.user.banned === true) {
+    if (accounts.length > 1) {
+        throw new ClientError({
+            message: "格数智能体账号绑定身份存在碰撞",
+            code: 503,
+        })
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: account.userId } })
+
+    if (!user) {
+        throw new ClientError({
+            message: "格数智能体账号绑定的本平台用户不存在",
+            code: 503,
+        })
+    }
+
+    if (user.banned === true) {
         throw new ClientError({
             message: "当前平台账号已被禁用",
             code: 403,
         })
     }
 
-    return account.user
+    return user
 }
 
 export async function getGeshuAgentSkillAccessTokenUser(authorization: string): Promise<User> {
@@ -185,7 +201,7 @@ export async function getGeshuAgentSkillAccessTokenUser(authorization: string): 
             })
         }
 
-        return await queryLinkedUser(result.payload.sub as string)
+        return await queryLinkedUser(result.payload.sub as string, config.issuer)
     } catch (error) {
         if (error instanceof ClientError) throw error
 
