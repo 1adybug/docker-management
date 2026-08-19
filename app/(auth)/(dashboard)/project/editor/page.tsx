@@ -128,13 +128,12 @@ async function ensureMonacoConfigured() {
     monacoConfigurePromise = (async function configureMonaco() {
         const monaco = await import("monaco-editor")
 
-        // @ts-expect-error: monaco-editor ESM internals don't have type declarations
-        await import("monaco-editor/esm/vs/basic-languages/yaml/yaml.contribution")
+        await import("monaco-editor/languages/definitions/yaml/register.js")
 
         const globalAny = globalThis as MonacoGlobal
         globalAny.MonacoEnvironment = {
             getWorker(_moduleId, _label) {
-                return new Worker(new URL("monaco-editor/esm/vs/editor/editor.worker.js", import.meta.url), { type: "module" })
+                return new Worker(new URL("monaco-editor/editor/editor.worker.js", import.meta.url), { type: "module" })
             },
         }
 
